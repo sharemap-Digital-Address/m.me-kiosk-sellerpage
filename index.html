@@ -90,6 +90,16 @@
       max-width: 400px;
       margin: 10px auto;
     }
+    .order-id-display {
+      background: #e0f2fe;
+      border: 1px dashed #0284c7;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #0369a1;
+      font-weight: bold;
+    }
     .share-btn { 
       background-color: #0084FF; 
       color: white; 
@@ -169,6 +179,7 @@
     </div>
 
     <h3>📍 Delivery Location Share</h3>
+    <div id="orderIdDisplay" class="order-id-display">🔢 Order ID: #-</div>
 
     <div id="buyerDetailsDisplay" class="buyer-info-box">
       <h4>📋 Impormasyon sa Delivery:</h4>
@@ -244,12 +255,22 @@
     const buyerOrders = localStorage.getItem('sharemap_orders') || "Walang order";
     const buyerBranch = localStorage.getItem('sharemap_branch') || "Main Branch";
     const buyerSchedule = localStorage.getItem('sharemap_schedule') || "Now (Agad-agad)";
+    const buyerOrderId = localStorage.getItem('sharemap_orderid') || "N/A";
 
     window.addEventListener("DOMContentLoaded", () => {
       const pageId = getPageId();
       localStorage.setItem('sharemap_page', pageId);
 
       const urlParams = new URLSearchParams(window.location.search);
+
+      // Kunin ang Order ID mula sa URL parameter o localStorage
+      const orderIdVal = urlParams.get('oid') || buyerOrderId;
+      if (orderIdVal && orderIdVal !== "N/A") {
+        document.getElementById("orderIdDisplay").innerText = `🔢 Order ID: #${orderIdVal}`;
+        localStorage.setItem('sharemap_orderid', orderIdVal);
+      } else {
+        document.getElementById("orderIdDisplay").innerText = `🔢 Order ID: #-`;
+      }
 
       if (urlParams.get('branch')) {
         const branchFromUrl = urlParams.get('branch');
@@ -414,6 +435,7 @@
       const finalOrders = localStorage.getItem('sharemap_orders') || buyerOrders;
       const finalBranch = localStorage.getItem('sharemap_branch') || buyerBranch;
       const finalSched = localStorage.getItem('sharemap_schedule') || buyerSchedule;
+      const finalOrderId = localStorage.getItem('sharemap_orderid') || buyerOrderId;
       const pageId = getPageId();
 
       const formattedOrders = finalOrders
@@ -439,7 +461,7 @@
           
           const textAddress = await getStreetAddress(lat, lng);
 
-          const shareText = `🏪 Store / Page: ${pageId}\n🏢 Nearest Branch: ${finalBranch}\n⏰ Schedule Order: ${finalSched}\n\nClient Order List:\n${formattedOrders}\n\nName: ${finalName}\nPhone: ${finalPhone}\nLandmark: ${finalLandmark}\n\n📍 Pin Location\nDigital Address (PlusCode): ${plusCode}\n\nMap link address: ${googleMapsUrl}\n\nGeo address: ${lat},${lng}\nText Address (OSM): ${textAddress}`;
+          const shareText = `🏪 Store / Page: ${pageId}\n🔢 Order ID: #${finalOrderId}\n🏢 Nearest Branch: ${finalBranch}\n⏰ Schedule Order: ${finalSched}\n\nClient Order List:\n${formattedOrders}\n\nName: ${finalName}\nPhone: ${finalPhone}\nLandmark: ${finalLandmark}\n\n📍 Pin Location\nDigital Address (PlusCode): ${plusCode}\n\nMap link address: ${googleMapsUrl}\n\nGeo address: ${lat},${lng}\nText Address (OSM): ${textAddress}`;
 
           const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
 
@@ -493,6 +515,7 @@
       const finalOrders = localStorage.getItem('sharemap_orders') || buyerOrders;
       const finalBranch = localStorage.getItem('sharemap_branch') || buyerBranch;
       const finalSched = localStorage.getItem('sharemap_schedule') || buyerSchedule;
+      const finalOrderId = localStorage.getItem('sharemap_orderid') || buyerOrderId;
       const pageId = getPageId();
 
       const formattedOrders = finalOrders
@@ -518,11 +541,12 @@
           statusEl.innerText = "📱 Binubuksan ang SMS Messaging App...";
 
           const smsBodyText = `SHAREMAP DELIVERY ORDER\n` +
+                              `🔢 Order ID: #${finalOrderId}\n` +
                               `🏪 Store: ${pageId}\n` +
                               `🏢 Branch: ${finalBranch}\n` +
                               `⏰ Schedule: ${finalSched}\n\n` +
                               `🛒 Orders:\n• ${formattedOrders}\n\n` +
-                              `👤 Name: ${nameVal}\n` +
+                              `👤 Name: ${finalName}\n` +
                               `📞 Contact: ${finalPhone}\n` +
                               `🏡 Landmark: ${finalLandmark}\n\n` +
                               `📍 Plus Code: ${plusCode}\n` +
