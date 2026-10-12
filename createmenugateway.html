@@ -56,8 +56,9 @@
             <label>Product Name:</label>
             <input type="text" id="prodName" placeholder="halimbawa: Halo-Halo Special">
 
-            <label>Image Link URL (ImgBB / FB Link):</label>
-            <input type="url" id="prodImage" placeholder="https://i.ibb.co/xxxxx/image.jpg">
+            <label>Image Link URL (Google Drive / ImgBB):</label>
+            <input type="url" id="prodImage" placeholder="I-paste ang Google Drive Share Link dito">
+            <small style="font-size: 11px; color: #38bdf8; display: block; margin-top: -8px; margin-bottom: 10px;">💡 Awtomatikong iko-convert ang Google Drive link para bumilis ang load.</small>
 
             <label>Description (Opsyonal):</label>
             <textarea id="prodDesc" rows="2" placeholder="halimbawa: May leche flan at ice cream"></textarea>
@@ -99,7 +100,25 @@
         }
     };
 
-    // SIYASATIN KUNG MAY PASSWORD NA ANG STORE IN SUPABASE
+    // REGEX FUNCTION PARA SA GOOGLE DRIVE LINK CONVERSION
+    function convertGoogleDriveLink(rawUrl) {
+        if (!rawUrl) return "";
+        rawUrl = rawUrl.trim();
+
+        // Regex para makuha ang File ID sa loob ng Google Drive link (hal. /d/FILE_ID/ o id=FILE_ID)
+        const driveRegex = /(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
+        const match = rawUrl.match(driveRegex);
+
+        if (match && match[1]) {
+            let fileId = match[1];
+            // Ibalik ang tamang format na direktang babasahin bilang larawan
+            return `https://lh3.googleusercontent.com/d/${fileId}`;
+        }
+
+        // Kung hindi Google Drive link (halimbawa ImgBB o iba pa), ibalik lang kung ano ang niliagay
+        return rawUrl;
+    }
+
     async function checkStorePasswordStatus() {
         const username = document.getElementById('storeUsername').value.trim().toLowerCase();
         const pwdWrapper = document.getElementById('passwordWrapper');
@@ -123,7 +142,6 @@
             return;
         }
 
-        // KUNG WALA PANG PASSWORD NA NALILIKHA
         if (!data.password || data.password.trim() === "") {
             hasPasswordSet = false;
             pwdWrapper.style.display = "none";
@@ -139,7 +157,6 @@
                 window.location.href = `./accountgateway.html?page=${encodeURIComponent(username)}`;
             };
         } else {
-            // KUNG MAY PASSWORD NA
             hasPasswordSet = true;
             pwdWrapper.style.display = "block";
             notice.style.display = "none";
@@ -230,17 +247,20 @@
 
     async function saveMenuItem() {
         const name = document.getElementById('prodName').value.trim();
-        const image = document.getElementById('prodImage').value.trim();
+        const rawImageInput = document.getElementById('prodImage').value.trim();
         const desc = document.getElementById('prodDesc').value.trim();
         const status = document.getElementById('prodStatus').value;
         const itemId = document.getElementById('editItemId').value;
 
         if(!name) { alert("Pakilagay ang Product Name!"); return; }
 
+        // ISASALANG SA REGEX CONVERTER ANG LINK BAGO ISE-SAVE SA DATABASE
+        const finalImageUrl = convertGoogleDriveLink(rawImageInput);
+
         const payload = {
             username: activeStore,
             name: name,
-            image: image,
+            image: finalImageUrl,
             description: desc,
             status: status
         };
@@ -255,7 +275,7 @@
         if(result.error) {
             alert("Error sa pag-save: " + result.error.message);
         } else {
-            alert("✅ Nai-save na ang item!");
+            alert("✅ Nai-save na ang item na may converted Google Drive image link!");
             document.getElementById('prodName').value = "";
             document.getElementById('prodImage').value = "";
             document.getElementById('prodDesc').value = "";
