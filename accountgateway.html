@@ -22,7 +22,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
         .container {
             max-width: 400px;
@@ -55,7 +56,7 @@
         button:hover { opacity: 0.9; }
         .store-badge {
             background: #e2e8f0;
-            padding: 8px 12px;
+            padding: 10px 12px;
             border-radius: 6px;
             font-weight: bold;
             color: #1e293b;
@@ -72,15 +73,20 @@
     <h2>Merchant Account Setup</h2>
     <p style="text-align:center; font-size:13px; color:#64748b; margin-bottom:15px;">Gumawa ng sariling password para sa iyong Kiosk Management Portal.</p>
 
-    <div class="store-badge" id="displayUsername">Loading Store ID...</div>
+    <!-- Store Badge / Input Box -->
+    <div id="storeHeaderArea">
+        <div class="store-badge" id="displayUsername">🔍 Sinusuri ang Store ID...</div>
+    </div>
 
-    <label>Bagong Password:</label>
-    <input type="password" id="newPassword" placeholder="Gumawa ng secure na password">
+    <div id="formFieldsArea">
+        <label>Bagong Password:</label>
+        <input type="password" id="newPassword" placeholder="Gumawa ng secure na password">
 
-    <label>Kumpirmahin ang Password:</label>
-    <input type="password" id="confirmPassword" placeholder="I-type ulit ang password">
+        <label>Kumpirmahin ang Password:</label>
+        <input type="password" id="confirmPassword" placeholder="I-type ulit ang password">
 
-    <button onclick="savePassword()">I-save ang Password</button>
+        <button onclick="savePassword()">I-save ang Password</button>
+    </div>
 
     <div class="note">
         🔒 Ang password na ito ay gagamitin para makapag-log in at makapag-manage ng iyong Kiosk Menu at Prices.
@@ -88,12 +94,8 @@
 </div>
 
 <script>
-    // ==========================================
-    // ILAGAY DITO ANG SUPABASE CREDENTIALS MO
-    // ==========================================
     const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
-
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let currentStore = "";
@@ -102,17 +104,34 @@
         const urlParams = new URLSearchParams(window.location.search);
         currentStore = urlParams.get('page') || localStorage.getItem('sharemap_page');
 
-        if (!currentStore) {
-            alert("⚠️ Walang natagpung Store ID sa link.");
-            document.body.innerHTML = "<h3 style='color:red; text-align:center;'>Invalid Gateway Link</h3>";
-            return;
+        if (!currentStore || currentStore.trim() === "") {
+            // Kung walang nailagay sa URL, bigyan sila ng input box para mag-type ng Store ID
+            document.getElementById('storeHeaderArea').innerHTML = `
+                <label>Store FB Page Username:</label>
+                <input type="text" id="manualStoreInput" placeholder="halimbawa: marjevinsoylucena" style="border: 1px solid #2563eb;">
+            `;
+            document.getElementById('displayUsername').style.display = "none";
+        } else {
+            currentStore = currentStore.toLowerCase();
+            document.getElementById('displayUsername').innerText = "Store: @" + currentStore;
         }
-
-        document.getElementById('displayUsername').innerText = "Store: @" + currentStore.toLowerCase();
     };
 
     async function savePassword() {
-        const pwd = document.getElementById('newPassword'].value.trim();
+        // Kung manual input ang ginamit
+        if (!currentStore) {
+            const manualIn = document.getElementById('manualStoreInput');
+            if (manualIn && manualIn.value.trim()) {
+                currentStore = manualIn.value.trim().toLowerCase();
+            }
+        }
+
+        if (!currentStore) {
+            alert("⚠️ Pakilagay muna ang Store Page Username.");
+            return;
+        }
+
+        const pwd = document.getElementById('newPassword').value.trim();
         const confirmPwd = document.getElementById('confirmPassword').value.trim();
 
         if (!pwd || !confirmPwd) {
@@ -129,14 +148,15 @@
         const { data, error } = await supabaseClient
             .from('licenses')
             .update({ password: pwd })
-            .eq('username', currentStore.toLowerCase());
+            .eq('username', currentStore);
 
         if (error) {
             alert("Error sa pag-save: " + error.message);
         } else {
             alert(`✅ Tagumpay! Naka-set na ang password para sa @${currentStore}. Maaari mo na itong gamitin sa pag-login.`);
-            document.getElementById('newPassword').value = "";
-            document.getElementById('confirmPassword').value = "";
+            
+            // I-redirect pabalik sa createmenugateway.html para makapag-login na sila
+            window.location.href = `./createmenugateway.html?page=${encodeURIComponent(currentStore)}`;
         }
     }
 </script>
