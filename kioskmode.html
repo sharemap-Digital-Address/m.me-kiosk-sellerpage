@@ -7,19 +7,24 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #0284c7; --bg: #0f172a; --card: #1e293b; --text: #ffffff; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; padding-bottom: 90px; }
         .container { max-width: 480px; margin: 0 auto; }
         .store-header { text-align: center; margin-bottom: 20px; }
         .store-header h2 { margin: 0; color: #38bdf8; font-size: 22px; }
         .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .menu-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; }
-        .menu-card img { width: 100%; height: 120px; object-fit: cover; background: #334155; }
+        .menu-card img { width: 100%; height: 110px; object-fit: cover; background: #334155; }
         .menu-details { padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
-        .menu-title { font-weight: bold; font-size: 14px; margin-bottom: 4px; }
-        .menu-desc { font-size: 11px; color: #94a3b8; margin-bottom: 8px; line-height: 1.3; }
-        .btn-add { background: #16a34a; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; width: 100%; }
-        .btn-add:disabled { background: #64748b; cursor: not-allowed; }
-        .cart-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); max-width: 450px; width: 90%; background: #2563eb; color: white; padding: 12px 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); font-weight: bold; cursor: pointer; }
+        .menu-title { font-weight: bold; font-size: 13px; margin-bottom: 2px; }
+        .menu-desc { font-size: 10px; color: #94a3b8; margin-bottom: 8px; line-height: 1.3; }
+        
+        /* Quantity Controls inside Kiosk Card */
+        .qty-control { display: flex; align-items: center; justify-content: space-between; background: #0f172a; border-radius: 6px; padding: 4px; border: 1px solid #475569; margin-top: 5px; }
+        .qty-btn { background: #334155; color: white; border: none; width: 26px; height: 26px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .qty-val { font-weight: bold; font-size: 13px; }
+        
+        .cart-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); max-width: 450px; width: 90%; background: #16a34a; color: white; padding: 14px 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); font-weight: bold; cursor: pointer; z-index: 1000; }
+        .cart-bar:hover { background: #15803d; }
     </style>
 </head>
 <body>
@@ -27,7 +32,7 @@
 <div class="container">
     <div class="store-header">
         <h2 id="storeTitle">🏪 Loading Kiosk Menu...</h2>
-        <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Pumili ng iyong mga order sa ibaba:</p>
+        <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Pumili at i-tap ang (+) para idagdag sa cart:</p>
     </div>
 
     <div class="menu-grid" id="kioskMenuGrid">
@@ -35,9 +40,9 @@
     </div>
 </div>
 
-<div class="cart-bar" id="cartBar" onclick="proceedToGateway()" style="display:none;">
-    <span id="cartCount">🛒 0 Items Selected</span>
-    <span>I-proceed sa Checkout ➔</span>
+<div class="cart-bar" id="cartBar" onclick="checkoutToGateway()" style="display:none;">
+    <span id="cartSummaryText">🛒 0 Items Selected</span>
+    <span>I-save at Bumalik sa Order ➔</span>
 </div>
 
 <script>
@@ -46,7 +51,17 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let storePage = "";
-    let selectedCart = {};
+    let selectedCart = {}; // Format: { "Chicken Joy": 2, "Halo-Halo Special": 1 }
+
+    // DEFAULT FAST-FOOD KIOSK MENU (Kung sakaling wala pang nilagay ang store owner)
+    const DEFAULT_KIOSK_MENU = [
+        { name: "Chicken Joy Value Meal", image: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=300", description: "Crispy fried chicken with rice & gravy", status: "AVAILABLE" },
+        { name: "Family Fiesta Ala Carte", image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=300", description: "Special family size sharing meal", status: "AVAILABLE" },
+        { name: "Burger Cheezy Large", image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", description: "Juicy beef patty with extra melted cheese", status: "AVAILABLE" },
+        { name: "Halo-Halo Special", image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", description: "Loaded with leche flan, ube, and ice cream", status: "AVAILABLE" },
+        { name: "Spaghetti Panalo", image: "https://images.unsplash.com/photo-1621996346565-e3d5d6281298?w=300", description: "Sweet style spaghetti with hotdog slices", status: "AVAILABLE" },
+        { name: "Regular Fries", image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=300", description: "Golden crispy potato fries", status: "AVAILABLE" }
+    ];
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -58,84 +73,118 @@
             return;
         }
 
-        document.getElementById('storeTitle').innerText = "🏪 @" + storePage;
+        document.getElementById('storeTitle').innerText = "🏪 @" + storePage + " - Kiosk Menu";
         loadKioskMenu();
     };
 
     async function loadKioskMenu() {
+        // Subukang kumuha mula sa Supabase table ng store na ito
         const { data, error } = await supabaseClient
             .from('menu_items')
             .select('*')
             .eq('username', storePage.toLowerCase())
             .order('created_at', { ascending: false });
 
+        let menuToDisplay = [];
+
+        if(error || !data || data.length === 0) {
+            // Kung wala pa, gamitin ang Default Kiosk Menu
+            menuToDisplay = DEFAULT_KIOSK_MENU;
+        } else {
+            menuToDisplay = data;
+        }
+
+        renderGrid(menuToDisplay);
+    }
+
+    function renderGrid(items) {
         const grid = document.getElementById('kioskMenuGrid');
         grid.innerHTML = "";
 
-        if(error || !data || data.length === 0) {
-            grid.innerHTML = "<p style='text-align:center; grid-column: 1 / -1; color:#94a3b8;'>Walang nakitang menu items para sa store na ito.</p>";
-            return;
-        }
+        items.forEach(item => {
+            let isAvail = (item.status === "AVAILABLE" || !item.status);
+            let itemName = item.name;
+            let currentQty = selectedCart[itemName] || 0;
 
-        data.forEach(item => {
-            let isAvail = item.status === "AVAILABLE";
             let card = document.createElement('div');
             card.className = "menu-card";
             card.innerHTML = `
-                <img src="${item.image || 'https://via.placeholder.com/150'}" alt="${item.name}">
+                <img src="${item.image || item.image_url || 'https://via.placeholder.com/150'}" alt="${itemName}">
                 <div class="menu-details">
                     <div>
-                        <div class="menu-title">${item.name}</div>
-                        <div class="menu-desc">${item.description || ''}</div>
+                        <div class="menu-title">${itemName}</div>
+                        <div class="menu-desc">${item.description || item.desc || ''}</div>
                     </div>
-                    <button class="btn-add" ${!isAvail ? 'disabled':''} onclick="addToCart('${escapeQuotes(item.name)}')">
-                        ${isAvail ? '➕ Order Item' : 'Out of Stock'}
-                    </button>
+                    <div>
+                        ${isAvail ? `
+                            <div class="qty-control">
+                                <button type="button" class="qty-btn" onclick="updateQty('${escapeQuotes(itemName)}', -1)">-</button>
+                                <span class="qty-val" id="qty-val-${CSS.escape(itemName)}">${currentQty}</span>
+                                <button type="button" class="qty-btn" onclick="updateQty('${escapeQuotes(itemName)}', 1)">+</button>
+                            </div>
+                        ` : '<div style="color:#ef4444; font-size:11px; font-weight:bold; text-align:center; padding:4px;">Out of Stock</div>'}
+                    </div>
                 </div>
             `;
             grid.appendChild(card);
         });
+        updateCartBar();
+    }
+
+    function updateQty(itemName, delta) {
+        if (!selectedCart[itemName]) {
+            selectedCart[itemName] = 0;
+        }
+        selectedCart[itemName] += delta;
+
+        if (selectedCart[itemName] < 0) {
+            selectedCart[itemName] = 0;
+        }
+
+        if (selectedCart[itemName] === 0) {
+            delete selectedCart[itemName];
+        }
+
+        // I-update ang UI counter para sa item na ito
+        let valEl = document.getElementById(`qty-val-${CSS.escape(itemName)}`);
+        if (valEl) {
+            valEl.innerText = selectedCart[itemName] || 0;
+        }
+
+        updateCartBar();
+    }
+
+    function updateCartBar() {
+        let totalCount = 0;
+        for (let key in selectedCart) {
+            totalCount += selectedCart[key];
+        }
+
+        const bar = document.getElementById('cartBar');
+        if (totalCount > 0) {
+            bar.style.display = 'flex';
+            document.getElementById('cartSummaryText').innerText = `🛒 ${totalCount} Item(s) in Cart`;
+        } else {
+            bar.style.display = 'none';
+        }
     }
 
     function escapeQuotes(str) {
         return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     }
 
-    function addToCart(itemName) {
-        if(selectedCart[itemName]) {
-            selectedCart[itemName]++;
-        } else {
-            selectedCart[itemName] = 1;
-        }
-        updateCartBar();
-    }
-
-    function updateCartBar() {
-        let totalItems = 0;
-        for(let key in selectedCart) {
-            totalItems += selectedCart[key];
+    function checkoutToGateway() {
+        let orderArray = [];
+        for (let name in selectedCart) {
+            if (selectedCart[name] > 0) {
+                orderArray.push(`${name} x${selectedCart[name]}`);
+            }
         }
 
-        const bar = document.getElementById('cartBar');
-        if(totalItems > 0) {
-            bar.style.display = 'flex';
-            document.getElementById('cartCount').innerText = `🛒 ${totalItems} Item(s) Selected`;
-        } else {
-            bar.style.display = 'none';
-        }
-    }
-
-    function proceedToGateway() {
-        let orderSummary = [];
-        for(let name in selectedCart) {
-            orderSummary.push(`${name} x${selectedCart[name]}`);
-        }
-
-        let ordersText = orderSummary.join(', ');
-        localStorage.setItem('sharemap_orders', ordersText);
-
-        // I-redirect pabalik sa Multigateway / Index na may dalang selected orders
-        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(ordersText)}`;
+        let orderString = orderArray.join(', ');
+        
+        // Bumalik sa multigateway.html na dala ang mga napiling order
+        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}`;
     }
 </script>
 </body>
