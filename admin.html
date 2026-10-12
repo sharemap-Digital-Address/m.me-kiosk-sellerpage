@@ -21,10 +21,10 @@
             padding: 15px;
         }
         .container {
-            max-width: 620px;
+            max-width: 600px;
             margin: 0 auto;
         }
-        h2 { text-align: center; color: var(--primary); margin-top: 5px; }
+        h2 { text-align: center; color: var(--primary); }
         .card {
             background: var(--card);
             padding: 15px;
@@ -35,7 +35,7 @@
         input, select, button {
             width: 100%;
             padding: 10px;
-            margin-top: 6px;
+            margin-top: 8px;
             margin-bottom: 12px;
             border: 1px solid var(--border);
             border-radius: 6px;
@@ -52,31 +52,30 @@
         button:hover { opacity: 0.9; }
         .store-item {
             padding: 12px 10px;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .store-info div { font-size: 13px; color: #64748b; margin-top: 2px; }
-        .actions { display: flex; flex-direction: column; gap: 4px; }
         .actions button {
-            width: 100%;
+            width: auto;
             padding: 5px 8px;
             font-size: 11px;
-            margin: 0;
+            margin-left: 3px;
+            margin-top: 2px;
         }
         .badge {
-            padding: 2px 6px;
+            padding: 3px 6px;
             border-radius: 4px;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: bold;
-            display: inline-block;
         }
         .active { background: #dcfce7; color: #166534; }
         .expired { background: #fee2e2; color: #991b1b; }
         .trial { background: #fef3c7; color: #92400e; }
-        .pass-set { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-        .pass-none { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .pwd-set { background: #e0f2fe; color: #0369a1; }
+        .pwd-unset { background: #fef3c7; color: #b45309; }
 
         .modal-overlay {
             position: fixed;
@@ -101,21 +100,20 @@
 <body>
 
 <div class="container">
-    <h2>👑 ShareMap License Admin</h2>
+    <h2>ShareMap License Admin</h2>
 
     <!-- Add / Edit Store Card -->
     <div class="card">
-        <h3 style="margin-top:0; color:#1e293b;">Magdagdag / Mag-update ng Store</h3>
-        
+        <h3>Magdagdag / Mag-update ng Store</h3>
         <label>Page Username:</label>
         <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena">
 
         <label>Client Email Address:</label>
         <input type="email" id="clientEmailInput" placeholder="halimbawa: client@gmail.com">
-        
-        <label>Store Portal Password (Opsyonal / Admin Override):</label>
-        <input type="text" id="storePasswordInput" placeholder="Iwanang blanko kung hayaan silang mag-set sa setup link">
 
+        <label>Store Password (Admin Reset / Set):</label>
+        <input type="text" id="storePasswordInput" placeholder="Iwanang blanko kung si client ang magse-set">
+        
         <label>Plan Type:</label>
         <select id="planType" onchange="autoSetExpiry()">
             <option value="TRIAL_ACCESS">30-Day Free Trial</option>
@@ -126,12 +124,12 @@
         <label>Expiry Date (YYYY-MM-DD):</label>
         <input type="date" id="expiryDate">
 
-        <button onclick="saveStoreLicense()" style="background-color: #16a34a; margin-top:5px;">💾 I-save sa Supabase</button>
+        <button onclick="saveStoreLicense()" style="background-color: #16a34a;">I-save sa Supabase</button>
     </div>
 
     <!-- Search & Filter Card -->
     <div class="card">
-        <h3 style="margin-top:0; color:#1e293b;">Lista ng mga Store</h3>
+        <h3>Lista ng mga Store</h3>
         <input type="text" id="searchInput" placeholder="Mag-search ng Store Username..." onkeyup="filterStores()">
         
         <div id="storeListContainer" style="max-height: 350px; overflow-y: auto; margin-top: 10px;">
@@ -186,7 +184,7 @@
     }
 
     async function loadLicensesFromSupabase() {
-        const { data, error } = await supabaseClient.from('licenses').select('*').order('username', { ascending: true });
+        const { data, error } = await supabaseClient.from('licenses').select('*');
         if (error) {
             alert("Error sa pag-fetch sa Supabase: " + error.message);
             return;
@@ -220,27 +218,27 @@
 
             let expiryLabel = store.expiry ? store.expiry : "Lifetime";
             let emailLabel = store.email ? store.email : "Wala pang email";
-            
-            // PASSWORD STATUS BADGE
-            let passBadge = "";
+
+            // CHECK PASSWORD STATUS
+            let pwdLabel = "";
             if (store.password && store.password.trim() !== "") {
-                passBadge = `<span class="badge pass-set" title="Current Password">🔑 Pass: <b>${store.password}</b></span>`;
+                pwdLabel = `<span class="badge pwd-set">🔑 Pwd: <b>${store.password}</b></span>`;
             } else {
-                passBadge = `<span class="badge pass-none">⚠️ No Pass Set</span>`;
+                pwdLabel = `<span class="badge pwd-unset">⚠️ Pwd: Not Set</span>`;
             }
 
             let div = document.createElement('div');
             div.className = "store-item";
             div.innerHTML = `
                 <div class="store-info">
-                    <strong>@${store.username}</strong> <span class="badge ${statusClass}">${statusText}</span> ${passBadge}
+                    <strong>@${store.username}</strong> <span class="badge ${statusClass}">${statusText}</span> ${pwdLabel}
                     <div>Email: ${emailLabel}</div>
                     <div>Plan: ${store.plan} | Expiry: ${expiryLabel}</div>
                 </div>
                 <div class="actions">
-                    <button onclick="editStore('${store.username}')" style="background:#2563eb;">✏️ Edit</button>
-                    <button onclick="resetPassword('${store.username}')" style="background:#eab308; color:#000;">🔑 Reset Pass</button>
-                    <button onclick="deleteStore('${store.username}')" style="background:#dc2626;">🗑️ Del</button>
+                    <button onclick="editStore('${store.username}')" style="background:#2563eb;">Edit</button>
+                    <button onclick="copySetupLink('${store.username}')" style="background:#16a34a;" title="Copy Password Setup Link">🔗 Link</button>
+                    <button onclick="deleteStore('${store.username}')" style="background:#dc2626;">Del</button>
                 </div>
             `;
             container.appendChild(div);
@@ -270,10 +268,17 @@
         }
     }
 
+    function copySetupLink(username) {
+        const link = `${BASE_SETUP_URL}?page=${username}`;
+        navigator.clipboard.writeText(link).then(() => {
+            alert(`✅ Na-copy na sa clipboard ang Password Setup Link para sa @${username}:\n\n${link}`);
+        });
+    }
+
     async function saveStoreLicense() {
         const username = document.getElementById('storeUsername').value.trim().toLowerCase();
         const email = document.getElementById('clientEmailInput').value.trim();
-        const password = document.getElementById('storePasswordInput').value.trim();
+        const pwd = document.getElementById('storePasswordInput').value.trim();
         const plan = document.getElementById('planType').value;
         const expiry = (plan === "PLATINUM_LIFETIME") ? null : document.getElementById('expiryDate').value;
 
@@ -288,7 +293,7 @@
             plan: plan,
             expiry: expiry,
             email: email ? email : null,
-            password: password ? password : null
+            password: pwd ? pwd : null
         };
 
         const { error } = await supabaseClient.from('licenses').upsert(payload, { onConflict: 'username' });
@@ -303,32 +308,11 @@
         lastSavedPlan = plan;
         lastSavedExpiry = expiry;
 
-        // Clear input form
-        document.getElementById('storeUsername').value = "";
-        document.getElementById('clientEmailInput').value = "";
+        // Reset password input
         document.getElementById('storePasswordInput').value = "";
 
         await loadLicensesFromSupabase();
         document.getElementById('emailModal').style.display = 'flex';
-    }
-
-    async function resetPassword(username) {
-        let newPass = prompt(`Maglagay ng bagong password para sa @${username} (o iwanang blangko para ibalik sa No Password Set):`);
-        if (newPass === null) return; // Cancelled
-
-        let valToSave = newPass.trim() === "" ? null : newPass.trim();
-
-        const { error } = await supabaseClient
-            .from('licenses')
-            .update({ password: valToSave })
-            .eq('username', username);
-
-        if (error) {
-            alert("Error sa pag-reset ng password: " + error.message);
-        } else {
-            alert(`✅ Tagumpay na na-update/reset ang password para sa @${username}!`);
-            loadLicensesFromSupabase();
-        }
     }
 
     async function deleteStore(username) {
