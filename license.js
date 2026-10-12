@@ -6,17 +6,23 @@ const SHAREMAP_LICENSES = {
     "test.resto.page": {
         "status": "TRIAL",
         "plan": "TRIAL_ACCESS",
-        "expiry": "2026-10-17"
+        "expiry": "2026-10-17",
+        "email": null,
+        "password": null
     },
     "marjevinsoylucena": {
         "status": "ACTIVE",
         "plan": "PLATINUM_LIFETIME",
-        "expiry": null
+        "expiry": null,
+        "email": "marjevin@gmail.com",
+        "password": null
     },
     "miniburger": {
         "status": "ACTIVE",
         "plan": "BRONZE_MONTHLY",
-        "expiry": "2026-11-10"
+        "expiry": "2026-11-10",
+        "email": "miniburger@gmail.com",
+        "password": null
     }
 };
 
