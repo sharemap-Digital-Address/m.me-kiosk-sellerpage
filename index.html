@@ -1,36 +1,68 @@
 <!DOCTYPE html>
 <html lang="tl">
 <head>
-  <style>
-    @font-face {
-      font-family: "Optimistic";
-      font-style: normal;
-      font-weight: 400 600;
-      font-display: swap;
-      src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
-    }
-    @font-face {
-      font-family: "Optimistic Mono";
-      font-style: normal;
-      font-weight: 400;
-      font-display: swap;
-      src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
-    }
-    :where(html) {
-      font-family: "Optimistic", system-ui, sans-serif;
-    }
-    :where(code, pre, kbd, samp) {
-      font-family: "Optimistic Mono", ui-monospace, monospace;
-    }
-  </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Instant Delivery Location Share</title>
 
-  <!-- Isama ang License Checker Script -->
-  <script src="./licenses.js"></script>
+  <!-- SUPABASE CLIENT LIBRARY & ACCESS CHECKER -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // I-verify agad ang access bago magpakita ang form
+    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function checkShareMapAccess() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pageId = urlParams.get('page') || localStorage.getItem('sharemap_page');
+
+      if (!pageId) {
+        alert("⚠️ Walang natagpung Store Page ID. Hindi maiproseso ang gateway.");
+        document.body.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>⚠️ Invalid Gateway Link</h2>";
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from('licenses')
+        .select('*')
+        .eq('username', pageId.toLowerCase())
+        .single();
+
+      const today = new Date().toISOString().split('T')[0];
+
+      if (error || !data || data.status === "INACTIVE") {
+        showBlockScreen("⚠️ Walang Lisensya / Inactive Account", "Ang store na ito ay wala pang lisensya sa ShareMap. Mangyaring makipag-ugnayan sa provider.");
+        return;
+      }
+
+      if (data.expiry && today > data.expiry) {
+        showBlockScreen("🚫 Expired License", `Ang inyong ${data.plan === 'BRONZE_MONTHLY' ? 'Bronze Monthly' : 'Trial'} Access ay nag-expire noong ${data.expiry}. Paki-renew ang inyong subscription sa ShareMap.`);
+        return;
+      }
+
+      console.log(`✅ Access Granted for ${pageId} [Plan: ${data.plan}]`);
+    }
+
+    function showBlockScreen(title, message) {
+        const CONTACT_LINK = "https://m.me/sharemap.digital.address"; 
+
+        document.body.innerHTML = `
+            <div style="background:#0f172a; color:#fff; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; font-family:sans-serif;">
+                <div style="background:#1e293b; padding:30px; border-radius:12px; border:1px solid #ef4444; max-width:400px; width:90%; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                    <h2 style="color:#ef4444; margin-top:0; font-size:20px;">${title}</h2>
+                    <p style="color:#cbd5e1; font-size:14px; line-height:1.5;">${message}</p>
+                    
+                    <a href="${CONTACT_LINK}" target="_blank" style="display:inline-block; margin-top:15px; background:#2563eb; color:#fff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; width:80%;">
+                        💬 Contact Developer / Renew Access
+                    </a>
+
+                    <hr style="border:0; border-top:1px solid #334155; margin:25px 0 15px 0;">
+                    <p style="font-size:11px; color:#94a3b8; margin:0;">ShareMap Licensing Protection &copy; 2026</p>
+                </div>
+            </div>
+        `;
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       checkShareMapAccess();
     });
@@ -70,19 +102,9 @@
       width: 100%;
       margin-top: 15px;
     }
-    .share-btn:active {
-      background-color: #006bce;
-    }
-    .status-msg {
-      font-size: 13px;
-      color: #0084FF;
-      margin-top: 12px;
-      font-weight: bold;
-      line-height: 1.4;
-    }
-    .status-msg.error {
-      color: #d93025;
-    }
+    .share-btn:active { background-color: #006bce; }
+    .status-msg { font-size: 13px; color: #0084FF; margin-top: 12px; font-weight: bold; line-height: 1.4; }
+    .status-msg.error { color: #d93025; }
     .buyer-info-box {
       background-color: #f8f9fa;
       border: 1px solid #e2e8f0;
@@ -101,10 +123,7 @@
       align-items: center;
       gap: 5px;
     }
-    .buyer-info-item {
-      margin-bottom: 4px;
-      word-break: break-word;
-    }
+    .buyer-info-item { margin-bottom: 4px; word-break: break-word; }
     .instruction-box {
       background-color: #eef6ff;
       border-left: 4px solid #0084FF;
@@ -128,16 +147,8 @@
       font-size: 13px;
       line-height: 1.4;
     }
-    .copyright-footer {
-      margin-top: 25px;
-      font-size: 12px;
-      color: #777777;
-    }
-    .branch-select-box {
-      margin-top: 10px;
-      margin-bottom: 10px;
-      text-align: left;
-    }
+    .copyright-footer { margin-top: 25px; font-size: 12px; color: #777777; }
+    .branch-select-box { margin-top: 10px; margin-bottom: 10px; text-align: left; }
     .branch-select-box select, .branch-select-box input {
       width: 100%;
       padding: 8px;
@@ -171,7 +182,6 @@
       <div class="buyer-info-item">🏠 <b>Landmark:</b> <span id="dispLandmark">-</span></div>
     </div>
 
-    <!-- OPTIONAL NEAREST BRANCH SELECTOR -->
     <div class="branch-select-box">
       <label style="font-size: 12px; font-weight: bold; color: #475569;">🏢 Nearest Branch (Opsyonal):</label>
       <input type="text" id="branchInput" placeholder="hal. SM Lucena / Main Branch" oninput="updateBranchDisplay()">
@@ -190,7 +200,6 @@
       <strong>📌 Pag bukas ng Messenger:</strong> Na-copy na rin sa Clipboard ang details! Pindutin nalang ang <b>SEND</b> o i-<b>PASTE</b> sa chatbox.
     </div>
 
-    <!-- DUAL DISPATCH: SMS OPTION SECTION -->
     <div style="margin-top: 25px; padding-top: 15px; border-top: 2px dashed #cbd5e1;">
       <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 14px; text-align: left;">
         📱 Opsyonal: I-send via Direct SMS / Text
@@ -374,7 +383,7 @@
           await navigator.clipboard.writeText(text);
           return true;
         } catch (err) {
-          console.log("Clipboard API failed, trying fallback...", err);
+          console.log("Clipboard API failed...", err);
         }
       }
       const textArea = document.createElement("textarea");
@@ -390,7 +399,6 @@
         textArea.remove();
         return true;
       } catch (err) {
-        console.error("Fallback copy failed", err);
         textArea.remove();
         return false;
       }
@@ -431,7 +439,6 @@
           
           const textAddress = await getStreetAddress(lat, lng);
 
-          // MESSENGER PAYLOAD LOADOUT WITH STORE NAME & SCHEDULE ORDER
           const shareText = `🏪 Store / Page: ${pageId}\n🏢 Nearest Branch: ${finalBranch}\n⏰ Schedule Order: ${finalSched}\n\nClient Order List:\n${formattedOrders}\n\nName: ${finalName}\nPhone: ${finalPhone}\nLandmark: ${finalLandmark}\n\n📍 Pin Location\nDigital Address (PlusCode): ${plusCode}\n\nMap link address: ${googleMapsUrl}\n\nGeo address: ${lat},${lng}\nText Address (OSM): ${textAddress}`;
 
           const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
@@ -449,7 +456,6 @@
       );
     }
 
-    // CONTACT PICKER AT SMS DISPATCH LOGIC
     async function selectContactPicker() {
       const supported = 'contacts' in navigator && 'ContactsManager' in window;
       if (supported) {
@@ -465,7 +471,7 @@
           console.log("Kanselado ang Contacts selection:", err);
         }
       } else {
-        alert("Hindi suportado ng browser na ito ang direct contact picker. Maari mong i-type nang manu-mano ang number.");
+        alert("Hindi suportado ng browser na ito ang direct contact picker.");
       }
     }
 
@@ -511,13 +517,12 @@
 
           statusEl.innerText = "📱 Binubuksan ang SMS Messaging App...";
 
-          // CLEAN SMS FORMAT WITH STORE NAME & SCHEDULE ORDER
           const smsBodyText = `SHAREMAP DELIVERY ORDER\n` +
                               `🏪 Store: ${pageId}\n` +
                               `🏢 Branch: ${finalBranch}\n` +
                               `⏰ Schedule: ${finalSched}\n\n` +
                               `🛒 Orders:\n• ${formattedOrders}\n\n` +
-                              `👤 Name: ${finalName}\n` +
+                              `👤 Name: ${nameVal}\n` +
                               `📞 Contact: ${finalPhone}\n` +
                               `🏡 Landmark: ${finalLandmark}\n\n` +
                               `📍 Plus Code: ${plusCode}\n` +
@@ -526,7 +531,6 @@
           const encodedText = encodeURIComponent(smsBodyText);
           const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
           const delimiter = isIOS ? '&' : '?';
-
           const smsUri = `sms:${targetPhone}${delimiter}body=${encodedText}`;
 
           window.location.href = smsUri;
@@ -546,4 +550,4 @@
   </footer>
 
 </body>
-  </html>
+</html>
