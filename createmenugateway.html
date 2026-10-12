@@ -46,6 +46,12 @@
     </div>
 
     <div id="managerSection" style="display: none;">
+        <!-- Top Bar with Logout Button -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 13px; color: #38bdf8;">Logged in as: <b id="activeStoreLabel"></b></span>
+            <button onclick="logoutStore()" style="width: auto; padding: 5px 10px; background: #dc2626; font-size: 11px;">Log Out / Switch Store</button>
+        </div>
+
         <!-- Add / Edit Menu Form -->
         <div class="card">
             <h3>Magdagdag / Mag-edit ng Item</h3>
@@ -98,8 +104,14 @@
     let currentMenuItems = [];
 
     window.onload = function() {
+        // Siguraduhing malinis ang inputs tuwing bagong session/load
+        document.getElementById('storeUsername').value = "";
+        document.getElementById('storePassword').value = "";
+
         const urlParams = new URLSearchParams(window.location.search);
-        const storeFromUrl = urlParams.get('page') || localStorage.getItem('sharemap_page');
+        const storeFromUrl = urlParams.get('page');
+        
+        // Babasahin LANG kung mayroong explicit na ?page= parameter sa URL
         if(storeFromUrl) {
             document.getElementById('storeUsername').value = storeFromUrl.toLowerCase();
             checkStorePasswordStatus();
@@ -185,10 +197,23 @@
         }
 
         activeStore = username;
+        document.getElementById('activeStoreLabel').innerText = "@" + username;
         document.getElementById('loginCard').style.display = 'none';
         document.getElementById('managerSection').style.display = 'block';
 
         loadStoreMenuItems();
+    }
+
+    function logoutStore() {
+        activeStore = "";
+        currentMenuItems = [];
+        document.getElementById('storeUsername').value = "";
+        document.getElementById('storePassword').value = "";
+        if(document.getElementById('statusNotice')) {
+            document.getElementById('statusNotice').style.display = "none";
+        }
+        document.getElementById('loginCard').style.display = 'block';
+        document.getElementById('managerSection').style.display = 'none';
     }
 
     async function loadStoreMenuItems() {
