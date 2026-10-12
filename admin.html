@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareMap Admin Dashboard</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #cbd5e1;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 15px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h2 { text-align: center; color: var(--primary); }
+        .card {
+            background: var(--card);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover { opacity: 0.9; }
+        .store-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .store-info div { font-size: 13px; color: #64748b; }
+        .actions button {
+            width: auto;
+            padding: 5px 8px;
+            font-size: 11px;
+            margin-left: 3px;
+        }
+        .badge {
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .active { background: #dcfce7; color: #166534; }
+        .expired { background: #fee2e2; color: #991b1b; }
+        .trial { background: #fef3c7; color: #92400e; }
+        .flex-row { display: flex; gap: 10px; }
+
+        /* Modal Popup Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 15px;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>ShareMap License Admin</h2>
+
+    <!-- GitHub Config Card -->
+    <div class="card">
+        <h3>GitHub Settings</h3>
+        <label>Personal Access Token (PAT):</label>
+        <input type="password" id="githubToken" placeholder="Ilagay ang iyong GitHub Token dito">
+        <button onclick="loadLicenses()">I-load ang mga Lisensya</button>
+    </div>
+
+    <!-- Add / Edit Store Card -->
+    <div class="card">
+        <h3>Magdagdag / Mag-update ng Store</h3>
+        <label>Page Username:</label>
+        <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena">
+        
+        <label>Plan Type:</label>
+        <select id="planType" onchange="autoSetExpiry()">
+            <option value="TRIAL_ACCESS">30-Day Free Trial</option>
+            <option value="BRONZE_MONTHLY">Bronze Monthly (P499/mo)</option>
+            <option value="PLATINUM_LIFETIME">Platinum Lifetime (No Expiry)</option>
+        </select>
+
+        <label>Expiry Date (YYYY-MM-DD):</label>
+        <input type="date" id="expiryDate">
+
+        <button onclick="saveStoreLicense()" style="background-color: #16a34a;">I-save sa GitHub</button>
+    </div>
+
+    <!-- Search & Filter Card -->
+    <div class="card">
+        <h3>Lista ng mga Store</h3>
+        <input type="text" id="searchInput" placeholder="Mag-search ng Store Username..." onkeyup="filterStores()">
+        
+        <div class="flex-row">
+            <select id="filterStatus" onchange="filterStores()">
+                <option value="all">Lahat</option>
+                <option value="active">Active</option>
+                <option value="trial">Trial</option>
+                <option value="expired">Expired</option>
+            </select>
+        </div>
+
+        <div id="storeListContainer" style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
+            <p style="text-align: center; color: #94a3b8;">I-load muna ang token para makita ang listahan.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Activation Dialog -->
+<div class="modal-overlay" id="emailModal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color:#2563eb;">🚀 Send Activation / Renewal Link</h3>
+        <p style="font-size:13px; color:#64748b;">Nai-save na sa GitHub! Ilagay ang detalye para ma-generate ang kaukulang email & template.</p>
+        
+        <label>Pangalan ng Store / Admin Name:</label>
+        <input type="text" id="clientName" placeholder="halimbawa: Marjevin Soy Products Admin">
+
+        <label>Email Address ng Client:</label>
+        <input type="email" id="clientEmail" placeholder="halimbawa: client@gmail.com">
+
+        <button onclick="sendActivationEmail()" style="background-color: #2563eb; margin-top: 10px;">📧 I-open ang Email App & Copy Template</button>
+        <button onclick="closeModal()" style="background-color: #64748b; margin-top: 0;">Isara (Skip)</button>
+    </div>
+</div>
+
+<script>
+    const REPO_OWNER = "sharemap-digital-address";
+    const REPO_NAME = "sendmessage-to-sellerpage";
+    const FILE_PATH = "licenses.js";
+    const BASE_GATEWAY_URL = "https://sharemap-digital-address.github.io/sendmessage-to-sellerpage/index.html";
+
+    let licensesData = {};
+    let fileSha = "";
+    let lastSavedUsername = "";
+    let lastSavedPlan = "";
+    let lastSavedExpiry = "";
+
+    window.onload = function() {
+        if(localStorage.getItem('gh_token')) {
+            document.getElementById('githubToken').value = localStorage.getItem('gh_token');
+            loadLicenses();
+        }
+        autoSetExpiry();
+    };
+
+    function autoSetExpiry() {
+        let plan = document.getElementById('planType').value;
+        let d = new Date();
+
+        if (plan === "PLATINUM_LIFETIME") {
+            document.getElementById('expiryDate').value = "";
+            document.getElementById('expiryDate').disabled = true;
+        } else {
+            document.getElementById('expiryDate').disabled = false;
+            let days = 30;
+            d.setDate(d.getDate() + days);
+            document.getElementById('expiryDate').value = d.toISOString().split('T')[0];
+        }
+    }
+
+    async function loadLicenses() {
+        const token = document.getElementById('githubToken').value.trim();
+        if(!token) {
+            alert("Pakilagay muna ang iyong GitHub Personal Access Token!");
+            return;
+        }
+        localStorage.setItem('gh_token', token);
+
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+        
+        try {
+            let response = await fetch(url, {
+                headers: { 'Authorization': `token ${token}` }
+            });
+            if(!response.ok) throw new Error("Nabigong basahin ang file mula sa GitHub.");
+            
+            let data = await response.json();
+            fileSha = data.sha;
+            
+            let decodedContent = decodeURIComponent(escape(atob(data.content)));
+            
+            let start = decodedContent.indexOf('SHAREMAP_LICENSES');
+            if (start !== -1) {
+                let assignment = decodedContent.substring(start);
+                let objectStart = assignment.indexOf('{');
+                let bracketCount = 0;
+                let objectEnd = -1;
+                for (let i = objectStart; i < assignment.length; i++) {
+                    if (assignment[i] === '{') bracketCount++;
+                    else if (assignment[i] === '}') {
+                        bracketCount--;
+                        if (bracketCount === 0) {
+                            objectEnd = i;
+                            break;
+                        }
+                    }
+                }
+                
+                if (objectStart !== -1 && objectEnd !== -1) {
+                    let jsonString = assignment.substring(objectStart, objectEnd + 1);
+                    licensesData = eval('(' + jsonString + ')');
+                } else {
+                    licensesData = {};
+                }
+            } else {
+                licensesData = {};
+            }
+            
+            renderStores(licensesData);
+            alert("Tagumpay na nai-load ang mga lisensya!");
+        } catch (error) {
+            alert("Error sa pag-parse: " + error.message);
+        }
+    }
+
+    function renderStores(data) {
+        const container = document.getElementById('storeListContainer');
+        container.innerHTML = "";
+
+        let keys = Object.keys(data);
+        if(keys.length === 0) {
+            container.innerHTML = `<p style="text-align: center; color: #94a3b8;">Walang nakitang account.</p>`;
+            return;
+        }
+
+        let today = new Date().toISOString().split('T')[0];
+
+        keys.forEach(username => {
+            let store = data[username];
+            let statusClass = "active";
+            let statusText = "Active";
+
+            if (store.expiry && today > store.expiry) {
+                statusClass = "expired";
+                statusText = "Expired";
+            } else if (store.plan === "TRIAL_ACCESS") {
+                statusClass = "trial";
+                statusText = "Trial";
+            }
+
+            let expiryLabel = store.expiry ? store.expiry : "Lifetime";
+
+            let div = document.createElement('div');
+            div.className = "store-item";
+            div.innerHTML = `
+                <div class="store-info">
+                    <strong>@${username}</strong> <span class="badge ${statusClass}">${statusText}</span>
+                    <div>Plan: ${store.plan} | Expiry: ${expiryLabel}</div>
+                </div>
+                <div class="actions">
+                    <button onclick="renewStore('${username}')" style="background:#8b5cf6;">Renew</button>
+                    <button onclick="editStore('${username}')" style="background:#2563eb;">Edit</button>
+                    <button onclick="deleteStore('${username}')" style="background:#dc2626;">Del</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function filterStores() {
+        let query = document.getElementById('searchInput').value.toLowerCase();
+        let statusFilter = document.getElementById('filterStatus').value;
+        let today = new Date().toISOString().split('T')[0];
+
+        let filtered = {};
+
+        Object.keys(licensesData).forEach(username => {
+            let store = licensesData[username];
+            let matchName = username.toLowerCase().includes(query);
+            let isExpired = store.expiry && today > store.expiry;
+
+            let keep = true;
+
+            if(statusFilter === "active" && (isExpired || store.plan === "TRIAL_ACCESS")) keep = false;
+            if(statusFilter === "trial" && store.plan !== "TRIAL_ACCESS") keep = false;
+            if(statusFilter === "expired" && !isExpired) keep = false;
+
+            if(matchName && keep) {
+                filtered[username] = store;
+            }
+        });
+
+        renderStores(filtered);
+    }
+
+    function editStore(username) {
+        let store = licensesData[username];
+        if(store) {
+            document.getElementById('storeUsername').value = username;
+            document.getElementById('planType').value = store.plan;
+            document.getElementById('expiryDate').value = store.expiry || "";
+            if (store.plan === "PLATINUM_LIFETIME") {
+                document.getElementById('expiryDate').disabled = true;
+            } else {
+                document.getElementById('expiryDate').disabled = false;
+            }
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+    }
+
+    function renewStore(username) {
+        document.getElementById('storeUsername').value = username;
+        document.getElementById('planType').value = "BRONZE_MONTHLY";
+        
+        let d = new Date();
+        d.setDate(d.getDate() + 30);
+        
+        document.getElementById('expiryDate').value = d.toISOString().split('T')[0];
+        document.getElementById('expiryDate').disabled = false;
+
+        window.scrollTo({top: 0, behavior: 'smooth'});
+        alert(`Nai-set na si @${username} sa Bronze Plan (+30 Days). Pindutin ang 'I-save sa GitHub' para kumpirmahin at magpadala ng email!`);
+    }
+
+    async function saveStoreLicense() {
+        const token = document.getElementById('githubToken').value.trim();
+        const username = document.getElementById('storeUsername').value.trim().toLowerCase();
+        const plan = document.getElementById('planType').value;
+        const expiry = (plan === "PLATINUM_LIFETIME") ? null : document.getElementById('expiryDate').value;
+
+        if(!token || !username) {
+            alert("Pakipunan ang store username.");
+            return;
+        }
+
+        licensesData[username] = {
+            status: "ACTIVE",
+            plan: plan,
+            expiry: expiry
+        };
+
+        lastSavedUsername = username;
+        lastSavedPlan = plan;
+        lastSavedExpiry = expiry;
+
+        await updateGitHubFile(true); // true = buksan ang email dialog
+    }
+
+    async function deleteStore(username) {
+        if(!confirm(`Sigurado ka bang gusto mong tanggalin si @${username}?`)) return;
+
+        delete licensesData[username];
+        await updateGitHubFile(false); // false = HUWAG buksan ang email dialog
+    }
+
+    async function updateGitHubFile(showEmailModal = false) {
+        const token = document.getElementById('githubToken').value.trim();
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+
+        let headerComments = `// ==========================================\n// SHAREMAP CENTRAL LICENSE DATABASE\n// ==========================================\n\n`;
+        
+        let accessFuncCode = `function checkShareMapAccess() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageId = urlParams.get('page') || localStorage.getItem('sharemap_page');
+
+    if (!pageId) {
+        alert("⚠️ Walang natagpung Store Page ID. Hindi maiproseso ang gateway.");
+        document.body.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>⚠️ Invalid Gateway Link</h2>";
+        return;
+    }
+
+    const license = SHAREMAP_LICENSES[pageId];
+    const today = new Date().toISOString().split('T')[0];
+
+    if (!license || license.status === "INACTIVE") {
+        showBlockScreen("⚠️ Walang Lisensya / Inactive Account", "Ang store na ito ay wala pang lisensya sa ShareMap. Mangyaring makipag-ugnayan sa provider.");
+        return;
+    }
+
+    if (license.expiry && today > license.expiry) {
+        showBlockScreen("🚫 Expired License", \`Ang inyong \${license.plan === 'BRONZE_MONTHLY' ? 'Bronze Monthly' : 'Trial'} Access ay nag-expire noong \${license.expiry}. Paki-renew ang inyong subscription sa ShareMap.\`);
+        return;
+    }
+
+    console.log(\`✅ Access Granted for \${pageId} [Plan: \${license.plan}]\`);
+}`;
+
+        let blockScreenCode = `function showBlockScreen(title, message) {
+    const CONTACT_LINK = "https://m.me/sharemap.digital.address"; 
+
+    document.body.innerHTML = \`
+        <div style="background:#0f172a; color:#fff; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; font-family:sans-serif;">
+            <div style="background:#1e293b; padding:30px; border-radius:12px; border:1px solid #ef4444; max-width:400px; width:90%; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                <h2 style="color:#ef4444; margin-top:0; font-size:20px;">\${title}</h2>
+                <p style="color:#cbd5e1; font-size:14px; line-height:1.5;">\${message}</p>
+                
+                <a href="\${CONTACT_LINK}" target="_blank" style="display:inline-block; margin-top:15px; background:#2563eb; color:#fff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; width:80%;">
+                    💬 Contact Developer / Renew Access
+                </a>
+
+                <hr style="border:0; border-top:1px solid #334155; margin:25px 0 15px 0;">
+                <p style="font-size:11px; color:#94a3b8; margin:0;">ShareMap Licensing Protection &copy; 2026</p>
+            </div>
+        </div>
+    \`;
+}`;
+
+        let newFileContent = headerComments + "const SHAREMAP_LICENSES = " + JSON.stringify(licensesData, null, 4) + ";\n\n" + accessFuncCode + "\n\n" + blockScreenCode;
+        
+        let encodedContent = btoa(unescape(encodeURIComponent(newFileContent)));
+
+        let bodyData = {
+            message: "Update SHAREMAP_LICENSES via Admin Dashboard",
+            content: encodedContent,
+            sha: fileSha
+        };
+
+        try {
+            let response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(bodyData)
+            });
+
+            if(!response.ok) throw new Error("Nabigong i-save ang mga pagbabago sa GitHub.");
+
+            let resJson = await response.json();
+            fileSha = resJson.content.sha;
+            
+            renderStores(licensesData);
+            
+            if (showEmailModal) {
+                document.getElementById('clientName').value = lastSavedUsername;
+                document.getElementById('emailModal').style.display = 'flex';
+            } else {
+                alert("Tagumpay na nabura ang store sa GitHub!");
+            }
+
+        } catch (error) {
+            alert("Error: " + error.message);
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('emailModal').style.display = 'none';
+    }
+
+    function sendActivationEmail() {
+        const storeAdmin = document.getElementById('clientName').value.trim() || lastSavedUsername;
+        const email = document.getElementById('clientEmail').value.trim();
+        const gatewayLink = `${BASE_GATEWAY_URL}?page=${lastSavedUsername}`;
+
+        let subject = "";
+        let emailBody = "";
+
+        if (lastSavedPlan === "TRIAL_ACCESS") {
+            subject = "🚀 Ang iyong ShareMap Order Gateway Link & Setup Guide (30-Day Free Trial Activated!)";
+            emailBody = `Magandang araw po, ${storeAdmin}! 👋
+
+Maraming salamat sa pag-interes sa ShareMap Order Gateway System. Opisyal nang naka-activate ang iyong 30-Day Free Trial simula ngayong araw!
+
+Ito ang iyong sariling automated ordering link na maaari mong ikabit sa iyong Facebook Page:
+🔗 Iyong Order Link: ${gatewayLink}
+
+📋 Gabay kung paano ito ikakabit sa iyong Facebook Page:
+
+* Ilagay bilang 'Order Now' Button: Pumunta sa iyong Facebook Page settings, i-edit ang Action Button, at piliin ang "Order Now" o "Start Order" gamit ang link sa taas.
+
+* I-set up ang Messenger Auto-Reply: Para sa mabilis na transaksyon, kopyahin at gamitin ang gabay na ito para sa mga nagme-message sa page mo:
+
+Sample Automation:
+
+"Hi! Thanks for messaging ${storeAdmin}! Yes, we deliver po. Delivery fee charges may apply.
+
+📍 Located at: [Ilagay ang address/landmark dito]
+📝 To order, kindly click the Order Button below to fill up the form and view our menu, then send back to us!
+[I-attach ang menu o logo image dito]
+Mode of Payments: COD / GCASH
+🛒 [ Click Here to Start Your Order & GPS Pin ] -> ${gatewayLink}"
+
+Malaya mo itong magagamit nang walang bayad sa loob ng 30 araw (Expiry Date: ${lastSavedExpiry}). Pagkatapos ng trial, maaari kang magpatuloy sa pamamagitan ng ating Bronze Plan (₱499/month) o mag-upgrade sa Platinum Lifetime (₱2,999) para wala ka nang isiping buwanang bayarin.
+
+Kung may tanong ka o kailangan ng tulong sa pag-setup, mag-reply lamang sa email na ito o mag-message sa aming Page. Happy selling!
+
+Magalang na sumasainyo,
+Jayrome
+ShareMap Developer & Administrator`;
+
+        } else if (lastSavedPlan === "BRONZE_MONTHLY") {
+            subject = "🎉 Active Bronze Monthly Subscription - ShareMap Gateway (P499/mo)";
+            emailBody = `Magandang araw po, ${storeAdmin}! 👋
+
+Maraming salamat sa iyong tiwala at sa pagtangkilik sa ShareMap Order Gateway System! 
+
+Ang inyong Bronze Monthly Plan (₱499/month) ay matagumpay nang naka-activate/na-renew. Ang inyong access ay valid hanggang: 🗓️ ${lastSavedExpiry}.
+
+Ito ang inyong live automated ordering link:
+🔗 Order Gateway Link: ${gatewayLink}
+
+Maaari niyo itong ipagpatuloy na gamitin sa inyong 'Order Now' Action Button at Messenger Auto-Reply Greetings sa Facebook Page.
+
+Paalala: Magpapadala kami ng pahabol na paalala bago sumapit ang petsa ng expiry (${lastSavedExpiry}) para sa inyong susunod na renewal.
+
+Maraming salamat at tuloy-tuloy sa pagpapalago ng negosyo!
+
+Magalang na sumasainyo,
+Jayrome
+ShareMap Developer & Administrator`;
+
+        } else if (lastSavedPlan === "PLATINUM_LIFETIME") {
+            subject = "👑 VIP Welcome! Platinum Lifetime Access Activated - ShareMap Gateway";
+            emailBody = `Magandang araw po, ${storeAdmin}! 👋
+
+Isang malaking karangalan at maraming salamat sa pag-avail ng aming Platinum Lifetime Access (₱2,999)! 
+
+Opisyal nang LIFETIME at WALANG EXPIRY ang inyong lisensya sa ShareMap Order Gateway System. Hindi niyo na kailangang mag-alala sa anumang buwanang bayarin!
+
+Ito ang inyong permanenteng automated ordering link:
+🔗 Order Gateway Link: ${gatewayLink}
+
+Maraming salamat sa inyong buong suporta sa ShareMap. Nais namin ang patuloy na tagumpay at paglago ng inyong negosyo!
+
+Magalang na sumasainyo,
+Jayrome
+ShareMap Developer & Administrator`;
+        }
+
+        // Kopyahin sa Clipboard
+        navigator.clipboard.writeText(emailBody).then(() => {
+            alert("✅ Na-copy na sa clipboard ang kumpletong template message!");
+        }).catch(err => {
+            console.log("Clipboard error: ", err);
+        });
+
+        // Buksan ang Email App
+        const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+        window.location.href = mailtoUrl;
+
+        closeModal();
+    }
+</script>
+
+</body>
+</html>
