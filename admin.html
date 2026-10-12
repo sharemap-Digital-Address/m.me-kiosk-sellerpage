@@ -113,6 +113,9 @@
         <h3>Magdagdag / Mag-update ng Store</h3>
         <label>Page Username:</label>
         <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena">
+
+        <label>Client Email Address:</label>
+        <input type="email" id="clientEmailInput" placeholder="halimbawa: client@gmail.com">
         
         <label>Plan Type:</label>
         <select id="planType" onchange="autoSetExpiry()">
@@ -151,28 +154,23 @@
 <div class="modal-overlay" id="emailModal">
     <div class="modal-content">
         <h3 style="margin-top:0; color:#2563eb;">🚀 Send Activation / Renewal Link</h3>
-        <p style="font-size:13px; color:#64748b;">Nai-save na sa GitHub! Ilagay ang detalye para ma-generate ang kaukulang email & template.</p>
+        <p style="font-size:13px; color:#64748b;">Nai-save na sa GitHub! Pindutin ang button sa ibaba para kopyahin ang template at buksan ang email.</p>
         
-        <label>Pangalan ng Store / Admin Name:</label>
-        <input type="text" id="clientName" placeholder="halimbawa: Marjevin Soy Products Admin">
-
-        <label>Email Address ng Client:</label>
-        <input type="email" id="clientEmail" placeholder="halimbawa: client@gmail.com">
-
         <button onclick="sendActivationEmail()" style="background-color: #2563eb; margin-top: 10px;">📧 I-open ang Email App & Copy Template</button>
-        <button onclick="closeModal()" style="background-color: #64748b; margin-top: 0;">Isara (Skip)</button>
+        <button onclick="closeModal()" style="background-color: #64748b; margin-top: 5px;">Isara (Skip)</button>
     </div>
 </div>
 
 <script>
     const REPO_OWNER = "sharemap-digital-address";
-    const REPO_NAME = "sendmessage-to-sellerpage";
+    const REPO_NAME = "m.me-kiosk-sellerpage";
     const FILE_PATH = "licenses.js";
-    const BASE_GATEWAY_URL = "https://sharemap-digital-address.github.io/sendmessage-to-sellerpage/index.html";
+    const BASE_GATEWAY_URL = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/multigateway.html";
 
     let licensesData = {};
     let fileSha = "";
     let lastSavedUsername = "";
+    let lastSavedEmail = "";
     let lastSavedPlan = "";
     let lastSavedExpiry = "";
 
@@ -280,12 +278,14 @@
             }
 
             let expiryLabel = store.expiry ? store.expiry : "Lifetime";
+            let emailLabel = store.email ? store.email : "Wala pang email";
 
             let div = document.createElement('div');
             div.className = "store-item";
             div.innerHTML = `
                 <div class="store-info">
                     <strong>@${username}</strong> <span class="badge ${statusClass}">${statusText}</span>
+                    <div>Email: ${emailLabel}</div>
                     <div>Plan: ${store.plan} | Expiry: ${expiryLabel}</div>
                 </div>
                 <div class="actions">
@@ -328,6 +328,7 @@
         let store = licensesData[username];
         if(store) {
             document.getElementById('storeUsername').value = username;
+            document.getElementById('clientEmailInput').value = store.email || "";
             document.getElementById('planType').value = store.plan;
             document.getElementById('expiryDate').value = store.expiry || "";
             if (store.plan === "PLATINUM_LIFETIME") {
@@ -340,7 +341,9 @@
     }
 
     function renewStore(username) {
+        let store = licensesData[username] || {};
         document.getElementById('storeUsername').value = username;
+        document.getElementById('clientEmailInput').value = store.email || "";
         document.getElementById('planType').value = "BRONZE_MONTHLY";
         
         let d = new Date();
@@ -356,32 +359,39 @@
     async function saveStoreLicense() {
         const token = document.getElementById('githubToken').value.trim();
         const username = document.getElementById('storeUsername').value.trim().toLowerCase();
+        const email = document.getElementById('clientEmailInput').value.trim();
         const plan = document.getElementById('planType').value;
         const expiry = (plan === "PLATINUM_LIFETIME") ? null : document.getElementById('expiryDate').value;
 
         if(!token || !username) {
-            alert("Pakipunan ang store username.");
+            alert("Pakipunan ang store username at GitHub token.");
             return;
         }
+
+        // Panatilihin ang lumang password kung meron na, o null kung bago
+        let existingPassword = (licensesData[username] && licensesData[username].password) ? licensesData[username].password : null;
 
         licensesData[username] = {
             status: "ACTIVE",
             plan: plan,
-            expiry: expiry
+            expiry: expiry,
+            email: email ? email : null,
+            password: existingPassword
         };
 
         lastSavedUsername = username;
+        lastSavedEmail = email;
         lastSavedPlan = plan;
         lastSavedExpiry = expiry;
 
-        await updateGitHubFile(true); // true = buksan ang email dialog
+        await updateGitHubFile(true);
     }
 
     async function deleteStore(username) {
         if(!confirm(`Sigurado ka bang gusto mong tanggalin si @${username}?`)) return;
 
         delete licensesData[username];
-        await updateGitHubFile(false); // false = HUWAG buksan ang email dialog
+        await updateGitHubFile(false);
     }
 
     async function updateGitHubFile(showEmailModal = false) {
@@ -464,7 +474,6 @@
             renderStores(licensesData);
             
             if (showEmailModal) {
-                document.getElementById('clientName').value = lastSavedUsername;
                 document.getElementById('emailModal').style.display = 'flex';
             } else {
                 alert("Tagumpay na nabura ang store sa GitHub!");
@@ -480,16 +489,15 @@
     }
 
     function sendActivationEmail() {
-        const storeAdmin = document.getElementById('clientName').value.trim() || lastSavedUsername;
-        const email = document.getElementById('clientEmail').value.trim();
         const gatewayLink = `${BASE_GATEWAY_URL}?page=${lastSavedUsername}`;
+        const emailToSend = lastSavedEmail || "";
 
         let subject = "";
         let emailBody = "";
 
         if (lastSavedPlan === "TRIAL_ACCESS") {
             subject = "🚀 Ang iyong ShareMap Order Gateway Link & Setup Guide (30-Day Free Trial Activated!)";
-            emailBody = `Magandang araw po, ${storeAdmin}! 👋
+            emailBody = `Magandang araw po! 👋
 
 Maraming salamat sa pag-interes sa ShareMap Order Gateway System. Opisyal nang naka-activate ang iyong 30-Day Free Trial simula ngayong araw!
 
@@ -497,24 +505,11 @@ Ito ang iyong sariling automated ordering link na maaari mong ikabit sa iyong Fa
 🔗 Iyong Order Link: ${gatewayLink}
 
 📋 Gabay kung paano ito ikakabit sa iyong Facebook Page:
-
 * Ilagay bilang 'Order Now' Button: Pumunta sa iyong Facebook Page settings, i-edit ang Action Button, at piliin ang "Order Now" o "Start Order" gamit ang link sa taas.
 
-* I-set up ang Messenger Auto-Reply: Para sa mabilis na transaksyon, kopyahin at gamitin ang gabay na ito para sa mga nagme-message sa page mo:
+Malaya mo itong magagamit nang walang bayad sa loob ng 30 araw (Expiry Date: ${lastSavedExpiry}). Pagkatapos ng trial, maaari kang magpatuloy sa pamamagitan ng ating Bronze Plan o Platinum Lifetime.
 
-Sample Automation:
-
-"Hi! Thanks for messaging ${storeAdmin}! Yes, we deliver po. Delivery fee charges may apply.
-
-📍 Located at: [Ilagay ang address/landmark dito]
-📝 To order, kindly click the Order Button below to fill up the form and view our menu, then send back to us!
-[I-attach ang menu o logo image dito]
-Mode of Payments: COD / GCASH
-🛒 [ Click Here to Start Your Order & GPS Pin ] -> ${gatewayLink}"
-
-Malaya mo itong magagamit nang walang bayad sa loob ng 30 araw (Expiry Date: ${lastSavedExpiry}). Pagkatapos ng trial, maaari kang magpatuloy sa pamamagitan ng ating Bronze Plan (₱499/month) o mag-upgrade sa Platinum Lifetime (₱2,999) para wala ka nang isiping buwanang bayarin.
-
-Kung may tanong ka o kailangan ng tulong sa pag-setup, mag-reply lamang sa email na ito o mag-message sa aming Page. Happy selling!
+Kung may tanong ka o kailangan ng tulong, mag-reply lamang sa email na ito. Happy selling!
 
 Magalang na sumasainyo,
 Jayrome
@@ -522,7 +517,7 @@ ShareMap Developer & Administrator`;
 
         } else if (lastSavedPlan === "BRONZE_MONTHLY") {
             subject = "🎉 Active Bronze Monthly Subscription - ShareMap Gateway (P499/mo)";
-            emailBody = `Magandang araw po, ${storeAdmin}! 👋
+            emailBody = `Magandang araw po! 👋
 
 Maraming salamat sa iyong tiwala at sa pagtangkilik sa ShareMap Order Gateway System! 
 
@@ -530,10 +525,6 @@ Ang inyong Bronze Monthly Plan (₱499/month) ay matagumpay nang naka-activate/n
 
 Ito ang inyong live automated ordering link:
 🔗 Order Gateway Link: ${gatewayLink}
-
-Maaari niyo itong ipagpatuloy na gamitin sa inyong 'Order Now' Action Button at Messenger Auto-Reply Greetings sa Facebook Page.
-
-Paalala: Magpapadala kami ng pahabol na paalala bago sumapit ang petsa ng expiry (${lastSavedExpiry}) para sa inyong susunod na renewal.
 
 Maraming salamat at tuloy-tuloy sa pagpapalago ng negosyo!
 
@@ -543,32 +534,34 @@ ShareMap Developer & Administrator`;
 
         } else if (lastSavedPlan === "PLATINUM_LIFETIME") {
             subject = "👑 VIP Welcome! Platinum Lifetime Access Activated - ShareMap Gateway";
-            emailBody = `Magandang araw po, ${storeAdmin}! 👋
+            emailBody = `Magandang araw po! 👋
 
 Isang malaking karangalan at maraming salamat sa pag-avail ng aming Platinum Lifetime Access (₱2,999)! 
 
-Opisyal nang LIFETIME at WALANG EXPIRY ang inyong lisensya sa ShareMap Order Gateway System. Hindi niyo na kailangang mag-alala sa anumang buwanang bayarin!
+Opisyal nang LIFETIME at WALANG EXPIRY ang inyong lisensya sa ShareMap Order Gateway System.
 
 Ito ang inyong permanenteng automated ordering link:
 🔗 Order Gateway Link: ${gatewayLink}
 
-Maraming salamat sa inyong buong suporta sa ShareMap. Nais namin ang patuloy na tagumpay at paglago ng inyong negosyo!
+Maraming salamat sa inyong buong suporta sa ShareMap!
 
 Magalang na sumasainyo,
 Jayrome
 ShareMap Developer & Administrator`;
         }
 
-        // Kopyahin sa Clipboard
         navigator.clipboard.writeText(emailBody).then(() => {
             alert("✅ Na-copy na sa clipboard ang kumpletong template message!");
         }).catch(err => {
             console.log("Clipboard error: ", err);
         });
 
-        // Buksan ang Email App
-        const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-        window.location.href = mailtoUrl;
+        if (emailToSend) {
+            const mailtoUrl = `mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+            window.location.href = mailtoUrl;
+        } else {
+            alert("⚠️ Walang nailagay na email address, ngunit naka-copy na sa clipboard ang message template.");
+        }
 
         closeModal();
     }
