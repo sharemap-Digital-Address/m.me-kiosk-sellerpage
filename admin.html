@@ -8,10 +8,10 @@
     <style>
         :root {
             --primary: #2563eb;
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --text: #1e293b;
-            --border: #cbd5e1;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --border: #334155;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -24,13 +24,14 @@
             max-width: 600px;
             margin: 0 auto;
         }
-        h2 { text-align: center; color: var(--primary); }
+        h2 { text-align: center; color: #38bdf8; margin-top: 0; }
         .card {
             background: var(--card);
             padding: 15px;
             border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             margin-bottom: 15px;
+            border: 1px solid var(--border);
         }
         input, select, button {
             width: 100%;
@@ -41,6 +42,8 @@
             border-radius: 6px;
             box-sizing: border-box;
             font-size: 14px;
+            background-color: #0f172a;
+            color: #fff;
         }
         button {
             background-color: var(--primary);
@@ -52,12 +55,12 @@
         button:hover { opacity: 0.9; }
         .store-item {
             padding: 12px 10px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .store-info div { font-size: 13px; color: #64748b; margin-top: 2px; }
+        .store-info div { font-size: 13px; color: #94a3b8; margin-top: 2px; }
         .actions button {
             width: auto;
             padding: 5px 8px;
@@ -71,16 +74,16 @@
             font-size: 11px;
             font-weight: bold;
         }
-        .active { background: #dcfce7; color: #166534; }
-        .expired { background: #fee2e2; color: #991b1b; }
-        .trial { background: #fef3c7; color: #92400e; }
-        .pwd-set { background: #e0f2fe; color: #0369a1; }
-        .pwd-unset { background: #fef3c7; color: #b45309; }
+        .active { background: #166534; color: #dcfce7; }
+        .expired { background: #991b1b; color: #fee2e2; }
+        .trial { background: #854d0e; color: #fef08a; }
+        .pwd-set { background: #0369a1; color: #e0f2fe; }
+        .pwd-unset { background: #a16207; color: #fef3c7; }
 
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.8);
             display: none;
             justify-content: center;
             align-items: center;
@@ -88,52 +91,72 @@
             padding: 15px;
         }
         .modal-content {
-            background: #fff;
+            background: var(--card);
             padding: 20px;
             border-radius: 12px;
             max-width: 480px;
             width: 100%;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>ShareMap License Admin</h2>
+    <h2>🛡️ ShareMap Admin Portal</h2>
 
-    <!-- Add / Edit Store Card -->
-    <div class="card">
-        <h3>Magdagdag / Mag-update ng Store</h3>
-        <label>Page Username:</label>
-        <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena">
-
-        <label>Client Email Address:</label>
-        <input type="email" id="clientEmailInput" placeholder="halimbawa: client@gmail.com">
-
-        <label>Store Password (Admin Reset / Set):</label>
-        <input type="text" id="storePasswordInput" placeholder="Iwanang blanko kung si client ang magse-set">
+    <!-- MASTER ADMIN LOGIN CARD -->
+    <div class="card" id="adminLoginCard">
+        <h3>🔑 Master Admin Verification</h3>
+        <p style="font-size:12px; color:#94a3b8;">Mangyaring i-type ang Master Admin Password para buksan ang dashboard controls:</p>
         
-        <label>Plan Type:</label>
-        <select id="planType" onchange="autoSetExpiry()">
-            <option value="TRIAL_ACCESS">30-Day Free Trial</option>
-            <option value="BRONZE_MONTHLY">Bronze Monthly (P499/mo)</option>
-            <option value="PLATINUM_LIFETIME">Platinum Lifetime (No Expiry)</option>
-        </select>
+        <label>Master Passcode:</label>
+        <input type="password" id="masterPasswordInput" placeholder="I-type ang Master Admin Password">
 
-        <label>Expiry Date (YYYY-MM-DD):</label>
-        <input type="date" id="expiryDate">
-
-        <button onclick="saveStoreLicense()" style="background-color: #16a34a;">I-save sa Supabase</button>
+        <button onclick="verifyMasterAdmin()" style="background-color: #2563eb;">Verify & Unlock Admin</button>
     </div>
 
-    <!-- Search & Filter Card -->
-    <div class="card">
-        <h3>Lista ng mga Store</h3>
-        <input type="text" id="searchInput" placeholder="Mag-search ng Store Username..." onkeyup="filterStores()">
-        
-        <div id="storeListContainer" style="max-height: 350px; overflow-y: auto; margin-top: 10px;">
-            <p style="text-align: center; color: #94a3b8;">Lino-load ang listahan mula sa Supabase...</p>
+    <!-- MAIN ADMIN DASHBOARD SECTION (MGA KONTROL AT LISTAHAN) -->
+    <div id="adminDashboardSection" style="display: none;">
+        <!-- Add / Edit Store Card -->
+        <div class="card">
+            <h3>Magdagdag / Mag-update ng Store</h3>
+            <input type="hidden" id="editStoreId" value="">
+            
+            <label>Page Username:</label>
+            <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena">
+
+            <label>Client Email Address:</label>
+            <input type="email" id="clientEmailInput" placeholder="halimbawa: client@gmail.com">
+
+            <label>Store Password (Admin Reset / Set):</label>
+            <input type="text" id="storePasswordInput" placeholder="Iwanang blanko kung si client ang magse-set">
+            
+            <label>Plan Type:</label>
+            <select id="planType" onchange="autoSetExpiry()">
+                <option value="TRIAL_ACCESS">30-Day Free Trial</option>
+                <option value="BRONZE_MONTHLY">Bronze Monthly (P499/mo)</option>
+                <option value="PLATINUM_LIFETIME">Platinum Lifetime (No Expiry)</option>
+            </select>
+
+            <label>Expiry Date (YYYY-MM-DD):</label>
+            <input type="date" id="expiryDate">
+
+            <button onclick="saveStoreLicense()" style="background-color: #16a34a;">I-save sa Supabase</button>
+        </div>
+
+        <!-- Search & Filter Card -->
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">Lista ng mga Store</h3>
+                <button onclick="logoutAdmin()" style="width:auto; padding:5px 10px; background:#dc2626; font-size:11px;">Lock Dashboard</button>
+            </div>
+            <input type="text" id="searchInput" placeholder="Mag-search ng Store Username..." onkeyup="filterStores()" style="margin-top:10px;">
+            
+            <div id="storeListContainer" style="max-height: 350px; overflow-y: auto; margin-top: 10px;">
+                <p style="text-align: center; color: #94a3b8;">Lino-load ang listahan mula sa Supabase...</p>
+            </div>
         </div>
     </div>
 </div>
@@ -141,11 +164,11 @@
 <!-- Modal Activation Dialog -->
 <div class="modal-overlay" id="emailModal">
     <div class="modal-content">
-        <h3 style="margin-top:0; color:#2563eb;">🚀 Send Activation / Setup Links</h3>
-        <p style="font-size:13px; color:#64748b;">Nai-save na sa Supabase! Pindutin ang button sa ibaba para kopyahin ang template at buksan ang email App.</p>
+        <h3 style="margin-top:0; color:#38bdf8;">🚀 Send Activation / Setup Links</h3>
+        <p style="font-size:13px; color:#cbd5e1;">Nai-save na sa Supabase! Pindutin ang button sa ibaba para kopyahin ang template at buksan ang email App.</p>
         
         <button onclick="sendActivationEmail()" style="background-color: #2563eb; margin-top: 10px;">📧 I-open ang Email App & Copy Template</button>
-        <button onclick="closeModal()" style="background-color: #64748b; margin-top: 5px;">Isara (Skip)</button>
+        <button onclick="closeModal()" style="background-color: #475569; margin-top: 5px;">Isara (Skip)</button>
     </div>
 </div>
 
@@ -154,6 +177,9 @@
     const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
     const BASE_GATEWAY_URL = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/multigateway.html";
     const BASE_SETUP_URL = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/accountgateway.html";
+
+    // MASTER ADMIN PASSWORD (Puwede mong palitan ng sarili mong password)
+    const MASTER_ADMIN_PASS = "JayromeAdmin2026";
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -164,9 +190,35 @@
     let lastSavedExpiry = "";
 
     window.onload = function() {
+        // TINGNAN KUNG NAKA-VERIFY NA SA SESSION
+        if (sessionStorage.getItem('master_admin_authed') === 'true') {
+            unlockDashboard();
+        }
+    };
+
+    function verifyMasterAdmin() {
+        const inputPass = document.getElementById('masterPasswordInput').value.trim();
+        if (inputPass === MASTER_ADMIN_PASS) {
+            sessionStorage.setItem('master_admin_authed', 'true');
+            unlockDashboard();
+        } else {
+            alert("❌ Mali ang Master Admin Password!");
+        }
+    }
+
+    function unlockDashboard() {
+        document.getElementById('adminLoginCard').style.display = 'none';
+        document.getElementById('adminDashboardSection').style.display = 'block';
         autoSetExpiry();
         loadLicensesFromSupabase();
-    };
+    }
+
+    function logoutAdmin() {
+        sessionStorage.removeItem('master_admin_authed');
+        document.getElementById('adminLoginCard').style.display = 'block';
+        document.getElementById('adminDashboardSection').style.display = 'none';
+        document.getElementById('masterPasswordInput').value = "";
+    }
 
     function autoSetExpiry() {
         let plan = document.getElementById('planType').value;
@@ -219,7 +271,6 @@
             let expiryLabel = store.expiry ? store.expiry : "Lifetime";
             let emailLabel = store.email ? store.email : "Wala pang email";
 
-            // CHECK PASSWORD STATUS
             let pwdLabel = "";
             if (store.password && store.password.trim() !== "") {
                 pwdLabel = `<span class="badge pwd-set">🔑 Pwd: <b>${store.password}</b></span>`;
@@ -308,7 +359,6 @@
         lastSavedPlan = plan;
         lastSavedExpiry = expiry;
 
-        // Reset password input
         document.getElementById('storePasswordInput').value = "";
 
         await loadLicensesFromSupabase();
