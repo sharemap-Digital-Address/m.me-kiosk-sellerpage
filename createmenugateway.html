@@ -20,6 +20,7 @@
         .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .avail { background: #166534; color: #dcfce7; }
         .not-avail { background: #991b1b; color: #fee2e2; }
+        .alert-box { background: #0284c7; color: white; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; text-align: center; }
     </style>
 </head>
 <body>
@@ -31,12 +32,19 @@
     <div class="card" id="loginCard">
         <h3>🔑 Store Login</h3>
         <label>Store Page Username:</label>
-        <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena">
+        <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena" onchange="checkStorePasswordStatus()">
         
-        <label>Password:</label>
-        <input type="password" id="storePassword" placeholder="I-type ang iyong password">
+        <!-- Dinamikong Note/Alert -->
+        <div id="statusNotice" style="display:none;" class="alert-box"></div>
+
+        <!-- Password Field Wrapper -->
+        <div id="passwordWrapper">
+            <label>Password:</label>
+            <input type="password" id="storePassword" placeholder="I-type ang iyong password">
+        </div>
         
-        <button onclick="loginAndLoadMenu()">Log In & Load Menu</button>
+        <!-- Dinamikong Action Button -->
+        <button id="loginActionBtn" onclick="loginAndLoadMenu()">Log In & Load Menu</button>
     </div>
 
     <div id="managerSection" style="display: none;">
@@ -80,14 +88,68 @@
 
     let activeStore = "";
     let currentMenuItems = [];
+    let hasPasswordSet = false;
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         const storeFromUrl = urlParams.get('page') || localStorage.getItem('sharemap_page');
         if(storeFromUrl) {
             document.getElementById('storeUsername').value = storeFromUrl.toLowerCase();
+            checkStorePasswordStatus();
         }
     };
+
+    // SIYASATIN KUNG MAY PASSWORD NA ANG STORE IN SUPABASE
+    async function checkStorePasswordStatus() {
+        const username = document.getElementById('storeUsername').value.trim().toLowerCase();
+        const pwdWrapper = document.getElementById('passwordWrapper');
+        const actionBtn = document.getElementById('loginActionBtn');
+        const notice = document.getElementById('statusNotice');
+
+        if(!username) return;
+
+        const { data, error } = await supabaseClient
+            .from('licenses')
+            .select('password')
+            .eq('username', username)
+            .single();
+
+        if (error || !data) {
+            notice.style.display = "block";
+            notice.style.background = "#ef4444";
+            notice.innerText = "❌ Walang natagpung lisensyadong Store Account sa pangalang ito.";
+            pwdWrapper.style.display = "none";
+            actionBtn.style.display = "none";
+            return;
+        }
+
+        // KUNG WALA PANG PASSWORD NA NALILIKHA
+        if (!data.password || data.password.trim() === "") {
+            hasPasswordSet = false;
+            pwdWrapper.style.display = "none";
+            notice.style.display = "block";
+            notice.style.background = "#eab308";
+            notice.style.color = "#000";
+            notice.innerHTML = "⚠️ <b>Wala ka pang nalilikhang Password!</b><br>Kailangan mo munang mag-set ng password para sa iyong store.";
+            
+            actionBtn.style.display = "block";
+            actionBtn.style.background = "#16a34a";
+            actionBtn.innerText = "🔑 Gumawa ng Password Muna (Setup Account)";
+            actionBtn.onclick = function() {
+                window.location.href = `./accountgateway.html?page=${encodeURIComponent(username)}`;
+            };
+        } else {
+            // KUNG MAY PASSWORD NA
+            hasPasswordSet = true;
+            pwdWrapper.style.display = "block";
+            notice.style.display = "none";
+            
+            actionBtn.style.display = "block";
+            actionBtn.style.background = "#2563eb";
+            actionBtn.innerText = "Log In & Load Menu";
+            actionBtn.onclick = loginAndLoadMenu;
+        }
+    }
 
     async function loginAndLoadMenu() {
         const username = document.getElementById('storeUsername').value.trim().toLowerCase();
@@ -98,7 +160,6 @@
             return;
         }
 
-        // I-check sa licenses table sa Supabase kung tama ang password
         const { data, error } = await supabaseClient
             .from('licenses')
             .select('*')
@@ -106,7 +167,7 @@
             .single();
 
         if(error || !data) {
-            alert("❌ Walang natagpung Store Account na ganyan.");
+            alert("❌ Walang natagpung Store Account.");
             return;
         }
 
@@ -186,18 +247,15 @@
 
         let result;
         if(itemId) {
-            // Update
             result = await supabaseClient.from('menu_items').update(payload).eq('id', itemId);
         } else {
-            // Insert new
             result = await supabaseClient.from('menu_items').insert([payload]);
         }
 
         if(result.error) {
             alert("Error sa pag-save: " + result.error.message);
         } else {
-            alert("✅ Naii-save na ang item!");
-            // Reset Form
+            alert("✅ Nai-save na ang item!");
             document.getElementById('prodName').value = "";
             document.getElementById('prodImage').value = "";
             document.getElementById('prodDesc').value = "";
