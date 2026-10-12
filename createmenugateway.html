@@ -49,15 +49,19 @@
         <!-- Top Bar with Logout Button -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <span style="font-size: 13px; color: #38bdf8;">Logged in as: <b id="activeStoreLabel"></b></span>
-            <button onclick="logoutStore()" style="width: auto; padding: 5px 10px; background: #dc2626; font-size: 11px;">Log Out / Switch Store</button>
+            <button onclick="logoutStore()" style="width: auto; padding: 5px 10px; background: #dc2626; font-size: 11px; margin:0;">Log Out / Switch Store</button>
         </div>
 
-        <!-- Add / Edit Menu Form -->
-        <div class="card">
-            <h3>Magdagdag / Mag-edit ng Item</h3>
+        <!-- Add / Edit Menu Form (NAKA-HIDE BY DEFAULT PARA MALAWAK ANG VIEW) -->
+        <div class="card" id="menuFormCard" style="display: none; border: 1px solid #38bdf8;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="formTitle" style="margin: 0; color: #38bdf8;">➕ Magdagdag ng Item</h3>
+                <button onclick="hideMenuForm()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">❌ Isara</button>
+            </div>
+            
             <input type="hidden" id="editItemId" value="">
             
-            <label>Product Name:</label>
+            <label style="margin-top: 10px; display: block;">Product Name:</label>
             <input type="text" id="prodName" placeholder="halimbawa: Halo-Halo Special">
 
             <label>Category / Kategorya:</label>
@@ -82,13 +86,21 @@
                 <option value="UNAVAILABLE">Not Available (Out of Stock)</option>
             </select>
 
-            <button onclick="saveMenuItem()" style="background:#16a34a;">I-save ang Item sa Database</button>
+            <button onclick="saveMenuItem()" style="background:#16a34a; margin-bottom:0;">💾 I-save ang Item sa Database</button>
         </div>
 
-        <!-- Active Menu List -->
+        <!-- Active Menu List (MAIN VIEW) -->
         <div class="card">
-            <h3>Lista ng mga Item sa Kiosk</h3>
-            <div id="menuContainer">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <h3 style="margin:0;">Lista ng mga Item sa Kiosk</h3>
+            </div>
+
+            <!-- BUTTON PARA BUMUKAS ANG ADD MENU FORM -->
+            <button onclick="showAddMenuForm()" style="background-color: #16a34a; font-size: 15px; padding: 12px; margin-bottom: 10px;">
+                ➕ Add New Menu Item
+            </button>
+
+            <div id="menuContainer" style="max-height: 500px; overflow-y: auto; margin-top: 10px;">
                 <p style="text-align:center; color:#94a3b8;">Lino-load ang menu...</p>
             </div>
         </div>
@@ -104,14 +116,12 @@
     let currentMenuItems = [];
 
     window.onload = function() {
-        // Siguraduhing malinis ang inputs tuwing bagong session/load
         document.getElementById('storeUsername').value = "";
         document.getElementById('storePassword').value = "";
 
         const urlParams = new URLSearchParams(window.location.search);
         const storeFromUrl = urlParams.get('page');
         
-        // Babasahin LANG kung mayroong explicit na ?page= parameter sa URL
         if(storeFromUrl) {
             document.getElementById('storeUsername').value = storeFromUrl.toLowerCase();
             checkStorePasswordStatus();
@@ -216,6 +226,28 @@
         document.getElementById('managerSection').style.display = 'none';
     }
 
+    // FORM TOGGLE FUNCTIONS
+    function showAddMenuForm() {
+        resetMenuFormFields();
+        document.getElementById('formTitle').innerText = "➕ Magdagdag ng Item";
+        document.getElementById('menuFormCard').style.display = 'block';
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function hideMenuForm() {
+        document.getElementById('menuFormCard').style.display = 'none';
+        resetMenuFormFields();
+    }
+
+    function resetMenuFormFields() {
+        document.getElementById('editItemId').value = "";
+        document.getElementById('prodName').value = "";
+        document.getElementById('prodCategory').value = "";
+        document.getElementById('prodImage').value = "";
+        document.getElementById('prodDesc').value = "";
+        document.getElementById('prodStatus').value = "AVAILABLE";
+    }
+
     async function loadStoreMenuItems() {
         const { data, error } = await supabaseClient
             .from('menu_items')
@@ -296,12 +328,7 @@
             alert("Error sa pag-save: " + result.error.message);
         } else {
             alert("✅ Nai-save na ang item sa database!");
-            document.getElementById('prodName').value = "";
-            document.getElementById('prodCategory').value = "";
-            document.getElementById('prodImage').value = "";
-            document.getElementById('prodDesc').value = "";
-            document.getElementById('editItemId').value = "";
-            
+            hideMenuForm(); // Awtomatikong itatago ang form at ire-reset pagka-save
             loadStoreMenuItems();
         }
     }
@@ -309,12 +336,16 @@
     function editItem(id) {
         let item = currentMenuItems.find(i => i.id === id);
         if(item) {
+            document.getElementById('formTitle').innerText = `✏️ Edit Item: ${item.name}`;
             document.getElementById('prodName').value = item.name;
             document.getElementById('prodCategory').value = item.category || "General";
             document.getElementById('prodImage').value = item.image || "";
             document.getElementById('prodDesc').value = item.description || "";
             document.getElementById('prodStatus').value = item.status;
             document.getElementById('editItemId').value = item.id;
+            
+            // LALABAS ANG FORM CARD KAPAG PININDOY ANG EDIT
+            document.getElementById('menuFormCard').style.display = 'block';
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
     }
