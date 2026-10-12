@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareMap Merchant Password Setup</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #cbd5e1;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            max-width: 400px;
+            width: 100%;
+            background: var(--card);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        h2 { text-align: center; color: var(--primary); margin-top: 0; }
+        label { font-weight: 600; font-size: 13px; color: #475569; display: block; margin-top: 10px; }
+        input, button {
+            width: 100%;
+            padding: 11px;
+            margin-top: 6px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        button:hover { opacity: 0.9; }
+        .note { font-size: 12px; color: #64748b; text-align: center; margin-top: 15px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Merchant Account Setup</h2>
+    <p style="text-align:center; font-size:13px; color:#64748b; margin-bottom:20px;">Ilagay ang inyong Store Page Username para i-set ang sariling Password.</p>
+
+    <label>GitHub PAT (Admin Token):</label>
+    <input type="password" id="adminToken" placeholder="I-paste ang admin GitHub Token dito">
+
+    <label>Store Page Username:</label>
+    <input type="text" id="targetUsername" placeholder="halimbawa: marjevinsoylucena">
+
+    <label>Bagong Password:</label>
+    <input type="password" id="newPassword" placeholder="Gumawa ng secure na password">
+
+    <button onclick="setMerchantPassword()">I-save ang Password</button>
+
+    <div class="note">
+        🔒 Ang password na ito ay gagamitin para sa hinaharap na pag-login sa iyong Kiosk Menu Management Portal.
+    </div>
+</div>
+
+<script>
+    const REPO_OWNER = "sharemap-digital-address";
+    const REPO_NAME = "m.me-kiosk-sellerpage";
+    const FILE_PATH = "licenses.js";
+
+    async function setMerchantPassword() {
+        const token = document.getElementById('adminToken').value.trim();
+        const username = document.getElementById('targetUsername').value.trim().toLowerCase();
+        const password = document.getElementById('newPassword').value.trim();
+
+        if (!token || !username || !password) {
+            alert("⚠️ Pakipunan ang lahat ng fields (Token, Username, at Password).");
+            return;
+        }
+
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+
+        try {
+            // 1. Kunin ang kasalukuyang licenses.js mula sa GitHub
+            let response = await fetch(url, {
+                headers: { 'Authorization': `token ${token}` }
+            });
+            if (!response.ok) throw new Error("Nabigong basahin ang licenses.js sa GitHub. Suriin ang Token.");
+
+            let data = await response.json();
+            let fileSha = data.sha;
+            let decodedContent = decodeURIComponent(escape(atob(data.content)));
+
+            // 2. I-parse ang mga lisensya
+            let start = decodedContent.indexOf('SHAREMAP_LICENSES');
+            let licensesData = {};
+            if (start !== -1) {
+                let assignment = decodedContent.substring(start);
+                let objectStart = assignment.indexOf('{');
+                let bracketCount = 0;
+                let objectEnd = -1;
+                for (let i = objectStart; i < assignment.length; i++) {
+                    if (assignment[i] === '{') bracketCount++;
+                    else if (assignment[i] === '}') {
+                        bracketCount--;
+                        if (bracketCount === 0) {
+                            objectEnd = i;
+                            break;
+                        }
+                    }
+                }
+                if (objectStart !== -1 && objectEnd !== -1) {
+                    let jsonString = assignment.substring(objectStart, objectEnd + 1);
+                    licensesData = eval('(' + jsonString + ')');
+                }
+            }
+
+            // 3. Suriin kung umiiral ang store username
+            if (!licensesData[username]) {
+                alert(`❌ Ang username na "@${username}" ay walang rehistradong lisensya sa system.`);
+                return;
+            }
+
+            // 4. I-update ang password ng partikular na store
+            licensesData[username].password = password;
+
+            // 5. I-rebuild ang buong file content
+            let headerComments = `// ==========================================\n// SHAREMAP CENTRAL LICENSE DATABASE\n// ==========================================\n\n`;
+            
+            // Kunin ang mga kasamang functions mula sa lumang file o i-retain ang template
+            let fileBody = "const SHAREMAP_LICENSES = " + JSON.stringify(licensesData, null, 4) + ";\n\n";
+            
+            // Kunin ang helper functions sa ibaba ng lumang file kung meron man
+            let funcStartIndex = decodedContent.indexOf('function checkShareMapAccess');
+            let functionsCode = (funcStartIndex !== -1) ? decodedContent.substring(funcStartIndex) : "";
+
+            let newFileContent = headerComments + fileBody + "\n" + functionsCode;
+            let encodedContent = btoa(unescape(encodeURIComponent(newFileContent)));
+
+            let bodyData = {
+                message: `Set password for merchant @${username}`,
+                content: encodedContent,
+                sha: fileSha
+            };
+
+            // 6. I-save pabalik sa GitHub
+            let putResponse = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(bodyData)
+            });
+
+            if (!putResponse.ok) throw new Error("Nabigong i-save ang bagong password sa GitHub.");
+
+            alert(`✅ Tagumpay! Na-set na ang password para sa store na "@${username}".`);
+            document.getElementById('newPassword').value = "";
+
+        } catch (error) {
+            alert("Error: " + error.message);
+        }
+    }
+</script>
+
+</body>
+</html>
