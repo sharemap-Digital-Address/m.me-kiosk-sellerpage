@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareMap Kiosk Visual Menu</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #0284c7; --bg: #0f172a; --card: #1e293b; --text: #ffffff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .container { max-width: 480px; margin: 0 auto; }
+        .store-header { text-align: center; margin-bottom: 20px; }
+        .store-header h2 { margin: 0; color: #38bdf8; font-size: 22px; }
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .menu-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; }
+        .menu-card img { width: 100%; height: 120px; object-fit: cover; background: #334155; }
+        .menu-details { padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .menu-title { font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+        .menu-desc { font-size: 11px; color: #94a3b8; margin-bottom: 8px; line-height: 1.3; }
+        .btn-add { background: #16a34a; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; width: 100%; }
+        .btn-add:disabled { background: #64748b; cursor: not-allowed; }
+        .cart-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); max-width: 450px; width: 90%; background: #2563eb; color: white; padding: 12px 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="store-header">
+        <h2 id="storeTitle">🏪 Loading Kiosk Menu...</h2>
+        <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Pumili ng iyong mga order sa ibaba:</p>
+    </div>
+
+    <div class="menu-grid" id="kioskMenuGrid">
+        <p style="text-align:center; grid-column: 1 / -1; color:#94a3b8;">Lino-load ang Visual Menu...</p>
+    </div>
+</div>
+
+<div class="cart-bar" id="cartBar" onclick="proceedToGateway()" style="display:none;">
+    <span id="cartCount">🛒 0 Items Selected</span>
+    <span>I-proceed sa Checkout ➔</span>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let storePage = "";
+    let selectedCart = {};
+
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        storePage = urlParams.get('page') || localStorage.getItem('sharemap_page');
+
+        if(!storePage) {
+            document.getElementById('storeTitle').innerText = "⚠️ Invalid Store Gateway Link";
+            document.getElementById('kioskMenuGrid').innerHTML = "";
+            return;
+        }
+
+        document.getElementById('storeTitle').innerText = "🏪 @" + storePage;
+        loadKioskMenu();
+    };
+
+    async function loadKioskMenu() {
+        const { data, error } = await supabaseClient
+            .from('menu_items')
+            .select('*')
+            .eq('username', storePage.toLowerCase())
+            .order('created_at', { ascending: false });
+
+        const grid = document.getElementById('kioskMenuGrid');
+        grid.innerHTML = "";
+
+        if(error || !data || data.length === 0) {
+            grid.innerHTML = "<p style='text-align:center; grid-column: 1 / -1; color:#94a3b8;'>Walang nakitang menu items para sa store na ito.</p>";
+            return;
+        }
+
+        data.forEach(item => {
+            let isAvail = item.status === "AVAILABLE";
+            let card = document.createElement('div');
+            card.className = "menu-card";
+            card.innerHTML = `
+                <img src="${item.image || 'https://via.placeholder.com/150'}" alt="${item.name}">
+                <div class="menu-details">
+                    <div>
+                        <div class="menu-title">${item.name}</div>
+                        <div class="menu-desc">${item.description || ''}</div>
+                    </div>
+                    <button class="btn-add" ${!isAvail ? 'disabled':''} onclick="addToCart('${escapeQuotes(item.name)}')">
+                        ${isAvail ? '➕ Order Item' : 'Out of Stock'}
+                    </button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function escapeQuotes(str) {
+        return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function addToCart(itemName) {
+        if(selectedCart[itemName]) {
+            selectedCart[itemName]++;
+        } else {
+            selectedCart[itemName] = 1;
+        }
+        updateCartBar();
+    }
+
+    function updateCartBar() {
+        let totalItems = 0;
+        for(let key in selectedCart) {
+            totalItems += selectedCart[key];
+        }
+
+        const bar = document.getElementById('cartBar');
+        if(totalItems > 0) {
+            bar.style.display = 'flex';
+            document.getElementById('cartCount').innerText = `🛒 ${totalItems} Item(s) Selected`;
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    function proceedToGateway() {
+        let orderSummary = [];
+        for(let name in selectedCart) {
+            orderSummary.push(`${name} x${selectedCart[name]}`);
+        }
+
+        let ordersText = orderSummary.join(', ');
+        localStorage.setItem('sharemap_orders', ordersText);
+
+        // I-redirect pabalik sa Multigateway / Index na may dalang selected orders
+        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(ordersText)}`;
+    }
+</script>
+</body>
+</html>
