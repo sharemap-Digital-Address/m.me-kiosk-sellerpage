@@ -18,6 +18,7 @@
         .menu-item img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; margin-right: 10px; }
         .menu-info { flex-grow: 1; }
         .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .cat-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #0284c7; color: #fff; margin-left: 4px; font-weight: bold; }
         .avail { background: #166534; color: #dcfce7; }
         .not-avail { background: #991b1b; color: #fee2e2; }
         .alert-box { background: #0284c7; color: white; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; text-align: center; }
@@ -34,16 +35,13 @@
         <label>Store Page Username:</label>
         <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena" onchange="checkStorePasswordStatus()">
         
-        <!-- Dinamikong Note/Alert -->
         <div id="statusNotice" style="display:none;" class="alert-box"></div>
 
-        <!-- Password Field Wrapper -->
         <div id="passwordWrapper">
             <label>Password:</label>
             <input type="password" id="storePassword" placeholder="I-type ang iyong password">
         </div>
         
-        <!-- Dinamikong Action Button -->
         <button id="loginActionBtn" onclick="loginAndLoadMenu()">Log In & Load Menu</button>
     </div>
 
@@ -56,9 +54,18 @@
             <label>Product Name:</label>
             <input type="text" id="prodName" placeholder="halimbawa: Halo-Halo Special">
 
+            <label>Category / Kategorya:</label>
+            <input type="text" id="prodCategory" placeholder="hal. Best Sellers, Meals, Drinks, Desserts" list="catSuggestions">
+            <datalist id="catSuggestions">
+                <option value="Best Sellers">
+                <option value="Main Meals">
+                <option value="Snacks & Sides">
+                <option value="Drinks & Beverages">
+                <option value="Desserts">
+            </datalist>
+
             <label>Image Link URL (Google Drive / ImgBB):</label>
             <input type="url" id="prodImage" placeholder="I-paste ang Google Drive Share Link dito">
-            <small style="font-size: 11px; color: #38bdf8; display: block; margin-top: -8px; margin-bottom: 10px;">💡 Awtomatikong iko-convert ang Google Drive link para bumilis ang load.</small>
 
             <label>Description (Opsyonal):</label>
             <textarea id="prodDesc" rows="2" placeholder="halimbawa: May leche flan at ice cream"></textarea>
@@ -89,7 +96,6 @@
 
     let activeStore = "";
     let currentMenuItems = [];
-    let hasPasswordSet = false;
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -100,22 +106,14 @@
         }
     };
 
-    // REGEX FUNCTION PARA SA GOOGLE DRIVE LINK CONVERSION
     function convertGoogleDriveLink(rawUrl) {
         if (!rawUrl) return "";
         rawUrl = rawUrl.trim();
-
-        // Regex para makuha ang File ID sa loob ng Google Drive link (hal. /d/FILE_ID/ o id=FILE_ID)
         const driveRegex = /(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
         const match = rawUrl.match(driveRegex);
-
         if (match && match[1]) {
-            let fileId = match[1];
-            // Ibalik ang tamang format na direktang babasahin bilang larawan
-            return `https://lh3.googleusercontent.com/d/${fileId}`;
+            return `https://lh3.googleusercontent.com/d/${match[1]}`;
         }
-
-        // Kung hindi Google Drive link (halimbawa ImgBB o iba pa), ibalik lang kung ano ang niliagay
         return rawUrl;
     }
 
@@ -143,7 +141,6 @@
         }
 
         if (!data.password || data.password.trim() === "") {
-            hasPasswordSet = false;
             pwdWrapper.style.display = "none";
             notice.style.display = "block";
             notice.style.background = "#eab308";
@@ -157,7 +154,6 @@
                 window.location.href = `./accountgateway.html?page=${encodeURIComponent(username)}`;
             };
         } else {
-            hasPasswordSet = true;
             pwdWrapper.style.display = "block";
             notice.style.display = "none";
             
@@ -183,13 +179,8 @@
             .eq('username', username)
             .single();
 
-        if(error || !data) {
-            alert("❌ Walang natagpung Store Account.");
-            return;
-        }
-
-        if(data.password !== pwd) {
-            alert("❌ Mali ang Password! Subukang muli.");
+        if(error || !data || data.password !== pwd) {
+            alert("❌ Mali ang Username o Password!");
             return;
         }
 
@@ -227,12 +218,14 @@
 
         currentMenuItems.forEach((item) => {
             let isAvail = item.status === "AVAILABLE";
+            let catText = item.category || "General";
             let div = document.createElement('div');
             div.className = "menu-item";
             div.innerHTML = `
                 <img src="${item.image || 'https://via.placeholder.com/50'}" alt="Item">
                 <div class="menu-info">
                     <strong>${item.name}</strong> 
+                    <span class="cat-badge">${catText}</span>
                     <span class="status-badge ${isAvail ? 'avail':'not-avail'}">${item.status}</span>
                     <div style="font-size:11px; color:#cbd5e1;">${item.description || ''}</div>
                 </div>
@@ -247,6 +240,7 @@
 
     async function saveMenuItem() {
         const name = document.getElementById('prodName').value.trim();
+        const category = document.getElementById('prodCategory').value.trim() || "General";
         const rawImageInput = document.getElementById('prodImage').value.trim();
         const desc = document.getElementById('prodDesc').value.trim();
         const status = document.getElementById('prodStatus').value;
@@ -254,12 +248,12 @@
 
         if(!name) { alert("Pakilagay ang Product Name!"); return; }
 
-        // ISASALANG SA REGEX CONVERTER ANG LINK BAGO ISE-SAVE SA DATABASE
         const finalImageUrl = convertGoogleDriveLink(rawImageInput);
 
         const payload = {
             username: activeStore,
             name: name,
+            category: category,
             image: finalImageUrl,
             description: desc,
             status: status
@@ -275,8 +269,9 @@
         if(result.error) {
             alert("Error sa pag-save: " + result.error.message);
         } else {
-            alert("✅ Nai-save na ang item na may converted Google Drive image link!");
+            alert("✅ Nai-save na ang item sa database!");
             document.getElementById('prodName').value = "";
+            document.getElementById('prodCategory').value = "";
             document.getElementById('prodImage').value = "";
             document.getElementById('prodDesc').value = "";
             document.getElementById('editItemId').value = "";
@@ -289,6 +284,7 @@
         let item = currentMenuItems.find(i => i.id === id);
         if(item) {
             document.getElementById('prodName').value = item.name;
+            document.getElementById('prodCategory').value = item.category || "";
             document.getElementById('prodImage').value = item.image || "";
             document.getElementById('prodDesc').value = item.description || "";
             document.getElementById('prodStatus').value = item.status;
