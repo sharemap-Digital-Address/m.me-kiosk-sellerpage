@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareMap - Store Kiosk Menu Manager</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
+        body { font-family: sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        h2 { text-align: center; color: #38bdf8; }
+        .card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
+        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; background: #0f172a; color: #fff; box-sizing: border-box; font-size: 14px; }
+        button { background-color: var(--primary); font-weight: bold; cursor: pointer; border: none; }
+        .menu-item { display: flex; align-items: center; justify-content: space-between; background: #334155; padding: 10px; border-radius: 8px; margin-bottom: 8px; }
+        .menu-item img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; margin-right: 10px; }
+        .menu-info { flex-grow: 1; }
+        .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .avail { background: #166534; color: #dcfce7; }
+        .not-avail { background: #991b1b; color: #fee2e2; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🍔 Kiosk Menu Manager</h2>
+
+    <!-- Store Credentials -->
+    <div class="card">
+        <label>GitHub PAT Token (Admin Access):</label>
+        <input type="password" id="ghToken" placeholder="Ilagay ang Token">
+        
+        <label>Store FB Page Username:</label>
+        <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena">
+        
+        <button onclick="loadStoreMenu()">I-load ang Menu ng Store</button>
+    </div>
+
+    <!-- Add / Edit Menu Form -->
+    <div class="card">
+        <h3>Magdagdag / Mag-edit ng Item</h3>
+        <input type="hidden" id="editIndex" value="-1">
+        
+        <label>Product Name:</label>
+        <input type="text" id="prodName" placeholder="halimbawa: Halo-Halo Special">
+
+        <label>Image Link URL (ImgBB / FB Link):</label>
+        <input type="url" id="prodImage" placeholder="https://i.ibb.co/xxxxx/image.jpg">
+
+        <label>Description (Opsyonal):</label>
+        <textarea id="prodDesc" rows="2" placeholder="halimbawa: May leche flan at ice cream"></textarea>
+
+        <label>Status Availability:</label>
+        <select id="prodStatus">
+            <option value="AVAILABLE">Available</option>
+            <option value="UNAVAILABLE">Not Available (Out of Stock)</option>
+        </select>
+
+        <button onclick="saveMenuItem()" style="background:#16a34a;">I-save ang Item</button>
+    </div>
+
+    <!-- Active Menu List -->
+    <div class="card">
+        <h3>Lista ng mga Item sa Kiosk</h3>
+        <div id="menuContainer">
+            <p style="text-align:center; color:#94a3b8;">I-load muna ang Store Menu.</p>
+        </div>
+        <button onclick="syncToGitHub()" style="background:#2563eb; margin-top:10px;">💾 I-save Lahat sa Database (GitHub)</button>
+    </div>
+</div>
+
+<script>
+    const REPO_OWNER = "sharemap-digital-address";
+    const REPO_NAME = "sendmessage-to-sellerpage";
+    const FILE_PATH = "menus.js";
+
+    let globalMenus = {};
+    let currentStoreItems = [];
+    let fileSha = "";
+
+    async function loadStoreMenu() {
+        const token = document.getElementById('ghToken').value.trim();
+        const username = document.getElementById('storeUsername').value.trim().toLowerCase();
+
+        if(!token || !username) { alert("Pakipunan ang Token at Username!"); return; }
+
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+        try {
+            let res = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
+            if(!res.ok) throw new Error("Hindi mabasa ang menus.js file.");
+            
+            let data = await res.json();
+            fileSha = data.sha;
+            let decoded = decodeURIComponent(escape(atob(data.content)));
+
+            let start = decoded.indexOf('{');
+            let end = decoded.lastIndexOf('}');
+            if (start !== -1 && end !== -1) {
+                globalMenus = JSON.parse(decoded.substring(start, end + 1));
+            } else {
+                globalMenus = {};
+            }
+
+            currentStoreItems = globalMenus[username] || [];
+            renderMenuList();
+            alert(`Menu para sa @${username} ay nai-load na!`);
+        } catch(e) {
+            alert("Error: " + e.message);
+        }
+    }
+
+    function renderMenuList() {
+        const container = document.getElementById('menuContainer');
+        container.innerHTML = "";
+
+        if(currentStoreItems.length === 0) {
+            container.innerHTML = "<p style='text-align:center; color:#94a3b8;'>Wala pang item sa kiosk.</p>";
+            return;
+        }
+
+        currentStoreItems.forEach((item, index) => {
+            let isAvail = item.status === "AVAILABLE";
+            let div = document.createElement('div');
+            div.className = "menu-item";
+            div.innerHTML = `
+                <img src="${item.image || 'https://via.placeholder.com/50'}" alt="Item">
+                <div class="menu-info">
+                    <strong>${item.name}</strong> 
+                    <span class="status-badge ${isAvail ? 'avail':'not-avail'}">${item.status}</span>
+                    <div style="font-size:11px; color:#cbd5e1;">${item.desc || ''}</div>
+                </div>
+                <div>
+                    <button onclick="editItem(${index})" style="width:auto; padding:5px; font-size:11px;">Edit</button>
+                    <button onclick="deleteItem(${index})" style="width:auto; padding:5px; font-size:11px; background:#dc2626;">Del</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function saveMenuItem() {
+        const name = document.getElementById('prodName').value.trim();
+        const image = document.getElementById('prodImage').value.trim();
+        const desc = document.getElementById('prodDesc').value.trim();
+        const status = document.getElementById('prodStatus').value;
+        const editIdx = parseInt(document.getElementById('editIndex').value);
+
+        if(!name) { alert("Pakilagay ang Product Name!"); return; }
+
+        let itemObj = { name, image, desc, status };
+
+        if(editIdx >= 0) {
+            currentStoreItems[editIdx] = itemObj;
+            document.getElementById('editIndex').value = "-1";
+        } else {
+            currentStoreItems.push(itemObj);
+        }
+
+        // Reset inputs
+        document.getElementById('prodName').value = "";
+        document.getElementById('prodImage').value = "";
+        document.getElementById('prodDesc').value = "";
+        
+        renderMenuList();
+    }
+
+    function editItem(index) {
+        let item = currentStoreItems[index];
+        document.getElementById('prodName').value = item.name;
+        document.getElementById('prodImage').value = item.image;
+        document.getElementById('prodDesc').value = item.desc;
+        document.getElementById('prodStatus').value = item.status;
+        document.getElementById('editIndex').value = index;
+    }
+
+    function deleteItem(index) {
+        if(confirm("Sigurado ka bang buburahin ang item na ito?")) {
+            currentStoreItems.splice(index, 1);
+            renderMenuList();
+        }
+    }
+
+    async function syncToGitHub() {
+        const token = document.getElementById('ghToken').value.trim();
+        const username = document.getElementById('storeUsername').value.trim().toLowerCase();
+
+        if(!token || !username) return;
+
+        globalMenus[username] = currentStoreItems;
+
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+        let fileContent = `const SHAREMAP_STORE_MENUS = ` + JSON.stringify(globalMenus, null, 4) + `;`;
+        let encoded = btoa(unescape(encodeURIComponent(fileContent)));
+
+        try {
+            let res = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: `Update menu for @${username}`, content: encoded, sha: fileSha })
+            });
+
+            if(!res.ok) throw new Error("Failed to save menu on GitHub");
+            let resJson = await res.json();
+            fileSha = resJson.content.sha;
+            alert("✅ Tagumpay na na-update ang Visual Kiosk Menu sa GitHub!");
+        } catch(e) {
+            alert("Error: " + e.message);
+        }
+    }
+</script>
+</body>
+</html>
