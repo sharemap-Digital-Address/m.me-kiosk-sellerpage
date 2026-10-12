@@ -218,7 +218,7 @@
 
         currentMenuItems.forEach((item) => {
             let isAvail = item.status === "AVAILABLE";
-            let catText = item.category || "General";
+            let catText = (item.category && item.category.trim() !== "") ? item.category : "General";
             let div = document.createElement('div');
             div.className = "menu-item";
             div.innerHTML = `
@@ -240,7 +240,8 @@
 
     async function saveMenuItem() {
         const name = document.getElementById('prodName').value.trim();
-        const category = document.getElementById('prodCategory').value.trim() || "General";
+        const categoryInput = document.getElementById('prodCategory').value.trim();
+        const category = categoryInput !== "" ? categoryInput : "General";
         const rawImageInput = document.getElementById('prodImage').value.trim();
         const desc = document.getElementById('prodDesc').value.trim();
         const status = document.getElementById('prodStatus').value;
@@ -284,7 +285,7 @@
         let item = currentMenuItems.find(i => i.id === id);
         if(item) {
             document.getElementById('prodName').value = item.name;
-            document.getElementById('prodCategory').value = item.category || "";
+            document.getElementById('prodCategory').value = item.category || "General";
             document.getElementById('prodImage').value = item.image || "";
             document.getElementById('prodDesc').value = item.description || "";
             document.getElementById('prodStatus').value = item.status;
