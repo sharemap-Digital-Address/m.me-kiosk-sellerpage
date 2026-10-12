@@ -117,14 +117,17 @@
         <button onclick="verifyMasterAdmin()" style="background-color: #2563eb;">Verify & Unlock Admin</button>
     </div>
 
-    <!-- MAIN ADMIN DASHBOARD SECTION (MGA KONTROL AT LISTAHAN) -->
+    <!-- MAIN ADMIN DASHBOARD SECTION -->
     <div id="adminDashboardSection" style="display: none;">
-        <!-- Add / Edit Store Card -->
-        <div class="card">
-            <h3>Magdagdag / Mag-update ng Store</h3>
-            <input type="hidden" id="editStoreId" value="">
+        
+        <!-- Add / Edit Store Card (NAKA-HIDE BY DEFAULT PARA MALAWAK ANG VIEW) -->
+        <div class="card" id="licenseFormCard" style="display: none; border: 1px solid #38bdf8;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="formTitle" style="margin: 0; color: #38bdf8;">➕ Magdagdag ng Store License</h3>
+                <button onclick="hideFormCard()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">❌ Isara</button>
+            </div>
             
-            <label>Page Username:</label>
+            <label style="margin-top: 10px; display: block;">Page Username:</label>
             <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena">
 
             <label>Client Email Address:</label>
@@ -143,18 +146,24 @@
             <label>Expiry Date (YYYY-MM-DD):</label>
             <input type="date" id="expiryDate">
 
-            <button onclick="saveStoreLicense()" style="background-color: #16a34a;">I-save sa Supabase</button>
+            <button onclick="saveStoreLicense()" style="background-color: #16a34a; margin-bottom: 0;">💾 I-save sa Supabase</button>
         </div>
 
-        <!-- Search & Filter Card -->
+        <!-- Search & Filter Card (MAIN VIEW) -->
         <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
                 <h3 style="margin:0;">Lista ng mga Store</h3>
-                <button onclick="logoutAdmin()" style="width:auto; padding:5px 10px; background:#dc2626; font-size:11px;">Lock Dashboard</button>
+                <button onclick="logoutAdmin()" style="width:auto; padding:5px 10px; background:#dc2626; font-size:11px; margin:0;">Lock Dashboard</button>
             </div>
-            <input type="text" id="searchInput" placeholder="Mag-search ng Store Username..." onkeyup="filterStores()" style="margin-top:10px;">
+
+            <!-- BUTTON FOR CREATING NEW LICENSE -->
+            <button onclick="showCreateForm()" style="background-color: #16a34a; font-size: 15px; padding: 12px; margin-bottom: 10px;">
+                ➕ Create New License
+            </button>
+
+            <input type="text" id="searchInput" placeholder="Mag-search ng Store Username..." onkeyup="filterStores()" style="margin-top:5px;">
             
-            <div id="storeListContainer" style="max-height: 350px; overflow-y: auto; margin-top: 10px;">
+            <div id="storeListContainer" style="max-height: 500px; overflow-y: auto; margin-top: 10px;">
                 <p style="text-align: center; color: #94a3b8;">Lino-load ang listahan mula sa Supabase...</p>
             </div>
         </div>
@@ -178,7 +187,6 @@
     const BASE_GATEWAY_URL = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/multigateway.html";
     const BASE_SETUP_URL = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/accountgateway.html";
 
-    // MASTER ADMIN PASSWORD (Puwede mong palitan ng sarili mong password)
     const MASTER_ADMIN_PASS = "JayromeAdmin2026";
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -190,7 +198,6 @@
     let lastSavedExpiry = "";
 
     window.onload = function() {
-        // TINGNAN KUNG NAKA-VERIFY NA SA SESSION
         if (sessionStorage.getItem('master_admin_authed') === 'true') {
             unlockDashboard();
         }
@@ -209,7 +216,6 @@
     function unlockDashboard() {
         document.getElementById('adminLoginCard').style.display = 'none';
         document.getElementById('adminDashboardSection').style.display = 'block';
-        autoSetExpiry();
         loadLicensesFromSupabase();
     }
 
@@ -218,6 +224,28 @@
         document.getElementById('adminLoginCard').style.display = 'block';
         document.getElementById('adminDashboardSection').style.display = 'none';
         document.getElementById('masterPasswordInput').value = "";
+    }
+
+    // TOGGLE FORM CARD FUNCTIONS
+    function showCreateForm() {
+        resetFormFields();
+        document.getElementById('formTitle').innerText = "➕ Magdagdag ng Store License";
+        document.getElementById('licenseFormCard').style.display = 'block';
+        document.getElementById('storeUsername').readOnly = false;
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function hideFormCard() {
+        document.getElementById('licenseFormCard').style.display = 'none';
+        resetFormFields();
+    }
+
+    function resetFormFields() {
+        document.getElementById('storeUsername').value = "";
+        document.getElementById('clientEmailInput').value = "";
+        document.getElementById('storePasswordInput').value = "";
+        document.getElementById('planType').value = "TRIAL_ACCESS";
+        autoSetExpiry();
     }
 
     function autoSetExpiry() {
@@ -236,7 +264,7 @@
     }
 
     async function loadLicensesFromSupabase() {
-        const { data, error } = await supabaseClient.from('licenses').select('*');
+        const { data, error } = await supabaseClient.from('licenses').select('*').order('username', { ascending: true });
         if (error) {
             alert("Error sa pag-fetch sa Supabase: " + error.message);
             return;
@@ -305,16 +333,22 @@
     function editStore(username) {
         let store = licensesData.find(s => s.username === username);
         if(store) {
+            document.getElementById('formTitle').innerText = `✏️ Edit License: @${store.username}`;
             document.getElementById('storeUsername').value = store.username;
+            document.getElementById('storeUsername').readOnly = true; // Bawal palitan ang username kapag edit
             document.getElementById('clientEmailInput').value = store.email || "";
             document.getElementById('storePasswordInput').value = store.password || "";
             document.getElementById('planType').value = store.plan;
             document.getElementById('expiryDate').value = store.expiry || "";
+            
             if (store.plan === "PLATINUM_LIFETIME") {
                 document.getElementById('expiryDate').disabled = true;
             } else {
                 document.getElementById('expiryDate').disabled = false;
             }
+
+            // LALABAS ANG FORM CARD KAPAG EDIT
+            document.getElementById('licenseFormCard').style.display = 'block';
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
     }
@@ -359,7 +393,8 @@
         lastSavedPlan = plan;
         lastSavedExpiry = expiry;
 
-        document.getElementById('storePasswordInput').value = "";
+        // IHIDE ANG FORM CARD MATAPOS MAG-SAVE AT I-RESET ANG FIELDS
+        hideFormCard();
 
         await loadLicensesFromSupabase();
         document.getElementById('emailModal').style.display = 'flex';
