@@ -72,7 +72,7 @@
   </div>
 
   <div class="test-banner">
-    🚀 <b>Live Cloud Sync Active:</b> Awtomatikong pumapasok dito ang mga order mula sa gateway.<br>
+    🚀 <b>Live Cloud Sync Active:</b> Awtomatikong isinasama sa lokal na device storage ang lahat ng detalye (pati PSID) mula sa Supabase.<br>
     <div class="sim-btn-group">
       <button class="sim-btn" onclick="simulateOrder('TAKEOUT', 'UNPAID')">🛵 Simulate Takeout</button>
       <button class="sim-btn sim-btn-dinein" onclick="simulateOrder('DINE_IN', 'UNPAID')">🍽️ Simulate Dine-In</button>
@@ -179,7 +179,7 @@
       }
     }
 
-    // Direktang kumukuha ng mga tunay na order mula sa Supabase table
+    // Kinukuha at isinasama ang BUONG detalye (kasama ang PSID, Plus Code, GPS) sa local storage ng device
     async function syncAndFetchNewOrders() {
       try {
         const { data: cloudOrders, error } = await supabaseClient
@@ -199,18 +199,23 @@
             const exists = waitingOrders.some(item => item.order_id === cloudOrder.order_id);
             if (!exists) {
               const isDineIn = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("DINE-IN"));
+              
+              // Buong object na isinasave sa local device storage ni seller
               waitingOrders.unshift({ 
                 order_id: cloudOrder.order_id,
                 order_type: isDineIn ? "DINE_IN" : "TAKEOUT",
                 store_page: cloudOrder.store_page,
-                branch: cloudOrder.branch,
-                schedule: cloudOrder.schedule,
+                branch: cloudOrder.branch || "Main Branch",
+                schedule: cloudOrder.schedule || "Now (Agad-agad)",
                 customer_name: cloudOrder.customer_name,
                 customer_phone: cloudOrder.customer_phone,
                 landmark: cloudOrder.landmark,
                 orders_list: cloudOrder.orders_list,
+                plus_code: cloudOrder.plus_code,
+                latitude: cloudOrder.latitude,
+                longitude: cloudOrder.longitude,
                 raw_chat_output: cloudOrder.raw_chat_output,
-                messenger_psid: cloudOrder.messenger_psid,
+                messenger_psid: cloudOrder.messenger_psid, // 👈 Naka-save na nang buo sa local device!
                 payment_status: 'UNPAID',
                 status: 'PENDING',
                 received_at: new Date().toLocaleTimeString() 
@@ -220,7 +225,7 @@
 
           localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
 
-          // Burahin na sa cloud table para hindi na ma-duplicate ang pull
+          // Burahin na sa cloud table pagkatapos masalo ng lokal na device ni seller
           for (const ord of cloudOrders) {
             await supabaseClient.from('orders').delete().eq('order_id', ord.order_id);
           }
@@ -241,13 +246,17 @@
         order_type: type,
         store_page: storePageId.toLowerCase(),
         branch: "Main Branch",
-        schedule: "Oct 16, 2026, 1:15 AM",
+        schedule: "Oct 16, 2026, 2:15 AM",
         customer_name: "Juan Dela Cruz",
         customer_phone: "09124356789",
         landmark: "Malapit sa Panaderia",
         orders_list: "Chicken Joy Value Meal x1\nCoke Regular x1",
+        plus_code: "7Q53WJQ4+CG",
+        latitude: 13.93859,
+        longitude: 121.60636,
         payment_status: paymentStatus,
         status: "PENDING",
+        messenger_psid: "MESSENGER_WEB_USER",
         received_at: new Date().toLocaleTimeString()
       };
 
@@ -256,7 +265,7 @@
       waitingOrders.unshift(sampleOrder);
       localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
       loadOrdersFromDevice();
-      alert(`✅ May pumasok na test ${type} order sa Waiting Room!`);
+      alert(`✅ May pumasok na test ${type} order sa Waiting Room (Naka-save sa device)!`);
     }
 
     function loadOrdersFromDevice() {
@@ -388,6 +397,7 @@
         localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
         localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders));
         
+        // Magpapadala ng notification gamit ang PSID na nakapaloob sa lokal na data
         sendApiNotification(item.customer_name, item.messenger_psid, `Salamat! Na-verify na ang bayad (${method}) para sa Order #${selectedOrderIdForPayment}. Inihahanda na ito sa kusina.`);
         alert(`✅ Na-proseso ang bayad (${method}) para sa Order #${selectedOrderIdForPayment}! Nailipat na sa Preparing Room.`);
         
@@ -426,6 +436,7 @@
         localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders));
         localStorage.setItem(STORAGE_CANCELLED, JSON.stringify(cancelledOrders));
 
+        // Magpapadala ng cancellation notice gamit ang lokal na PSID
         sendApiNotification(targetItem.customer_name, targetItem.messenger_psid, `Paumanhin po, kinansela ang Order #${orderId}. Dahilan: ${reason}`);
         alert(`❌ Nakansela ang Order #${orderId}.`);
         loadOrdersFromDevice();
@@ -507,7 +518,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       await fetchStoreToken();
       syncAndFetchNewOrders();
-      setInterval(syncAndFetchNewOrders, 5000); // Tinitignan ang Supabase cloud tuwing 5 segundo
+      setInterval(syncAndFetchNewOrders, 5000);
     });
   </script>
 
