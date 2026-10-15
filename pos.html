@@ -49,7 +49,6 @@
     .btn-copy { background-color: #475569; }
     .btn:active { opacity: 0.8; }
 
-    /* Modal para sa POS Payment Keypad */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
     .modal-content { background: white; padding: 25px; border-radius: 12px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     .keypad-display { background: #f8fafc; border: 2px solid #cbd5e1; padding: 12px; font-size: 22px; font-weight: bold; margin-bottom: 15px; border-radius: 6px; }
@@ -73,11 +72,10 @@
   </div>
 
   <div class="test-banner">
-    🚀 <b>POS Payment Flow:</b> Subukang i-simulate ang order at i-click ang Accept para makita ang Payment Keypad Modal.<br>
+    🚀 <b>Live Cloud Sync Active:</b> Awtomatikong pumapasok dito ang mga order mula sa gateway.<br>
     <div class="sim-btn-group">
-      <button class="sim-btn" onclick="simulateOrder('TAKEOUT', 'UNPAID')">🛵 Takeout (Unpaid / COD)</button>
-      <button class="sim-btn" onclick="simulateOrder('TAKEOUT', 'PAID')">💳 Takeout (Online Paid)</button>
-      <button class="sim-btn sim-btn-dinein" onclick="simulateOrder('DINE_IN', 'UNPAID')">🍽️ Dine-In (Unpaid)</button>
+      <button class="sim-btn" onclick="simulateOrder('TAKEOUT', 'UNPAID')">🛵 Simulate Takeout</button>
+      <button class="sim-btn sim-btn-dinein" onclick="simulateOrder('DINE_IN', 'UNPAID')">🍽️ Simulate Dine-In</button>
     </div>
   </div>
 
@@ -101,7 +99,7 @@
   <div id="paymentModal" class="modal-overlay">
     <div class="modal-content">
       <h3 style="margin-top:0; color:#0369a1;">💰 POS Payment Processor</h3>
-      <p id="modalOrderInfo" style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Order #AU12 - Total: ₱250.00</p>
+      <p id="modalOrderInfo" style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Order # - Total: ₱250.00</p>
       
       <div style="text-align: left; margin-bottom: 5px; font-size: 12px; font-weight: bold;">Paraan ng Pagbabayad:</div>
       <select id="paymentMethodSelect" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:12px; font-size:14px;">
@@ -149,7 +147,7 @@
     let currentStoreToken = "";
     let currentTab = 'waiting';
     let selectedOrderIdForPayment = null;
-    let currentCashInput = "250"; // Mock total amount
+    let currentCashInput = "250";
 
     const STORAGE_WAITING = `sharemap_pos_waiting_${storePageId.toLowerCase()}`;
     const STORAGE_PREPARING = `sharemap_pos_preparing_${storePageId.toLowerCase()}`;
@@ -181,33 +179,7 @@
       }
     }
 
-    function simulateOrder(type, paymentStatus) {
-      let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
-      const orderId = (type === 'DINE_IN' ? 'AT' : 'AU') + Math.floor(10 + Math.random() * 90);
-      
-      const sampleOrder = {
-        order_id: orderId,
-        order_type: type,
-        store_page: storePageId.toLowerCase(),
-        branch: "Main Branch",
-        schedule: "Oct 15, 2026, 4:46 PM",
-        customer_name: "Juan Dela Cruz",
-        customer_phone: "09124356789",
-        landmark: "Malapit sa Panaderia",
-        orders_list: "Chicken Joy Value Meal x1\nCoke Regular x1",
-        payment_status: paymentStatus, // 'PAID' o 'UNPAID'
-        status: "PENDING",
-        received_at: new Date().toLocaleTimeString()
-      };
-
-      sampleOrder.raw_chat_output = `🏪 Store / Page: ${sampleOrder.store_page}\n🔢 Order ID: #${sampleOrder.order_id}\n💳 Payment: ${paymentStatus}\n⏰ Schedule: ${sampleOrder.schedule}\n\nClient Order List:\n${sampleOrder.orders_list}\n\nName: ${sampleOrder.customer_name}\nPhone: ${sampleOrder.customer_phone}`;
-
-      waitingOrders.unshift(sampleOrder);
-      localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
-      loadOrdersFromDevice();
-      alert(`✅ May pumasok na bagong ${type} order (${paymentStatus}) sa Waiting Room!`);
-    }
-
+    // Direktang kumukuha ng mga tunay na order mula sa Supabase table
     async function syncAndFetchNewOrders() {
       try {
         const { data: cloudOrders, error } = await supabaseClient
@@ -215,7 +187,10 @@
           .select('*')
           .eq('store_page', storePageId.toLowerCase());
 
-        if (error) return;
+        if (error) {
+          console.error("Supabase fetch error:", error);
+          return;
+        }
 
         if (cloudOrders && cloudOrders.length > 0) {
           let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
@@ -223,11 +198,20 @@
           cloudOrders.forEach(cloudOrder => {
             const exists = waitingOrders.some(item => item.order_id === cloudOrder.order_id);
             if (!exists) {
-              const isDineIn = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("DINE-IN")) || cloudOrder.order_type === "DINE_IN";
+              const isDineIn = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("DINE-IN"));
               waitingOrders.unshift({ 
-                ...cloudOrder, 
-                order_type: isDineIn ? "DINE_IN" : "TAKEOUT_DELIVERY",
-                payment_status: cloudOrder.payment_status || 'UNPAID',
+                order_id: cloudOrder.order_id,
+                order_type: isDineIn ? "DINE_IN" : "TAKEOUT",
+                store_page: cloudOrder.store_page,
+                branch: cloudOrder.branch,
+                schedule: cloudOrder.schedule,
+                customer_name: cloudOrder.customer_name,
+                customer_phone: cloudOrder.customer_phone,
+                landmark: cloudOrder.landmark,
+                orders_list: cloudOrder.orders_list,
+                raw_chat_output: cloudOrder.raw_chat_output,
+                messenger_psid: cloudOrder.messenger_psid,
+                payment_status: 'UNPAID',
                 status: 'PENDING',
                 received_at: new Date().toLocaleTimeString() 
               });
@@ -236,6 +220,7 @@
 
           localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
 
+          // Burahin na sa cloud table para hindi na ma-duplicate ang pull
           for (const ord of cloudOrders) {
             await supabaseClient.from('orders').delete().eq('order_id', ord.order_id);
           }
@@ -245,6 +230,33 @@
       }
 
       loadOrdersFromDevice();
+    }
+
+    function simulateOrder(type, paymentStatus) {
+      let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
+      const orderId = (type === 'DINE_IN' ? 'AT' : 'AU') + Math.floor(10 + Math.random() * 90);
+      
+      const sampleOrder = {
+        order_id: orderId,
+        order_type: type,
+        store_page: storePageId.toLowerCase(),
+        branch: "Main Branch",
+        schedule: "Oct 16, 2026, 1:15 AM",
+        customer_name: "Juan Dela Cruz",
+        customer_phone: "09124356789",
+        landmark: "Malapit sa Panaderia",
+        orders_list: "Chicken Joy Value Meal x1\nCoke Regular x1",
+        payment_status: paymentStatus,
+        status: "PENDING",
+        received_at: new Date().toLocaleTimeString()
+      };
+
+      sampleOrder.raw_chat_output = `🏪 Store / Page: ${sampleOrder.store_page}\n🔢 Order ID: #${sampleOrder.order_id}\n💳 Payment: ${paymentStatus}\n⏰ Schedule: ${sampleOrder.schedule}\n\nClient Order List:\n${sampleOrder.orders_list}\n\nName: ${sampleOrder.customer_name}\nPhone: ${sampleOrder.customer_phone}`;
+
+      waitingOrders.unshift(sampleOrder);
+      localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
+      loadOrdersFromDevice();
+      alert(`✅ May pumasok na test ${type} order sa Waiting Room!`);
     }
 
     function loadOrdersFromDevice() {
@@ -334,10 +346,9 @@
       });
     }
 
-    // 💰 Buka ang Payment Modal Keypad
     function openPaymentModal(orderId) {
       selectedOrderIdForPayment = orderId;
-      currentCashInput = "250"; // Mock amount
+      currentCashInput = "250";
       document.getElementById('cashDisplay').innerText = "₱" + currentCashInput + ".00";
       document.getElementById('modalOrderInfo').innerText = `Order #${orderId} - Total Amount Due`;
       document.getElementById('paymentModal').style.display = 'flex';
@@ -358,7 +369,6 @@
       document.getElementById('cashDisplay').innerText = "₱" + currentCashInput + ".00";
     }
 
-    // ✅ Kumpirmahin ang Bayad at Ilipat sa Preparing Room
     function confirmPayment() {
       if (!selectedOrderIdForPayment) return;
       const method = document.getElementById('paymentMethodSelect').value;
@@ -379,7 +389,7 @@
         localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders));
         
         sendApiNotification(item.customer_name, item.messenger_psid, `Salamat! Na-verify na ang bayad (${method}) para sa Order #${selectedOrderIdForPayment}. Inihahanda na ito sa kusina.`);
-        alert(`✅ Matagumpay na na-proseso ang bayad (${method}) para sa Order #${selectedOrderIdForPayment}! Nailipat na sa Preparing Room.`);
+        alert(`✅ Na-proseso ang bayad (${method}) para sa Order #${selectedOrderIdForPayment}! Nailipat na sa Preparing Room.`);
         
         closePaymentModal();
         loadOrdersFromDevice();
@@ -497,7 +507,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       await fetchStoreToken();
       syncAndFetchNewOrders();
-      setInterval(syncAndFetchNewOrders, 7000);
+      setInterval(syncAndFetchNewOrders, 5000); // Tinitignan ang Supabase cloud tuwing 5 segundo
     });
   </script>
 
