@@ -9,6 +9,9 @@
     body { font-family: Arial, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #334155; }
     .header { text-align: center; margin-bottom: 25px; }
     .test-banner { background: #dcfce7; border: 1px dashed #16a34a; padding: 10px; border-radius: 8px; max-width: 600px; margin: 0 auto 20px auto; text-align: center; font-size: 13px; color: #166534; }
+    .nav-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+    .tab-btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; background: #cbd5e1; color: #334155; }
+    .tab-btn.active { background: #0284c7; color: white; }
     .order-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
     .order-card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; border-top: 5px solid #16a34a; }
     .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
@@ -40,7 +43,12 @@
   </div>
 
   <div class="test-banner">
-    🚀 <b>Multi-Store API Mode:</b> Automatic na kumukuha ng sariling Page Access Token ng store mula sa Supabase database para sa direktang Messenger reply.
+    🚀 <b>Local Storage Active Queue Mode:</b> Ang mga order ay agad naiimbak sa device ni seller at awtomatikong binubura sa Supabase para ligtas ang cloud storage mo habang buo ang order list sa POS!
+  </div>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active" id="tabLive" onclick="switchTab('live')">📥 Active Orders (Device Storage)</button>
+    <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">💾 Completed History</button>
   </div>
 
   <div id="ordersContainer" class="order-container">
@@ -58,55 +66,98 @@
     const storePageId = urlParams.get('page') || "marjevinsoylucena";
     document.getElementById("currentStoreDisplay").innerText = storePageId;
 
-    // Global variable para i-cache ang Token ng kasalukuyang store pagka-load
     let currentStoreToken = "";
+    let currentView = 'live'; // 'live' o 'history'
 
-    // 1. KUNIN ANG PAGE ACCESS TOKEN NG STORE MULA SA SUPABASE 'licenses' TABLE
+    // Local Storage Keys para sa device ni seller
+    const STORAGE_ACTIVE = `sharemap_pos_active_${storePageId.toLowerCase()}`;
+    const STORAGE_HISTORY = `sharemap_pos_history_${storePageId.toLowerCase()}`;
+
+    function switchTab(tab) {
+      currentView = tab;
+      document.getElementById('tabLive').className = tab === 'live' ? 'tab-btn active' : 'tab-btn';
+      document.getElementById('tabHistory').className = tab === 'history' ? 'tab-btn active' : 'tab-btn';
+      loadOrdersFromDevice();
+    }
+
     async function fetchStoreToken() {
       try {
         const { data, error } = await supabaseClient
           .from('licenses')
-          .select('page_access_token') // Tiyaking may ganitong column ka sa Supabase licenses table
+          .select('page_access_token')
           .eq('username', storePageId.toLowerCase())
           .single();
 
-        if (error || !data || !data.page_access_token) {
-          console.warn("⚠️ Walang natagpuang Page Access Token para sa store na ito sa database.");
-          currentStoreToken = "";
-        } else {
+        if (!error && data && data.page_access_token) {
           currentStoreToken = data.page_access_token;
-          console.log("✅ Tagumpay na nakuha ang Page Access Token ng store.");
         }
       } catch (err) {
-        console.error("Error sa pag-fetch ng store token:", err);
+        console.error("Token fetch error:", err);
       }
     }
 
-    async function loadActiveOrders() {
-      const { data: orders, error } = await supabaseClient
-        .from('orders')
-        .select('*')
-        .eq('store_page', storePageId.toLowerCase())
-        .order('created_at', { ascending: false });
+    // 🚀 1. SURIIN ANG SUPABASE, ILIPAT SA DEVICE STORAGE, AT BURAHIN SA CLOUD KAGAD
+    async function syncAndFetchNewOrders() {
+      try {
+        const { data: cloudOrders, error } = await supabaseClient
+          .from('orders')
+          .select('*')
+          .eq('store_page', storePageId.toLowerCase());
 
-      if (error) {
-        console.error("Error sa pag-fetch ng orders:", error.message);
-        return;
+        if (error) {
+          console.error("Cloud fetch error:", error.message);
+          return;
+        }
+
+        if (cloudOrders && cloudOrders.length > 0) {
+          let activeOrders = JSON.parse(localStorage.getItem(STORAGE_ACTIVE)) || [];
+
+          cloudOrders.forEach(cloudOrder => {
+            // Suriin kung wala pa sa active device storage para hindi mag-double
+            const exists = activeOrders.some(item => item.order_id === cloudOrder.order_id);
+            if (!exists) {
+              activeOrders.unshift({ 
+                ...cloudOrder, 
+                status: cloudOrder.status || 'PENDING',
+                received_at: new Date().toLocaleTimeString() 
+              });
+            }
+          });
+
+          // I-save pabalik sa device local storage
+          localStorage.setItem(STORAGE_ACTIVE, JSON.stringify(activeOrders));
+
+          // Burahin na agad sa Supabase para lumaya ang database mo!
+          for (const ord of cloudOrders) {
+            await supabaseClient.from('orders').delete().eq('order_id', ord.order_id);
+          }
+          console.log("🧹 Matagumpay na nailipat sa device storage at nabura sa Supabase.");
+        }
+      } catch (err) {
+        console.error("Sync exception:", err);
       }
 
-      renderOrderCards(orders);
+      // I-load sa screen mula sa device storage
+      loadOrdersFromDevice();
     }
 
-    function renderOrderCards(orders) {
+    function loadOrdersFromDevice() {
       const container = document.getElementById("ordersContainer");
       container.innerHTML = "";
 
-      if (!orders || orders.length === 0) {
-        container.innerHTML = "<p style='text-align:center; width:100%; color:#64748b;'>Walang kasalukuyang order sa queue.</p>";
+      let ordersList = [];
+      if (currentView === 'live') {
+        ordersList = JSON.parse(localStorage.getItem(STORAGE_ACTIVE)) || [];
+      } else {
+        ordersList = JSON.parse(localStorage.getItem(STORAGE_HISTORY)) || [];
+      }
+
+      if (ordersList.length === 0) {
+        container.innerHTML = `<p style='text-align:center; width:100%; color:#64748b;'>${currentView === 'live' ? 'Walang active order sa waiting room.' : 'Walang nakaimbak na completed history.'}</p>`;
         return;
       }
 
-      orders.forEach(order => {
+      ordersList.forEach(order => {
         const card = document.createElement("div");
         card.className = "order-card";
         
@@ -123,21 +174,71 @@
             <p>🛒 <b>Orders:</b><br><pre style="font-family:inherit; margin:4px 0; background:#f8fafc; padding:6px; border-radius:4px;">${order.orders_list}</pre></p>
             <p>🏡 <b>Landmark:</b> ${order.landmark}</p>
             <p>📍 <b>Plus Code:</b> <code>${order.plus_code}</code></p>
+            <p style="font-size:11px; color:#0284c7;">📥 Pumasok sa Device: ${order.received_at || 'Kailan lang'}</p>
           </div>
           <div class="action-buttons">
             <button class="btn btn-print" onclick="printKitchenTicket('${order.order_id}', '${order.branch}', '${order.schedule}', \`${order.orders_list}\`)">🖨️ Print Kitchen Ticket</button>
             <button class="btn btn-copy" onclick="copyOrderDetails(\`${order.raw_chat_output}\`)">📋 Copy Full Details</button>
-            <button class="btn btn-accept" onclick="handleOrderStatusAction('${order.order_id}', 'ACCEPTED', '${order.customer_name}', '${order.messenger_psid}')">👍 Accept & API Notify</button>
-            <button class="btn btn-prep" onclick="handleOrderStatusAction('${order.order_id}', 'PREPARING', '${order.customer_name}', '${order.messenger_psid}')">🍳 Preparing & API Notify</button>
-            <button class="btn btn-cancel" onclick="cancelOrder('${order.order_id}', '${order.customer_name}', '${order.messenger_psid}')">❌ Cancel Order</button>
-            <button class="btn btn-finish" onclick="completeAndClearOrder('${order.order_id}', '${order.customer_name}')">✅ Transaction Finished</button>
+            
+            ${currentView === 'live' ? `
+              <button class="btn btn-accept" onclick="updateOrderStatus('${order.order_id}', 'ACCEPTED', '${order.customer_name}', '${order.messenger_psid}')">👍 Accept & API Notify</button>
+              <button class="btn btn-prep" onclick="updateOrderStatus('${order.order_id}', 'PREPARING', '${order.customer_name}', '${order.messenger_psid}')">🍳 Preparing & API Notify</button>
+              <button class="btn btn-finish" onclick="completeOrder('${order.order_id}')">✅ Complete & Move to History</button>
+              <button class="btn btn-cancel" onclick="cancelOrderLocally('${order.order_id}')">❌ Cancel Order</button>
+            ` : ''}
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    // 🖨️ JOLLIBEE-STYLE KITCHEN TICKET PRINT
+    // 🔄 I-update ang status sa loob ng Device Storage
+    function updateOrderStatus(orderId, newStatus, customerName, psid) {
+      let activeOrders = JSON.parse(localStorage.getItem(STORAGE_ACTIVE)) || [];
+      activeOrders = activeOrders.map(item => {
+        if (item.order_id === orderId) {
+          item.status = newStatus;
+        }
+        return item;
+      });
+      localStorage.setItem(STORAGE_ACTIVE, JSON.stringify(activeOrders));
+      
+      // Magpadala rin ng Meta API notification kung may PSID
+      sendApiNotification(customerName, psid, newStatus === 'ACCEPTED' ? `Tanggap na po namin ang iyong order (#${orderId}). Inihahanda na ito.` : `Niluluto at inihahanda na po sa kusina ang iyong Order #${orderId}.`);
+      loadOrdersFromDevice();
+    }
+
+    // ✅ Tapusin ang order at ilipat sa History
+    function completeOrder(orderId) {
+      let activeOrders = JSON.parse(localStorage.getItem(STORAGE_ACTIVE)) || [];
+      let historyOrders = JSON.parse(localStorage.getItem(STORAGE_HISTORY)) || [];
+
+      const index = activeOrders.findIndex(item => item.order_id === orderId);
+      if (index > -1) {
+        const completedItem = activeOrders.splice(index, 1)[0];
+        completedItem.status = 'COMPLETED';
+        completedItem.completed_at = new Date().toLocaleString();
+        
+        historyOrders.unshift(completedItem);
+        if (historyOrders.length > 200) historyOrders.pop(); // Limit history
+
+        localStorage.setItem(STORAGE_ACTIVE, JSON.stringify(activeOrders));
+        localStorage.setItem(STORAGE_HISTORY, JSON.stringify(historyOrders));
+        
+        alert(`✅ Tapos na ang transaksyon para sa Order #${orderId}! Nailipat na sa History.`);
+        loadOrdersFromDevice();
+      }
+    }
+
+    // ❌ Kanselahin ang order
+    function cancelOrderLocally(orderId) {
+      if (!confirm(`Kanselahin ba ang Order #${orderId}?`)) return;
+      let activeOrders = JSON.parse(localStorage.getItem(STORAGE_ACTIVE)) || [];
+      activeOrders = activeOrders.filter(item => item.order_id !== orderId);
+      localStorage.setItem(STORAGE_ACTIVE, JSON.stringify(activeOrders));
+      loadOrdersFromDevice();
+    }
+
     function printKitchenTicket(orderId, branch, schedule, ordersList) {
       const printArea = document.getElementById("printArea");
       printArea.style.display = "block";
@@ -158,80 +259,21 @@
       printArea.style.display = "none";
     }
 
-    // 🌐 META GRAPH API MESSAGING (GAMIT ANG INDIVIDUAL STORE TOKEN)
-    async function sendMetaApiMessage(psid, messageText) {
-      if (!currentStoreToken) {
-        alert("❌ Error: Walang nakitang Page Access Token para sa store na ito sa database. Hindi maipadala ang automated message.");
-        return;
-      }
-
-      if (!psid || psid === "MESSENGER_WEB_USER") {
-        alert("⚠️ Walang wastong Messenger PSID ang customer para diretsong ma-message.");
-        return;
-      }
+    async function sendApiNotification(customerName, psid, messageText) {
+      if (!currentStoreToken || !psid || psid === "MESSENGER_WEB_USER" || psid === "SMS_USER") return;
 
       const url = `https://graph.facebook.com/v18.0/me/messages?access_token=${currentStoreToken}`;
-      const payload = {
-        recipient: { id: psid },
-        message: { text: messageText }
-      };
+      const payload = { recipient: { id: psid }, message: { text: messageText } };
 
       try {
-        const response = await fetch(url, {
+        await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        const result = await response.json();
-        if (result.error) {
-          console.error("Meta API Error:", result.error.message);
-          alert("Meta API Error: " + result.error.message);
-        } else {
-          console.log("✅ Tagumpay na naipadala via store's Meta API!");
-        }
       } catch (err) {
-        console.error("Network Exception:", err);
+        console.error("API Exception:", err);
       }
-    }
-
-    // 🔄 STATUS ACTION HANDLER
-    async function handleOrderStatusAction(orderId, newStatus, customerName, psid) {
-      await supabaseClient.from('orders').update({ status: newStatus }).eq('order_id', orderId);
-
-      let apiMessage = "";
-      if (newStatus === 'ACCEPTED') {
-        apiMessage = `Hello ${customerName}! 👋 Tanggap na po namin ang iyong order (Order ID: #${orderId}). Inihahanda na ito ng aming staff. Salamat!`;
-      } else if (newStatus === 'PREPARING') {
-        apiMessage = `Update kay Order #${orderId}: 👨‍🍳 Niluluto at inihahanda na po sa kusina ang inyong mga order.`;
-      }
-
-      if (confirm(`I-update ang status sa ${newStatus} at i-send ang automated message kay ${customerName}?`)) {
-        await sendMetaApiMessage(psid, apiMessage);
-        alert(`✅ Naipadala na ang automated notification mula sa Page ng store!`);
-      }
-
-      loadActiveOrders();
-    }
-
-    async function cancelOrder(orderId, customerName, psid) {
-      const reason = prompt(`Ilagay ang dahilan kung bakit kakanselahin ang Order #${orderId}:`, "Out of stock / Sarado na");
-      if (!reason) return;
-
-      await supabaseClient.from('orders').delete().eq('order_id', orderId);
-
-      const cancelMsg = `Paumanhin po ${customerName}, kinansela po namin ang iyong Order #${orderId}. Dahilan: ${reason}. Maraming salamat po sa pang-unawa.`;
-      await sendMetaApiMessage(psid, cancelMsg);
-      
-      alert(`❌ Nakansela na ang order at nai-notify na ang customer.`);
-      loadActiveOrders();
-    }
-
-    async function completeAndClearOrder(orderId, customerName) {
-      if (!confirm(`Tapos na ba ang transaksyon para sa Order #${orderId}? Buburahin na ito sa database.`)) return;
-
-      await supabaseClient.from('orders').delete().eq('order_id', orderId);
-      alert(`✅ Tapos na ang transaksyon kay ${customerName}!`);
-      loadActiveOrders();
     }
 
     function copyOrderDetails(text) {
@@ -239,11 +281,10 @@
       alert("Nai-copy ang buong detalye sa clipboard!");
     }
 
-    // Pag-load ng page, kukunin muna ang token at orders
     window.addEventListener('DOMContentLoaded', async () => {
       await fetchStoreToken();
-      loadActiveOrders();
-      setInterval(loadActiveOrders, 10000); // Auto-refresh bawat 10 segundo
+      syncAndFetchNewOrders();
+      setInterval(syncAndFetchNewOrders, 7000); // Auto-sync bawat 7 segundo para huthutin sa Supabase at itabi sa device
     });
   </script>
 
