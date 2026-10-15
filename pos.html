@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShareMap POS & Meta API Dashboard</title>
+  <title>ShareMap POS & Multi-Store Meta API Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #334155; }
@@ -35,12 +35,12 @@
 <body>
 
   <div class="header">
-    <h2>🛍️ ShareMap POS & Meta API Dashboard</h2>
+    <h2>🛍️ ShareMap POS & Multi-Store Meta API Dashboard</h2>
     <p>Live Orders Queue para sa store: <b id="currentStoreDisplay">marjevinsoylucena</b></p>
   </div>
 
   <div class="test-banner">
-    🚀 <b>Meta API Active Mode:</b> Tuwirang nagpapadala ng notipikasyon sa Messenger ng customer nang walang m.me popup!
+    🚀 <b>Multi-Store API Mode:</b> Automatic na kumukuha ng sariling Page Access Token ng store mula sa Supabase database para sa direktang Messenger reply.
   </div>
 
   <div id="ordersContainer" class="order-container">
@@ -58,8 +58,29 @@
     const storePageId = urlParams.get('page') || "marjevinsoylucena";
     document.getElementById("currentStoreDisplay").innerText = storePageId;
 
-    // 🔑 ILAGAY DITO ANG META PAGE ACCESS TOKEN NG STORE (O KUNIN SA DB)
-    const PAGE_ACCESS_TOKEN = "ILAGAY_MO_DITO_ANG_IYONG_FB_PAGE_ACCESS_TOKEN";
+    // Global variable para i-cache ang Token ng kasalukuyang store pagka-load
+    let currentStoreToken = "";
+
+    // 1. KUNIN ANG PAGE ACCESS TOKEN NG STORE MULA SA SUPABASE 'licenses' TABLE
+    async function fetchStoreToken() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('licenses')
+          .select('page_access_token') // Tiyaking may ganitong column ka sa Supabase licenses table
+          .eq('username', storePageId.toLowerCase())
+          .single();
+
+        if (error || !data || !data.page_access_token) {
+          console.warn("⚠️ Walang natagpuang Page Access Token para sa store na ito sa database.");
+          currentStoreToken = "";
+        } else {
+          currentStoreToken = data.page_access_token;
+          console.log("✅ Tagumpay na nakuha ang Page Access Token ng store.");
+        }
+      } catch (err) {
+        console.error("Error sa pag-fetch ng store token:", err);
+      }
+    }
 
     async function loadActiveOrders() {
       const { data: orders, error } = await supabaseClient
@@ -69,7 +90,7 @@
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error("Error sa pag-fetch:", error.message);
+        console.error("Error sa pag-fetch ng orders:", error.message);
         return;
       }
 
@@ -116,7 +137,7 @@
       });
     }
 
-    // 🖨️ KITCHEN TICKET PRINT
+    // 🖨️ JOLLIBEE-STYLE KITCHEN TICKET PRINT
     function printKitchenTicket(orderId, branch, schedule, ordersList) {
       const printArea = document.getElementById("printArea");
       printArea.style.display = "block";
@@ -137,14 +158,19 @@
       printArea.style.display = "none";
     }
 
-    // 🌐 DIREKTANG META GRAPH API MESSAGING FUNCTION
+    // 🌐 META GRAPH API MESSAGING (GAMIT ANG INDIVIDUAL STORE TOKEN)
     async function sendMetaApiMessage(psid, messageText) {
+      if (!currentStoreToken) {
+        alert("❌ Error: Walang nakitang Page Access Token para sa store na ito sa database. Hindi maipadala ang automated message.");
+        return;
+      }
+
       if (!psid || psid === "MESSENGER_WEB_USER") {
         alert("⚠️ Walang wastong Messenger PSID ang customer para diretsong ma-message.");
         return;
       }
 
-      const url = `https://graph.facebook.com/v18.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`;
+      const url = `https://graph.facebook.com/v18.0/me/messages?access_token=${currentStoreToken}`;
       const payload = {
         recipient: { id: psid },
         message: { text: messageText }
@@ -161,14 +187,14 @@
           console.error("Meta API Error:", result.error.message);
           alert("Meta API Error: " + result.error.message);
         } else {
-          console.log("✅ Tagumpay na naipadala via Meta API!");
+          console.log("✅ Tagumpay na naipadala via store's Meta API!");
         }
       } catch (err) {
         console.error("Network Exception:", err);
       }
     }
 
-    // 🔄 ORDER STATUS ACTION & AUTO API NOTIFY
+    // 🔄 STATUS ACTION HANDLER
     async function handleOrderStatusAction(orderId, newStatus, customerName, psid) {
       await supabaseClient.from('orders').update({ status: newStatus }).eq('order_id', orderId);
 
@@ -179,9 +205,9 @@
         apiMessage = `Update kay Order #${orderId}: 👨‍🍳 Niluluto at inihahanda na po sa kusina ang inyong mga order.`;
       }
 
-      if (confirm(`I-update ang status sa ${newStatus} at direktang i-send ang Meta API message kay ${customerName}?`)) {
+      if (confirm(`I-update ang status sa ${newStatus} at i-send ang automated message kay ${customerName}?`)) {
         await sendMetaApiMessage(psid, apiMessage);
-        alert(`✅ Naipadala na ang automated notification kay ${customerName}!`);
+        alert(`✅ Naipadala na ang automated notification mula sa Page ng store!`);
       }
 
       loadActiveOrders();
@@ -213,7 +239,9 @@
       alert("Nai-copy ang buong detalye sa clipboard!");
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    // Pag-load ng page, kukunin muna ang token at orders
+    window.addEventListener('DOMContentLoaded', async () => {
+      await fetchStoreToken();
       loadActiveOrders();
       setInterval(loadActiveOrders, 10000); // Auto-refresh bawat 10 segundo
     });
