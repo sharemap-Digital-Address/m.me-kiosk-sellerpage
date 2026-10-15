@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShareMap POS & Business Dashboard</title>
+  <title>ShareMap POS & Meta API Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #334155; }
     .header { text-align: center; margin-bottom: 25px; }
-    .test-banner { background: #e0f2fe; border: 1px dashed #0284c7; padding: 10px; border-radius: 8px; max-width: 600px; margin: 0 auto 20px auto; text-align: center; font-size: 13px; color: #0369a1; }
+    .test-banner { background: #dcfce7; border: 1px dashed #16a34a; padding: 10px; border-radius: 8px; max-width: 600px; margin: 0 auto 20px auto; text-align: center; font-size: 13px; color: #166534; }
     .order-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
-    .order-card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; border-top: 5px solid #0284c7; }
+    .order-card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; border-top: 5px solid #16a34a; }
     .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
     .order-id { font-weight: bold; color: #0369a1; font-size: 16px; }
     .status-badge { background: #fef08a; color: #854d0e; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
@@ -25,7 +25,6 @@
     .btn-copy { background-color: #475569; }
     .btn:active { opacity: 0.8; }
 
-    /* HIDDEN KITCHEN TICKET STYLING FOR THERMAL / PRINTING */
     @media print {
       body * { visibility: hidden; }
       #printArea, #printArea * { visibility: visible; }
@@ -36,19 +35,18 @@
 <body>
 
   <div class="header">
-    <h2>🛍️ ShareMap POS & Order Dispatch Dashboard</h2>
+    <h2>🛍️ ShareMap POS & Meta API Dashboard</h2>
     <p>Live Orders Queue para sa store: <b id="currentStoreDisplay">marjevinsoylucena</b></p>
   </div>
 
   <div class="test-banner">
-    🧪 <b>POS Active Mode:</b> Handang gamitin para sa Supabase sync, Jollibee-style kitchen printing, at Messenger API / m.me automation.
+    🚀 <b>Meta API Active Mode:</b> Tuwirang nagpapadala ng notipikasyon sa Messenger ng customer nang walang m.me popup!
   </div>
 
   <div id="ordersContainer" class="order-container">
-    <!-- Dito papasok ang mga order cards -->
+    <p style="text-align:center; width:100%; color:#64748b;">Naghahanap ng mga papasok na order...</p>
   </div>
 
-  <!-- HIDDEN PRINT AREA PARA SA KITCHEN TICKET -->
   <div id="printArea" style="display:none;"></div>
 
   <script>
@@ -60,24 +58,8 @@
     const storePageId = urlParams.get('page') || "marjevinsoylucena";
     document.getElementById("currentStoreDisplay").innerText = storePageId;
 
-    const sampleMockOrders = [
-      {
-        order_id: "8821",
-        store_page: storePageId.toLowerCase(),
-        branch: "Main Branch - Lucena",
-        schedule: "Now (Agad-agad)",
-        customer_name: "Juan Dela Cruz",
-        customer_phone: "09123456789",
-        landmark: "Malapit sa Robinsons Place Lucena",
-        orders_list: "2x Crispy Pata - ₱900\n1x Inihaw na Liempo - ₱350\n* Note: Pakisama po ng extra kutsara at tinidor (Utensils: Yes)",
-        plus_code: "WHRV+69 Lucena City",
-        latitude: 13.9376,
-        longitude: 121.6155,
-        text_address: "Maharlika Highway, Lucena City, Quezon",
-        raw_chat_output: "🏪 Store: marjevinsoylucena\n🔢 Order ID: #8821\n👤 Name: Juan Dela Cruz\n🛒 Orders:\n2x Crispy Pata\n1x Inihaw na Liempo",
-        status: "PENDING"
-      }
-    ];
+    // 🔑 ILAGAY DITO ANG META PAGE ACCESS TOKEN NG STORE (O KUNIN SA DB)
+    const PAGE_ACCESS_TOKEN = "ILAGAY_MO_DITO_ANG_IYONG_FB_PAGE_ACCESS_TOKEN";
 
     async function loadActiveOrders() {
       const { data: orders, error } = await supabaseClient
@@ -86,8 +68,8 @@
         .eq('store_page', storePageId.toLowerCase())
         .order('created_at', { ascending: false });
 
-      if (error || !orders || orders.length === 0) {
-        renderOrderCards(sampleMockOrders);
+      if (error) {
+        console.error("Error sa pag-fetch:", error.message);
         return;
       }
 
@@ -97,6 +79,11 @@
     function renderOrderCards(orders) {
       const container = document.getElementById("ordersContainer");
       container.innerHTML = "";
+
+      if (!orders || orders.length === 0) {
+        container.innerHTML = "<p style='text-align:center; width:100%; color:#64748b;'>Walang kasalukuyang order sa queue.</p>";
+        return;
+      }
 
       orders.forEach(order => {
         const card = document.createElement("div");
@@ -119,17 +106,17 @@
           <div class="action-buttons">
             <button class="btn btn-print" onclick="printKitchenTicket('${order.order_id}', '${order.branch}', '${order.schedule}', \`${order.orders_list}\`)">🖨️ Print Kitchen Ticket</button>
             <button class="btn btn-copy" onclick="copyOrderDetails(\`${order.raw_chat_output}\`)">📋 Copy Full Details</button>
-            <button class="btn btn-accept" onclick="handleOrderStatusAction('${order.order_id}', 'ACCEPTED', '${order.customer_name}')">👍 Accept Order & Notify</button>
-            <button class="btn btn-prep" onclick="handleOrderStatusAction('${order.order_id}', 'PREPARING', '${order.customer_name}')">🍳 Start Preparing & Notify</button>
-            <button class="btn btn-cancel" onclick="cancelOrder('${order.order_id}', '${order.customer_name}')">❌ Cancel Order</button>
-            <button class="btn btn-finish" onclick="completeAndClearOrder('${order.order_id}', '${order.customer_name}')">✅ Transaction Finished (Complete)</button>
+            <button class="btn btn-accept" onclick="handleOrderStatusAction('${order.order_id}', 'ACCEPTED', '${order.customer_name}', '${order.messenger_psid}')">👍 Accept & API Notify</button>
+            <button class="btn btn-prep" onclick="handleOrderStatusAction('${order.order_id}', 'PREPARING', '${order.customer_name}', '${order.messenger_psid}')">🍳 Preparing & API Notify</button>
+            <button class="btn btn-cancel" onclick="cancelOrder('${order.order_id}', '${order.customer_name}', '${order.messenger_psid}')">❌ Cancel Order</button>
+            <button class="btn btn-finish" onclick="completeAndClearOrder('${order.order_id}', '${order.customer_name}')">✅ Transaction Finished</button>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    // 🖨️ JOLLIBEE-STYLE KITCHEN TICKET PRINT FUNCTION
+    // 🖨️ KITCHEN TICKET PRINT
     function printKitchenTicket(orderId, branch, schedule, ordersList) {
       const printArea = document.getElementById("printArea");
       printArea.style.display = "block";
@@ -146,48 +133,78 @@
         <hr style="border: 1px dashed #000;">
         <div style="text-align: center; font-size: 11px; margin-top: 10px;">--- End of Kitchen Copy ---</div>
       `;
-
       window.print();
       printArea.style.display = "none";
     }
 
-    // 🤖 META API O M.ME FALLBACK NOTIFICATION HANDLER
-    async function handleOrderStatusAction(orderId, newStatus, customerName) {
+    // 🌐 DIREKTANG META GRAPH API MESSAGING FUNCTION
+    async function sendMetaApiMessage(psid, messageText) {
+      if (!psid || psid === "MESSENGER_WEB_USER") {
+        alert("⚠️ Walang wastong Messenger PSID ang customer para diretsong ma-message.");
+        return;
+      }
+
+      const url = `https://graph.facebook.com/v18.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`;
+      const payload = {
+        recipient: { id: psid },
+        message: { text: messageText }
+      };
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (result.error) {
+          console.error("Meta API Error:", result.error.message);
+          alert("Meta API Error: " + result.error.message);
+        } else {
+          console.log("✅ Tagumpay na naipadala via Meta API!");
+        }
+      } catch (err) {
+        console.error("Network Exception:", err);
+      }
+    }
+
+    // 🔄 ORDER STATUS ACTION & AUTO API NOTIFY
+    async function handleOrderStatusAction(orderId, newStatus, customerName, psid) {
       await supabaseClient.from('orders').update({ status: newStatus }).eq('order_id', orderId);
 
-      let automatedReplyText = "";
+      let apiMessage = "";
       if (newStatus === 'ACCEPTED') {
-        automatedReplyText = `Hello ${customerName}! 👋 Tanggap na po namin ang iyong order (Order ID: #${orderId}). Inihahanda na ito ng aming staff. Salamat!`;
+        apiMessage = `Hello ${customerName}! 👋 Tanggap na po namin ang iyong order (Order ID: #${orderId}). Inihahanda na ito ng aming staff. Salamat!`;
       } else if (newStatus === 'PREPARING') {
-        automatedReplyText = `Update kay Order #${orderId}: 👨‍🍳 Niluluto na po sa kusina ang inyong mga order.`;
+        apiMessage = `Update kay Order #${orderId}: 👨‍🍳 Niluluto at inihahanda na po sa kusina ang inyong mga order.`;
       }
 
-      // Kapag mayroon ka nang Meta API Backend, dito mo tatawagin ang API fetch.
-      // Sa ngayon, ginagamit muna natin ang m.me link para sa madali at mabilis na deployment:
-      if (confirm(`Na-update ang status sa ${newStatus}!\n\nI-send ang automated reply kay ${customerName}?`)) {
-        window.open(`https://m.me/${encodeURIComponent(storePageId)}?text=${encodeURIComponent(automatedReplyText)}`, '_blank');
+      if (confirm(`I-update ang status sa ${newStatus} at direktang i-send ang Meta API message kay ${customerName}?`)) {
+        await sendMetaApiMessage(psid, apiMessage);
+        alert(`✅ Naipadala na ang automated notification kay ${customerName}!`);
       }
+
       loadActiveOrders();
     }
 
-    async function cancelOrder(orderId, customerName) {
+    async function cancelOrder(orderId, customerName, psid) {
       const reason = prompt(`Ilagay ang dahilan kung bakit kakanselahin ang Order #${orderId}:`, "Out of stock / Sarado na");
       if (!reason) return;
 
       await supabaseClient.from('orders').delete().eq('order_id', orderId);
 
       const cancelMsg = `Paumanhin po ${customerName}, kinansela po namin ang iyong Order #${orderId}. Dahilan: ${reason}. Maraming salamat po sa pang-unawa.`;
-      window.open(`https://m.me/${encodeURIComponent(storePageId)}?text=${encodeURIComponent(cancelMsg)}`, '_blank');
+      await sendMetaApiMessage(psid, cancelMsg);
       
-      alert(`❌ Nakansela na ang order at nabura sa queue.`);
+      alert(`❌ Nakansela na ang order at nai-notify na ang customer.`);
       loadActiveOrders();
     }
 
     async function completeAndClearOrder(orderId, customerName) {
-      if (!confirm(`Tapos na ba ang transaksyon para sa Order #${orderId}?`)) return;
+      if (!confirm(`Tapos na ba ang transaksyon para sa Order #${orderId}? Buburahin na ito sa database.`)) return;
 
       await supabaseClient.from('orders').delete().eq('order_id', orderId);
-      alert(`✅ Tapos na ang transaksyon kay ${customerName}! Nabura na ito para makatipid sa database storage.`);
+      alert(`✅ Tapos na ang transaksyon kay ${customerName}!`);
       loadActiveOrders();
     }
 
