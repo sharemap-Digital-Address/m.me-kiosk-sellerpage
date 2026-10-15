@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShareMap POS & Business Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #334155; }
+    .header { text-align: center; margin-bottom: 25px; }
+    .test-banner { background: #e0f2fe; border: 1px dashed #0284c7; padding: 10px; border-radius: 8px; max-width: 600px; margin: 0 auto 20px auto; text-align: center; font-size: 13px; color: #0369a1; }
+    .order-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+    .order-card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; border-top: 5px solid #0284c7; }
+    .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+    .order-id { font-weight: bold; color: #0369a1; font-size: 16px; }
+    .status-badge { background: #fef08a; color: #854d0e; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+    .order-details { font-size: 14px; line-height: 1.5; margin-bottom: 15px; }
+    .action-buttons { display: flex; flex-direction: column; gap: 8px; }
+    .btn { padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; color: white; text-align: center; }
+    .btn-print { background-color: #0284c7; }
+    .btn-accept { background-color: #2563eb; }
+    .btn-prep { background-color: #d97706; }
+    .btn-finish { background-color: #16a34a; }
+    .btn-cancel { background-color: #dc2626; }
+    .btn-copy { background-color: #475569; }
+    .btn:active { opacity: 0.8; }
+
+    /* HIDDEN KITCHEN TICKET STYLING FOR THERMAL / PRINTING */
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; font-family: monospace; padding: 10px; color: #000; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2>🛍️ ShareMap POS & Order Dispatch Dashboard</h2>
+    <p>Live Orders Queue para sa store: <b id="currentStoreDisplay">marjevinsoylucena</b></p>
+  </div>
+
+  <div class="test-banner">
+    🧪 <b>POS Active Mode:</b> Handang gamitin para sa Supabase sync, Jollibee-style kitchen printing, at Messenger API / m.me automation.
+  </div>
+
+  <div id="ordersContainer" class="order-container">
+    <!-- Dito papasok ang mga order cards -->
+  </div>
+
+  <!-- HIDDEN PRINT AREA PARA SA KITCHEN TICKET -->
+  <div id="printArea" style="display:none;"></div>
+
+  <script>
+    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const storePageId = urlParams.get('page') || "marjevinsoylucena";
+    document.getElementById("currentStoreDisplay").innerText = storePageId;
+
+    const sampleMockOrders = [
+      {
+        order_id: "8821",
+        store_page: storePageId.toLowerCase(),
+        branch: "Main Branch - Lucena",
+        schedule: "Now (Agad-agad)",
+        customer_name: "Juan Dela Cruz",
+        customer_phone: "09123456789",
+        landmark: "Malapit sa Robinsons Place Lucena",
+        orders_list: "2x Crispy Pata - ₱900\n1x Inihaw na Liempo - ₱350\n* Note: Pakisama po ng extra kutsara at tinidor (Utensils: Yes)",
+        plus_code: "WHRV+69 Lucena City",
+        latitude: 13.9376,
+        longitude: 121.6155,
+        text_address: "Maharlika Highway, Lucena City, Quezon",
+        raw_chat_output: "🏪 Store: marjevinsoylucena\n🔢 Order ID: #8821\n👤 Name: Juan Dela Cruz\n🛒 Orders:\n2x Crispy Pata\n1x Inihaw na Liempo",
+        status: "PENDING"
+      }
+    ];
+
+    async function loadActiveOrders() {
+      const { data: orders, error } = await supabaseClient
+        .from('orders')
+        .select('*')
+        .eq('store_page', storePageId.toLowerCase())
+        .order('created_at', { ascending: false });
+
+      if (error || !orders || orders.length === 0) {
+        renderOrderCards(sampleMockOrders);
+        return;
+      }
+
+      renderOrderCards(orders);
+    }
+
+    function renderOrderCards(orders) {
+      const container = document.getElementById("ordersContainer");
+      container.innerHTML = "";
+
+      orders.forEach(order => {
+        const card = document.createElement("div");
+        card.className = "order-card";
+        
+        card.innerHTML = `
+          <div class="order-header">
+            <span class="order-id">#${order.order_id || 'N/A'}</span>
+            <span class="status-badge">${order.status || 'PENDING'}</span>
+          </div>
+          <div class="order-details">
+            <p>👤 <b>Pangalan:</b> ${order.customer_name}</p>
+            <p>📞 <b>Contact:</b> ${order.customer_phone}</p>
+            <p>🏢 <b>Branch:</b> ${order.branch}</p>
+            <p>⏰ <b>Schedule:</b> ${order.schedule}</p>
+            <p>🛒 <b>Orders:</b><br><pre style="font-family:inherit; margin:4px 0; background:#f8fafc; padding:6px; border-radius:4px;">${order.orders_list}</pre></p>
+            <p>🏡 <b>Landmark:</b> ${order.landmark}</p>
+            <p>📍 <b>Plus Code:</b> <code>${order.plus_code}</code></p>
+          </div>
+          <div class="action-buttons">
+            <button class="btn btn-print" onclick="printKitchenTicket('${order.order_id}', '${order.branch}', '${order.schedule}', \`${order.orders_list}\`)">🖨️ Print Kitchen Ticket</button>
+            <button class="btn btn-copy" onclick="copyOrderDetails(\`${order.raw_chat_output}\`)">📋 Copy Full Details</button>
+            <button class="btn btn-accept" onclick="handleOrderStatusAction('${order.order_id}', 'ACCEPTED', '${order.customer_name}')">👍 Accept Order & Notify</button>
+            <button class="btn btn-prep" onclick="handleOrderStatusAction('${order.order_id}', 'PREPARING', '${order.customer_name}')">🍳 Start Preparing & Notify</button>
+            <button class="btn btn-cancel" onclick="cancelOrder('${order.order_id}', '${order.customer_name}')">❌ Cancel Order</button>
+            <button class="btn btn-finish" onclick="completeAndClearOrder('${order.order_id}', '${order.customer_name}')">✅ Transaction Finished (Complete)</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // 🖨️ JOLLIBEE-STYLE KITCHEN TICKET PRINT FUNCTION
+    function printKitchenTicket(orderId, branch, schedule, ordersList) {
+      const printArea = document.getElementById("printArea");
+      printArea.style.display = "block";
+      printArea.innerHTML = `
+        <div style="text-align: center; font-weight: bold; font-size: 16px;">KITCHEN / BAR ORDER TICKET</div>
+        <div style="text-align: center; font-size: 12px; margin-bottom: 10px;">ShareMap POS System</div>
+        <hr style="border: 1px dashed #000;">
+        <p><b>Order ID:</b> #${orderId}</p>
+        <p><b>Branch:</b> ${branch}</p>
+        <p><b>Type / Sched:</b> ${schedule}</p>
+        <hr style="border: 1px dashed #000;">
+        <p><b>ITEMS TO PREPARE:</b></p>
+        <pre style="font-family: monospace; font-size: 14px; white-space: pre-wrap;">${ordersList}</pre>
+        <hr style="border: 1px dashed #000;">
+        <div style="text-align: center; font-size: 11px; margin-top: 10px;">--- End of Kitchen Copy ---</div>
+      `;
+
+      window.print();
+      printArea.style.display = "none";
+    }
+
+    // 🤖 META API O M.ME FALLBACK NOTIFICATION HANDLER
+    async function handleOrderStatusAction(orderId, newStatus, customerName) {
+      await supabaseClient.from('orders').update({ status: newStatus }).eq('order_id', orderId);
+
+      let automatedReplyText = "";
+      if (newStatus === 'ACCEPTED') {
+        automatedReplyText = `Hello ${customerName}! 👋 Tanggap na po namin ang iyong order (Order ID: #${orderId}). Inihahanda na ito ng aming staff. Salamat!`;
+      } else if (newStatus === 'PREPARING') {
+        automatedReplyText = `Update kay Order #${orderId}: 👨‍🍳 Niluluto na po sa kusina ang inyong mga order.`;
+      }
+
+      // Kapag mayroon ka nang Meta API Backend, dito mo tatawagin ang API fetch.
+      // Sa ngayon, ginagamit muna natin ang m.me link para sa madali at mabilis na deployment:
+      if (confirm(`Na-update ang status sa ${newStatus}!\n\nI-send ang automated reply kay ${customerName}?`)) {
+        window.open(`https://m.me/${encodeURIComponent(storePageId)}?text=${encodeURIComponent(automatedReplyText)}`, '_blank');
+      }
+      loadActiveOrders();
+    }
+
+    async function cancelOrder(orderId, customerName) {
+      const reason = prompt(`Ilagay ang dahilan kung bakit kakanselahin ang Order #${orderId}:`, "Out of stock / Sarado na");
+      if (!reason) return;
+
+      await supabaseClient.from('orders').delete().eq('order_id', orderId);
+
+      const cancelMsg = `Paumanhin po ${customerName}, kinansela po namin ang iyong Order #${orderId}. Dahilan: ${reason}. Maraming salamat po sa pang-unawa.`;
+      window.open(`https://m.me/${encodeURIComponent(storePageId)}?text=${encodeURIComponent(cancelMsg)}`, '_blank');
+      
+      alert(`❌ Nakansela na ang order at nabura sa queue.`);
+      loadActiveOrders();
+    }
+
+    async function completeAndClearOrder(orderId, customerName) {
+      if (!confirm(`Tapos na ba ang transaksyon para sa Order #${orderId}?`)) return;
+
+      await supabaseClient.from('orders').delete().eq('order_id', orderId);
+      alert(`✅ Tapos na ang transaksyon kay ${customerName}! Nabura na ito para makatipid sa database storage.`);
+      loadActiveOrders();
+    }
+
+    function copyOrderDetails(text) {
+      navigator.clipboard.writeText(text);
+      alert("Nai-copy ang buong detalye sa clipboard!");
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadActiveOrders();
+      setInterval(loadActiveOrders, 10000); // Auto-refresh bawat 10 segundo
+    });
+  </script>
+
+</body>
+</html>
