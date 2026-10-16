@@ -12,16 +12,15 @@
         .store-header { text-align: center; margin-bottom: 15px; }
         .store-header h2 { margin: 0; color: #38bdf8; font-size: 22px; }
 
-        /* Category Navigation Tabs ala Jollibee / McDo */
         .category-tabs {
             display: flex;
             gap: 8px;
             overflow-x: auto;
             padding-bottom: 10px;
             margin-bottom: 15px;
-            scrollbar-width: none; /* Firefox */
+            scrollbar-width: none;
         }
-        .category-tabs::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
+        .category-tabs::-webkit-scrollbar { display: none; }
         .cat-tab {
             background: #1e293b;
             color: #94a3b8;
@@ -47,7 +46,6 @@
         .menu-title { font-weight: bold; font-size: 13px; margin-bottom: 2px; }
         .menu-desc { font-size: 10px; color: #94a3b8; margin-bottom: 8px; line-height: 1.3; }
         
-        /* Quantity Controls inside Kiosk Card */
         .qty-control { display: flex; align-items: center; justify-content: space-between; background: #0f172a; border-radius: 6px; padding: 4px; border: 1px solid #475569; margin-top: 5px; }
         .qty-btn { background: #334155; color: white; border: none; width: 26px; height: 26px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         .qty-val { font-weight: bold; font-size: 13px; }
@@ -64,10 +62,7 @@
         <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Pumili ng category at i-tap ang (+) para mag-order:</p>
     </div>
 
-    <!-- Category Tabs Container -->
-    <div class="category-tabs" id="categoryTabsContainer">
-        <!-- Dinamikong malilikha dito ang mga category tabs -->
-    </div>
+    <div class="category-tabs" id="categoryTabsContainer"></div>
 
     <div class="menu-grid" id="kioskMenuGrid">
         <p style="text-align:center; grid-column: 1 / -1; color:#94a3b8;">Lino-load ang Visual Menu...</p>
@@ -90,7 +85,6 @@
     let allFetchedItems = [];
     let activeCategory = "ALL";
 
-    // DEFAULT FAST-FOOD KIOSK MENU (Kung sakaling wala pang nilagay ang store owner)
     const DEFAULT_KIOSK_MENU = [
         { name: "Chicken Joy Value Meal", category: "Meals", image: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=300", description: "Crispy fried chicken with rice & gravy", status: "AVAILABLE" },
         { name: "Family Fiesta Ala Carte", category: "Best Sellers", image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=300", description: "Special family size sharing meal", status: "AVAILABLE" },
@@ -104,9 +98,8 @@
         const urlParams = new URLSearchParams(window.location.search);
         storePage = urlParams.get('page') || localStorage.getItem('sharemap_page');
         
-        // Saluhin ang PSID mula sa URL o LocalStorage
         currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
-        if (urlParams.get('psid')) {
+        if (urlParams.get('psid') && urlParams.get('psid') !== "USER_ACTUAL_PSID_DITO") {
             localStorage.setItem('sharemap_psid', currentPsid);
         }
 
@@ -263,7 +256,6 @@
         }
 
         let orderString = orderArray.join(', ');
-        // Isama pabalik ang psid patungong multigateway.html
         window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&psid=${encodeURIComponent(currentPsid)}`;
     }
 </script>
