@@ -275,12 +275,17 @@
       }
 
       // Saluhin at i-save ang PSID mula sa URL, SDK, o LocalStorage
-      let currentPsid = urlParams.get('psid');
-      if (!currentPsid || currentPsid === "USER_ACTUAL_PSID_DITO") {
-        currentPsid = localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+            let currentPsid = urlParams.get('psid');
+      // Kung ang pumasok ay placeholder text o walang laman, gawing MESSENGER_WEB_USER
+      if (!currentPsid || currentPsid.includes("PSID") || currentPsid.includes("DITO") || currentPsid === "USER_ACTUAL_PSID_DITO") {
+        currentPsid = localStorage.getItem('sharemap_psid');
+        if (!currentPsid || currentPsid.includes("PSID") || currentPsid.includes("DITO")) {
+          currentPsid = "MESSENGER_WEB_USER";
+        }
       } else {
         localStorage.setItem('sharemap_psid', currentPsid);
       }
+
 
       const orderIdVal = urlParams.get('oid') || localStorage.getItem('sharemap_orderid') || "N/A";
       const buyerBranch = urlParams.get('branch') || localStorage.getItem('sharemap_branch') || "Main Branch";
