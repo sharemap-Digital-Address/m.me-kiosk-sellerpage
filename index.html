@@ -1,614 +1,510 @@
 <!DOCTYPE html>
-<html lang="tl">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Instant Delivery Location Share</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareMap - Order & Service Gateway</title>
 
-  <!-- SUPABASE CLIENT LIBRARY & ACCESS CHECKER -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    <!-- SUPABASE CLIENT LIBRARY -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    async function checkShareMapAccess() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const pageId = urlParams.get('page') || localStorage.getItem('sharemap_page');
+        async function checkShareMapAccess() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const pageId = urlParams.get('page') || localStorage.getItem('sharemap_page');
 
-      if (!pageId) {
-        alert("⚠️ Walang natagpung Store Page ID. Hindi maiproseso ang gateway.");
-        document.body.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>⚠️ Invalid Gateway Link</h2>";
-        return;
-      }
+            if (!pageId) {
+                alert("⚠️ Walang natagpung Store Page ID. Hindi maiproseso ang gateway.");
+                document.body.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>⚠️ Invalid Gateway Link</h2>";
+                return;
+            }
 
-      const { data, error } = await supabaseClient
-        .from('licenses')
-        .select('*')
-        .eq('username', pageId.toLowerCase())
-        .single();
+            const { data, error } = await supabaseClient
+                .from('licenses')
+                .select('*')
+                .eq('username', pageId.toLowerCase())
+                .single();
 
-      const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString().split('T')[0];
 
-      if (error || !data || data.status === "INACTIVE") {
-        showBlockScreen("⚠️ Walang Lisensya / Inactive Account", "Ang store na ito ay wala pang lisensya sa ShareMap. Mangyaring makipag-ugnayan sa provider.");
-        return;
-      }
+            if (error || !data || data.status === "INACTIVE") {
+                showBlockScreen("⚠️ Walang Lisensya / Inactive Account", "Ang store na ito ay wala pang lisensya sa ShareMap. Mangyaring makipag-ugnayan sa provider.");
+                return;
+            }
 
-      if (data.expiry && today > data.expiry) {
-        showBlockScreen("🚫 Expired License", `Ang inyong ${data.plan === 'BRONZE_MONTHLY' ? 'Bronze Monthly' : 'Trial'} Access ay nag-expire noong ${data.expiry}. Paki-renew ang inyong subscription sa ShareMap.`);
-        return;
-      }
+            if (data.expiry && today > data.expiry) {
+                showBlockScreen("🚫 Expired License", `Ang inyong ${data.plan === 'BRONZE_MONTHLY' ? 'Bronze Monthly' : 'Trial'} Access ay nag-expire noong ${data.expiry}. Paki-renew ang inyong subscription sa ShareMap.`);
+                return;
+            }
 
-      console.log(`✅ Access Granted for ${pageId} [Plan: ${data.plan}]`);
-    }
+            console.log(`✅ Access Granted for ${pageId} [Plan: ${data.plan}]`);
+        }
 
-    function showBlockScreen(title, message) {
-        const CONTACT_LINK = "https://m.me/sharemap.digital.address"; 
+        function showBlockScreen(title, message) {
+            const CONTACT_LINK = "https://m.me/sharemap.digital.address"; 
 
-        document.body.innerHTML = `
-            <div style="background:#0f172a; color:#fff; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; font-family:sans-serif;">
-                <div style="background:#1e293b; padding:30px; border-radius:12px; border:1px solid #ef4444; max-width:400px; width:90%; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                    <h2 style="color:#ef4444; margin-top:0; font-size:20px;">${title}</h2>
-                    <p style="color:#cbd5e1; font-size:14px; line-height:1.5;">${message}</p>
-                    
-                    <a href="${CONTACT_LINK}" target="_blank" style="display:inline-block; margin-top:15px; background:#2563eb; color:#fff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; width:80%;">
-                        💬 Contact Developer / Renew Access
-                    </a>
+            document.body.innerHTML = `
+                <div style="background:#0f172a; color:#fff; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; font-family:sans-serif;">
+                    <div style="background:#1e293b; padding:30px; border-radius:12px; border:1px solid #ef4444; max-width:400px; width:90%; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                        <h2 style="color:#ef4444; margin-top:0; font-size:20px;">${title}</h2>
+                        <p style="color:#cbd5e1; font-size:14px; line-height:1.5;">${message}</p>
+                        
+                        <a href="${CONTACT_LINK}" target="_blank" style="display:inline-block; margin-top:15px; background:#2563eb; color:#fff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; width:80%;">
+                            💬 Contact Developer / Renew Access
+                        </a>
 
-                    <hr style="border:0; border-top:1px solid #334155; margin:25px 0 15px 0;">
-                    <p style="font-size:11px; color:#94a3b8; margin:0;">ShareMap Licensing Protection &copy; 2026</p>
+                        <hr style="border:0; border-top:1px solid #334155; margin:25px 0 15px 0;">
+                        <p style="font-size:11px; color:#94a3b8; margin:0;">ShareMap Licensing Protection &copy; 2026</p>
+                    </div>
                 </div>
-            </div>
-        `;
-    }
+            `;
+        }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      checkShareMapAccess();
-    });
-  </script>
-
-  <!-- OPEN GRAPH META TAGS -->
-  <meta property="og:title" content="📍 Instant Delivery Location Share">
-  <meta property="og:description" content="Pindutin para ma-share agad ang inyong Digital Address (Plus Code) para sa delivery.">
-  <meta property="og:image" content="https://maximizer-share-location.github.io/digital-address-byDevAdmin-JayromePevidal/1788426150049_transfer_2026-09-03_195332.png">
-  <meta property="og:url" content="https://maximizer-share-location.github.io/digital-address-byDevAdmin-JayromePevidal/">
-  <meta property="og:type" content="website">
-
-  <style>
-    body { 
-      font-family: Arial, sans-serif; 
-      padding: 20px; 
-      text-align: center;
-      background-color: #f4f7f6;
-    }
-    .card {
-      background: #ffffff;
-      padding: 25px 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      max-width: 400px;
-      margin: 10px auto;
-    }
-    .order-id-display {
-      background: #e0f2fe;
-      border: 1px dashed #0284c7;
-      padding: 8px;
-      border-radius: 6px;
-      margin-bottom: 12px;
-      font-size: 14px;
-      color: #0369a1;
-      font-weight: bold;
-    }
-    .share-btn { 
-      background-color: #0084FF; 
-      color: white; 
-      padding: 16px 24px; 
-      border: none; 
-      border-radius: 8px; 
-      font-weight: bold; 
-      font-size: 18px;
-      cursor: pointer;
-      width: 100%;
-      margin-top: 15px;
-    }
-    .share-btn:active { background-color: #006bce; }
-    .status-msg { font-size: 13px; color: #0084FF; margin-top: 12px; font-weight: bold; line-height: 1.4; }
-    .status-msg.error { color: #d93025; }
-    .buyer-info-box {
-      background-color: #f8f9fa;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 12px 15px;
-      text-align: left;
-      font-size: 13px;
-      color: #333;
-      margin-bottom: 15px;
-    }
-    .buyer-info-box h4 {
-      margin: 0 0 8px 0;
-      color: #0084FF;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .buyer-info-item { margin-bottom: 4px; word-break: break-word; }
-    .instruction-box {
-      background-color: #eef6ff;
-      border-left: 4px solid #0084FF;
-      padding: 10px 12px;
-      font-size: 12px;
-      color: #333;
-      text-align: left;
-      border-radius: 4px;
-      margin-top: 15px;
-      line-height: 1.4;
-    }
-    .messenger-alert {
-      display: none;
-      background-color: #fff3cd;
-      border: 1px solid #ffeeba;
-      color: #856404;
-      padding: 12px 15px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      text-align: left;
-      font-size: 13px;
-      line-height: 1.4;
-    }
-    .copyright-footer { margin-top: 25px; font-size: 12px; color: #777777; }
-    .branch-select-box { margin-top: 10px; margin-bottom: 10px; text-align: left; }
-    .branch-select-box select, .branch-select-box input {
-      width: 100%;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #cbd5e1;
-      font-size: 13px;
-      box-sizing: border-box;
-      margin-top: 4px;
-    }
-  </style>
+        window.addEventListener('DOMContentLoaded', () => {
+            checkShareMapAccess();
+        });
+    </script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px 12px 30px 12px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: #1e293b;
+            padding: 18px 16px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            box-sizing: border-box;
+        }
+        .order-id-badge {
+            background: #0f172a;
+            border: 1px dashed #38bdf8;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #38bdf8;
+            font-weight: bold;
+        }
+        .service-toggle {
+            display: flex;
+            background: #0f172a;
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #334155;
+        }
+        .service-option { flex: 1; text-align: center; }
+        .service-option input[type="radio"] { display: none; }
+        .service-option label {
+            display: block;
+            padding: 10px 6px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #94a3b8;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .service-option input[type="radio"]:checked + label {
+            background-color: #0284c7;
+            color: #ffffff;
+        }
+        .form-group { text-align: left; margin-bottom: 10px; }
+        .form-group label { display: block; font-size: 12px; margin-bottom: 3px; color: #cbd5e1; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            background-color: #0f172a;
+            color: #ffffff;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        .form-group input:focus { border-color: #38bdf8; }
+        .order-section {
+            text-align: left;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+        .order-section h4 { margin: 0 0 10px 0; font-size: 13px; color: #38bdf8; }
+        .btn-add-order {
+            background-color: #16a34a;
+            color: #ffffff;
+            border: none;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .btn-add-order:hover { background-color: #15803d; }
+        .item-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 8px;
+            background: #1e293b;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid #475569;
+        }
+        .act-btn { padding: 6px 8px; border: none; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .btn-edit { background: #eab308; color: #000; }
+        .btn-del { background: #ef4444; color: white; }
+        .saved-text { flex: 1; font-size: 13px; color: #f8fafc; word-break: break-word; }
+        .btn {
+            background-color: #0284c7;
+            color: #ffffff;
+            border: none;
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.3s;
+            margin-top: 8px;
+        }
+        .btn:hover { background-color: #0369a1; }
+        .btn-sms { background-color: #16a34a; margin-top: 10px; }
+        .btn-sms:hover { background-color: #15803d; }
+        .error-msg { color: #f87171; font-size: 12px; margin-top: 6px; display: none; }
+    </style>
 </head>
 <body>
 
-  <div class="card">
-    <div id="messengerNotice" class="messenger-alert">
-      ⚠️ <b>Gamit mo ang Messenger Browser:</b><br>
-      Para gumana nang tama ang GPS Location, pindutin ang button sa ibaba at i-tap ang <b>"CONTINUE"</b> para magbukas sa Chrome browser.
-    </div>
+    <div class="card">
+        <h3 style="margin: 0 0 4px 0;">📍 ShareMap Order Gateway</h3>
+        <div id="orderIdBadge" class="order-id-badge">🔢 Order ID: GENERATING...</div>
+        <p style="font-size: 12px; color: #94a3b8; margin: 0 0 12px 0;">Pumili ng serbisyo at sagutan ang mga detalye:</p>
 
-    <h3>📍 Delivery Location Share</h3>
-    <div id="orderIdDisplay" class="order-id-display">🔢 Order ID: #-</div>
-
-    <div id="buyerDetailsDisplay" class="buyer-info-box">
-      <h4>📋 Impormasyon sa Delivery:</h4>
-
-      <div class="buyer-info-item">🏪 <b>Store Name / Page:</b> <span id="dispPage">-</span></div>
-      <div class="buyer-info-item" id="branchDisplayRow">🏢 <b>Nearest Branch:</b> <span id="dispBranch">Pumili sa ibaba</span></div>
-      <div class="buyer-info-item">⏰ <b>Schedule Order:</b> <span id="dispSched">Now (Agad-agad)</span></div>
-      <div class="buyer-info-item">🛒 <b>Orders:</b> <span id="dispOrders">-</span></div>
-      <div class="buyer-info-item">👤 <b>Pangalan:</b> <span id="dispName">-</span></div>
-      <div class="buyer-info-item">📞 <b>Contact:</b> <span id="dispPhone">-</span></div>
-      <div class="buyer-info-item">🏠 <b>Landmark:</b> <span id="dispLandmark">-</span></div>
-    </div>
-
-    <div class="branch-select-box">
-      <label style="font-size: 12px; font-weight: bold; color: #475569;">🏢 Nearest Branch (Opsyonal):</label>
-      <input type="text" id="branchInput" placeholder="hal. SM Lucena / Main Branch" oninput="updateBranchDisplay()">
-    </div>
-
-    <p style="font-size: 13px; color: #555;">Pindutin ang button sa ibaba para ma-share agad ang inyong Digital Address (Plus Code) kasama ang inyong details at orders diretso sa Messenger ng Seller.</p>
-
-    <button id="mainShareBtn" class="share-btn" onclick="handleMainButtonClick()">
-      📤 Pindutin para I-Send sa Messenger ni Seller
-    </button>
-    
-    <p id="status" class="status-msg"></p>
-
-    <div class="instruction-box">
-      <strong>💡 Paalala:</strong> Siguraduhing <b>naka-ON ang GPS/Location</b> ng iyong phone at i-tap ang <b>"Allow"</b> kapag nag-prompt ang browser.<br><br>
-      <strong>📌 Pag bukas ng Messenger:</strong> Na-copy na rin sa Clipboard ang details! Pindutin nalang ang <b>SEND</b> o i-<b>PASTE</b> sa chatbox.
-    </div>
-
-    <div style="margin-top: 25px; padding-top: 15px; border-top: 2px dashed #cbd5e1;">
-      <h4 style="margin: 0 0 8px 0; color: #1e293b; font-size: 14px; text-align: left;">
-        📱 Opsyonal: I-send via Direct SMS / Text
-      </h4>
-      
-      <div style="text-align: left; margin-bottom: 8px;">
-        <label style="font-size: 12px; font-weight: bold; color: #475569;">Cellphone Number ng Seller/Branch Rider:</label>
-        <div style="position: relative; display: flex; align-items: center; margin-top: 4px;">
-          <input type="tel" id="smsSellerNum" placeholder="hal. 09123456789" style="width: 100%; padding: 10px 42px 10px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; box-sizing: border-box;">
-          <button type="button" onclick="selectContactPicker()" title="Pumili sa Contacts" style="position: absolute; right: 5px; background: none; border: none; font-size: 18px; cursor: pointer; padding: 4px;">📇</button>
+        <div class="service-toggle">
+            <div class="service-option">
+                <input type="radio" id="typeDelivery" name="serviceType" value="delivery" checked onchange="toggleServiceType()">
+                <label for="typeDelivery">🛵 Book Delivery</label>
+            </div>
+            <div class="service-option">
+                <input type="radio" id="typeDineIn" name="serviceType" value="dinein" onchange="toggleServiceType()">
+                <label for="typeDineIn">🍽️ Book Dine-In</label>
+            </div>
         </div>
-      </div>
 
-      <button type="button" onclick="executeSmsShare()" style="background-color: #28a745; color: white; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; width: 100%; cursor: pointer;">
-        📱 Pindutin para I-send via SMS
-      </button>
+        <div class="form-group">
+            <label for="fullName">👤 Buong Pangalan (Full Name):</label>
+            <input type="text" id="fullName" placeholder="hal. Juan Dela Cruz" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+            <label for="phone">📞 Contact Number:</label>
+            <input type="tel" id="phone" placeholder="hal. 09123456789" autocomplete="off">
+        </div>
+
+        <div class="form-group" id="landmarkGroup">
+            <label for="landmark">🏠 Landmark / Kulay ng Gate (Opsyonal):</label>
+            <input type="text" id="landmark" placeholder="hal. Tabi ng Sari-sari Store" autocomplete="off">
+        </div>
+
+        <div class="form-group" id="paxGroup" style="display: none;">
+            <label for="paxCount">👥 Bilang ng Tao (Pax / Table Size):</label>
+            <input type="number" id="paxCount" placeholder="hal. 4" min="1" value="2">
+        </div>
+
+        <div class="form-group">
+            <label for="scheduleOrder" id="scheduleLabel">⏰ Schedule Order / Oras ng Delivery (Opsyonal):</label>
+            <input type="datetime-local" id="scheduleOrder">
+            <small id="scheduleNote" style="font-size: 11px; color: #38bdf8;">*Iwanang blanko kung para sa AGAD-AGAD na order (Now).</small>
+        </div>
+
+        <!-- FULL KIOSK ORDER SECTION -->
+        <div class="order-section">
+            <h4>🛒 Order List (Mga Bibilhin):</h4>
+            <button type="button" class="btn-add-order" onclick="openKioskMenu()">
+                🍔 ➕ Magdagdag ng Order (Kiosk Mode)
+            </button>
+            <div id="orderListContainer"></div>
+        </div>
+
+        <p id="errorMsg" class="error-msg">⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy.</p>
+
+        <button id="proceedBtn" class="btn">📍 Sunod: Kunin ang GPS Location ➔</button>
+
+        <div id="dineInSmsContainer" style="display: none; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #475569;">
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label for="smsStoreNum" style="font-size: 11px; color: #38bdf8;">📱 Opsyonal: Cellphone Number ng Store/Manager para sa SMS:</label>
+                <input type="tel" id="smsStoreNum" placeholder="hal. 09123456789" autocomplete="off">
+            </div>
+            <button type="button" id="smsBtn" class="btn btn-sms" onclick="handleSmsReservation()">📱 I-send ang Reservation via SMS</button>
+        </div>
     </div>
-  </div>
 
-  <script>
-    const ALPHABET = "23456789CFGHJMPQRVWX";
+    <script>
+        let currentOrdersList = [];
+        let generatedOrderID = "";
+        let currentPsid = "MESSENGER_WEB_USER";
 
-    function isMessengerBrowser() {
-      const ua = navigator.userAgent || navigator.vendor || window.opera;
-      return (ua.indexOf("FBAN") > -1) || (ua.indexOf("FBAV") > -1) || (ua.indexOf("Messenger") > -1);
-    }
+        function generateSpreadsheetOrderID() {
+            const now = new Date();
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const minute = now.getMinutes();
+            
+            let letterCode = "";
+            if (minute < 26) {
+                letterCode = alphabet[minute];
+            } else if (minute < 52) {
+                letterCode = "A" + alphabet[minute - 26];
+            } else {
+                letterCode = "B" + alphabet[minute - 52];
+            }
 
-    function getPageId() {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('page') || localStorage.getItem('sharemap_page') || "TechSavyBoy.SketchDevPro";
-    }
+            const secondDigit = String(now.getSeconds()).padStart(2, '0')[0];
+            const milliDigit = String(now.getMilliseconds()).padStart(3, '0')[0];
 
-    function updateBranchDisplay() {
-      const inputVal = document.getElementById("branchInput").value.trim();
-      document.getElementById("dispBranch").innerText = inputVal || "Hindi naisulat";
-      localStorage.setItem('sharemap_branch', inputVal || "Main Branch");
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      const pageId = getPageId();
-      localStorage.setItem('sharemap_page', pageId);
-
-      const urlParams = new URLSearchParams(window.location.search);
-
-      // Kunin mula sa URL parameters at i-save/display nang tama
-      const orderIdVal = urlParams.get('oid') || localStorage.getItem('sharemap_orderid') || "N/A";
-      const buyerBranch = urlParams.get('branch') || localStorage.getItem('sharemap_branch') || "Main Branch";
-      const buyerSchedule = urlParams.get('sched') || localStorage.getItem('sharemap_schedule') || "Now (Agad-agad)";
-      const buyerName = urlParams.get('fn') || localStorage.getItem('sharemap_fullname') || "Hindi naisulat";
-      const buyerPhone = urlParams.get('ph') || localStorage.getItem('sharemap_phone') || "Hindi naisulat";
-      const buyerLandmark = urlParams.get('lm') || localStorage.getItem('sharemap_landmark') || "Wala";
-      const buyerOrders = urlParams.get('ord') || localStorage.getItem('sharemap_orders') || "Walang order";
-
-      // I-save pabalik sa localStorage para laging synchronized
-      if (orderIdVal && orderIdVal !== "N/A") {
-        document.getElementById("orderIdDisplay").innerText = `🔢 Order ID: #${orderIdVal}`;
-        localStorage.setItem('sharemap_orderid', orderIdVal);
-      } else {
-        document.getElementById("orderIdDisplay").innerText = `🔢 Order ID: #-`;
-      }
-
-      document.getElementById("dispBranch").innerText = buyerBranch;
-      document.getElementById("branchInput").value = buyerBranch !== "Main Branch" ? buyerBranch : "";
-      localStorage.setItem('sharemap_branch', buyerBranch);
-
-      document.getElementById("dispSched").innerText = buyerSchedule;
-      localStorage.setItem('sharemap_schedule', buyerSchedule);
-
-      document.getElementById("dispName").innerText = buyerName;
-      localStorage.setItem('sharemap_fullname', buyerName);
-
-      document.getElementById("dispPhone").innerText = buyerPhone;
-      localStorage.setItem('sharemap_phone', buyerPhone);
-
-      document.getElementById("dispLandmark").innerText = buyerLandmark;
-      localStorage.setItem('sharemap_landmark', buyerLandmark);
-
-      document.getElementById("dispOrders").innerText = buyerOrders;
-      localStorage.setItem('sharemap_orders', buyerOrders);
-
-      document.getElementById("dispPage").innerText = pageId;
-
-      if (isMessengerBrowser()) {
-        const noticeEl = document.getElementById("messengerNotice");
-        if (noticeEl) noticeEl.style.display = "block";
-      }
-    });
-
-    function handleMainButtonClick() {
-      if (isMessengerBrowser()) {
-        const currentUrl = window.location.href;
-        let finalUrl = currentUrl;
-        if (!finalUrl.includes('page=')) {
-            finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'page=' + encodeURIComponent(getPageId());
+            return `${letterCode}${secondDigit}${milliDigit}`;
         }
-        const cleanUrl = finalUrl.replace(/^https?:\/\//, '');
-        const chromeIntent = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;end;`;
 
-        const statusEl = document.getElementById("status");
-        statusEl.classList.remove("error");
-        statusEl.innerText = "Binubuksan sa Chrome Browser... Paki-tap ang 'CONTINUE' sa lumabas na prompt.";
-        window.location.href = chromeIntent;
-        return;
-      }
-      executeLocationShare();
-    }
+        function getPageId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('page') || localStorage.getItem('sharemap_page') || "TechSavyBoy.SketchDevPro";
+        }
 
-    function encodeStandardPlusCode(lat, lng) {
-      lat = Math.min(Math.max(lat, -90), 90);
-      lng = ((lng + 180) % 360 + 360) % 360 - 180;
-      if (lat === 90) lat = 89.999999;
+        window.addEventListener('DOMContentLoaded', () => {
+            const pageId = getPageId();
+            localStorage.setItem('sharemap_page', pageId);
 
-      let latVal = lat + 90;
-      let lngVal = lng + 180;
-      let code = "";
-      let latPlace = 20;
-      let lngPlace = 20;
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Saluhin at i-save ang PSID mula sa URL o LocalStorage
+            currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+            if (urlParams.get('psid')) {
+                localStorage.setItem('sharemap_psid', currentPsid);
+            }
 
-      for (let i = 0; i < 4; i++) {
-        let d1 = Math.floor(latVal / latPlace);
-        let d2 = Math.floor(lngVal / lngPlace);
-        latVal -= d1 * latPlace;
-        lngVal -= d2 * lngPlace;
-        code += ALPHABET.charAt(d1) + ALPHABET.charAt(d2);
-        latPlace /= 20;
-        lngPlace /= 20;
-      }
-      code += "+";
-      let d1 = Math.floor(latVal / latPlace);
-      let d2 = Math.floor(lngVal / lngPlace);
-      code += ALPHABET.charAt(d1) + ALPHABET.charAt(d2);
-      return code;
-    }
+            document.getElementById('fullName').value = "";
+            document.getElementById('phone').value = "";
+            document.getElementById('landmark').value = "";
+            document.getElementById('scheduleOrder').value = "";
+            document.getElementById('smsStoreNum').value = "";
+            
+            generatedOrderID = generateSpreadsheetOrderID();
+            document.getElementById("orderIdBadge").innerText = `🔢 Order ID: #${generatedOrderID}`;
 
-    async function getStreetAddress(lat, lng) {
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
-          headers: { 'User-Agent': 'ShareMapDeliveryApp/1.0' }
+            const passedOrders = urlParams.get('ord');
+
+            if (passedOrders) {
+                passedOrders.split(',').forEach(itemStr => {
+                    let parts = itemStr.trim().split(' x');
+                    if (parts.length === 2) {
+                        currentOrdersList.push({ name: parts[0].trim(), qty: parseInt(parts[1]) || 1 });
+                    } else if (parts.length === 1 && parts[0]) {
+                        currentOrdersList.push({ name: parts[0].trim(), qty: 1 });
+                    }
+                });
+            } else {
+                currentOrdersList = [];
+                localStorage.removeItem('sharemap_orders_array');
+                localStorage.removeItem('sharemap_orders');
+            }
+            renderOrderUI();
         });
-        const data = await response.json();
-        
-        if (data && data.address) {
-          const a = data.address;
-          const road = a.road || a.pedestrian || a.path || "";
-          const neighbourhood = a.neighbourhood || a.suburb || a.village || a.quarter || a.hamlet || "";
-          const city = a.city || a.town || a.municipality || "";
-          const province = a.province || a.state || a.region || "";
-          const country = a.country || "";
 
-          const addressParts = [road, neighbourhood, city, province, country]
-            .map(part => part.trim())
-            .filter((part, index, self) => part.length > 0 && self.indexOf(part) === index);
-          
-          return addressParts.join(", ");
+        function toggleServiceType() {
+            const isDineIn = document.getElementById("typeDineIn").checked;
+            const landmarkGroup = document.getElementById("landmarkGroup");
+            const paxGroup = document.getElementById("paxGroup");
+            const scheduleLabel = document.getElementById("scheduleLabel");
+            const scheduleNote = document.getElementById("scheduleNote");
+            const proceedBtn = document.getElementById("proceedBtn");
+            const dineInSmsContainer = document.getElementById("dineInSmsContainer");
+
+            if (isDineIn) {
+                landmarkGroup.style.display = "none";
+                paxGroup.style.display = "block";
+                scheduleLabel.innerText = "⏰ Petsa at Oras ng Pagkain (Dine-In Schedule):";
+                scheduleNote.innerText = "*Iwanang blanko kung pupunta na AGAD-AGAD sa store.";
+                proceedBtn.innerText = "📩 I-send ang Reservation sa Messenger ➔";
+                dineInSmsContainer.style.display = "block";
+            } else {
+                landmarkGroup.style.display = "block";
+                paxGroup.style.display = "none";
+                scheduleLabel.innerText = "⏰ Schedule Order / Oras ng Delivery (Opsyonal):";
+                scheduleNote.innerText = "*Iwanang blanko kung para sa AGAD-AGAD na order (Now).";
+                proceedBtn.innerText = "📍 Sunod: Kunin ang GPS Location ➔";
+                dineInSmsContainer.style.display = "none";
+            }
         }
-      } catch (err) {
-        console.log("Reverse geocoding error:", err);
-      }
-      return "Hindi nakuha ang kalye/address";
-    }
 
-    async function copyToClipboard(text) {
-      if (navigator.clipboard && window.isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(text);
-          return true;
-        } catch (err) {
-          console.log("Clipboard API failed...", err);
+        // Isama ang PSID kapag binuksan ang kiosk menu
+        function openKioskMenu() {
+            const pageId = getPageId();
+            window.location.href = `./kioskmode.html?page=${encodeURIComponent(pageId)}&psid=${encodeURIComponent(currentPsid)}`;
         }
-      }
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";
-      textArea.style.left = "-999999px";
-      textArea.style.top = "-999999px";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      try {
-        document.execCommand('copy');
-        textArea.remove();
-        return true;
-      } catch (err) {
-        textArea.remove();
-        return false;
-      }
-    }
-    
-    // 🚀 DUAL ACTION PARA SA MESSENGER SHARE: Save sa Supabase (POS) + Buksan ang Messenger Chat
-    async function executeLocationShare() {
-      const statusEl = document.getElementById("status");
-      statusEl.classList.remove("error");
 
-      const finalName = localStorage.getItem('sharemap_fullname') || "Hindi naisulat";
-      const finalPhone = localStorage.getItem('sharemap_phone') || "Hindi naisulat";
-      const finalLandmark = localStorage.getItem('sharemap_landmark') || "Wala";
-      const finalOrders = localStorage.getItem('sharemap_orders') || "Walang order";
-      const finalBranch = localStorage.getItem('sharemap_branch') || "Main Branch";
-      const finalSched = localStorage.getItem('sharemap_schedule') || "Now (Agad-agad)";
-      const finalOrderId = localStorage.getItem('sharemap_orderid') || "N/A";
-      const pageId = getPageId();
+        function renderOrderUI() {
+            const container = document.getElementById("orderListContainer");
+            container.innerHTML = "";
 
-      const formattedOrders = finalOrders
-        .split(',')
-        .map(item => item.trim())
-        .filter(item => item.length > 0)
-        .join('\n');
+            if (currentOrdersList.length === 0) {
+                container.innerHTML = `<p style="font-size:12px; color:#94a3b8; text-align:center; margin:8px 0;">Walang pang order. Pindutin ang button sa taas para mamili.</p>`;
+                return;
+            }
 
-      if (!navigator.geolocation) {
-        statusEl.classList.add("error");
-        statusEl.innerText = "Hindi suportado ng browser mo ang Geolocation.";
-        return;
-      }
+            currentOrdersList.forEach((item, index) => {
+                let row = document.createElement("div");
+                row.className = "item-row";
+                row.innerHTML = `
+                    <span class="saved-text"><b>${item.name}</b> x${item.qty}</span>
+                    <button type="button" class="act-btn btn-edit" onclick="editOrderQty(${index})">✏️ Edit Qty</button>
+                    <button type="button" class="act-btn btn-del" onclick="deleteOrderItem(${index})">🗑️</button>
+                `;
+                container.appendChild(row);
+            });
 
-      statusEl.innerText = "Kinukuha ang lokasyon at isinasa-save sa POS server...";
+            let summaryText = currentOrdersList.map(i => `${i.name} x${i.qty}`).join(', ');
+            localStorage.setItem('sharemap_orders', summaryText);
+        }
 
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          const plusCode = encodeStandardPlusCode(lat, lng);
-          const googleMapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
-          
-          const textAddress = await getStreetAddress(lat, lng);
-
-          const shareText = `🏪 Store / Page: ${pageId}\n🔢 Order ID: #${finalOrderId}\n🏢 Nearest Branch: ${finalBranch}\n⏰ Schedule Order: ${finalSched}\n\nClient Order List:\n${formattedOrders}\n\nName: ${finalName}\nPhone: ${finalPhone}\nLandmark: ${finalLandmark}\n\n📍 Pin Location\nDigital Address (PlusCode): ${plusCode}\n\nMap link address: ${googleMapsUrl}\n\nGeo address: ${lat},${lng}\nText Address (OSM): ${textAddress}`;
-
-          const urlParams = new URLSearchParams(window.location.search);
-          const psid = urlParams.get('psid') || "MESSENGER_WEB_USER";
-
-          try {
-            // 1. Isave agad sa Supabase para pumasok sa POS app ni seller
-            await supabaseClient
-              .from('orders')
-              .insert([
-                {
-                  order_id: finalOrderId,
-                  store_page: pageId.toLowerCase(),
-                  branch: finalBranch,
-                  schedule: finalSched,
-                  customer_name: finalName,
-                  customer_phone: finalPhone,
-                  landmark: finalLandmark,
-                  orders_list: formattedOrders,
-                  plus_code: plusCode,
-                  latitude: lat,
-                  longitude: lng,
-                  raw_chat_output: shareText,
-                  messenger_psid: psid,
-                  status: 'PENDING'
+        function editOrderQty(index) {
+            let current = currentOrdersList[index];
+            let newQty = prompt(`Ilagay ang bagong quantity para sa "${current.name}":`, current.qty);
+            if (newQty !== null) {
+                let parsed = parseInt(newQty);
+                if (!isNaN(parsed) && parsed > 0) {
+                    currentOrdersList[index].qty = parsed;
+                    renderOrderUI();
+                } else if (parsed === 0) {
+                    currentOrdersList.splice(index, 1);
+                    renderOrderUI();
                 }
-              ]);
-
-            // 2. Kopyahin sa clipboard at buksan ang Messenger chat
-            await copyToClipboard(shareText);
-
-            statusEl.style.color = "#16a34a";
-            statusEl.innerText = "✅ Naipadala na sa POS at binubuksan ang Messenger chat...";
-
-            const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
-            setTimeout(() => {
-              window.location.href = messengerUrl;
-            }, 800);
-
-          } catch (dbErr) {
-            console.error("Supabase Save Error:", dbErr);
-            const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
-            window.location.href = messengerUrl;
-          }
-        },
-        (err) => {
-          statusEl.classList.add("error");
-          statusEl.innerText = "⚠️ Siguraduhing NAKA-ON ang Location/GPS sa iyong phone at subukan ulit.";
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
-    }
-
-    async function selectContactPicker() {
-      const supported = 'contacts' in navigator && 'ContactsManager' in window;
-      if (supported) {
-        try {
-          const props = ['tel'];
-          const opts = { multiple: false };
-          const contacts = await navigator.contacts.select(props, opts);
-          if (contacts.length > 0 && contacts[0].tel && contacts[0].tel.length > 0) {
-            let cleanNumber = contacts[0].tel[0].replace(/[^0-9+]/g, '');
-            document.getElementById('smsSellerNum').value = cleanNumber;
-          }
-        } catch (err) {
-          console.log("Kanselado ang Contacts selection:", err);
+            }
         }
-      } else {
-        alert("Hindi suportado ng browser na ito ang direct contact picker.");
-      }
-    }
 
-    // 🚀 DUAL ACTION PARA SA SMS SHARE: Save sa Supabase (POS) + Buksan ang SMS App
-    async function executeSmsShare() {
-      const statusEl = document.getElementById("status");
-      const targetPhone = document.getElementById("smsSellerNum").value.trim();
+        function deleteOrderItem(index) {
+            currentOrdersList.splice(index, 1);
+            renderOrderUI();
+        }
 
-      if (!targetPhone) {
-        alert("Paki-lagay o pumili muna ng Cellphone Number ng Seller/Rider!");
-        return;
-      }
+        function getFormattedOrdersText() {
+            if (currentOrdersList.length === 0) return "Walang order";
+            return currentOrdersList.map(i => `${i.name} x${i.qty}`).join(', ');
+        }
 
-      statusEl.classList.remove("error");
-      statusEl.innerText = "🔍 Kumukuha ng GPS location para sa SMS at POS...";
+        function formatScheduleText(rawInput) {
+            if (!rawInput) return "Now (Agad-agad)";
+            const dt = new Date(rawInput);
+            if (isNaN(dt.getTime())) return rawInput;
+            return dt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+        }
 
-      const finalName = localStorage.getItem('sharemap_fullname') || "Hindi naisulat";
-      const finalPhone = localStorage.getItem('sharemap_phone') || "Hindi naisulat";
-      const finalLandmark = localStorage.getItem('sharemap_landmark') || "Wala";
-      const finalOrders = localStorage.getItem('sharemap_orders') || "Walang order";
-      const finalBranch = localStorage.getItem('sharemap_branch') || "Main Branch";
-      const finalSched = localStorage.getItem('sharemap_schedule') || "Now (Agad-agad)";
-      const finalOrderId = localStorage.getItem('sharemap_orderid') || "N/A";
-      const pageId = getPageId();
+        function handleProcessOrder() {
+            const nameVal = document.getElementById('fullName').value.trim();
+            const phoneVal = document.getElementById('phone').value.trim();
+            const landmarkVal = document.getElementById('landmark').value.trim();
+            const paxVal = document.getElementById('paxCount').value.trim();
+            const schedVal = document.getElementById('scheduleOrder').value;
+            const ordersVal = getFormattedOrdersText();
+            const isDineIn = document.getElementById("typeDineIn").checked;
+            const pageId = getPageId();
 
-      const formattedOrdersText = finalOrders
-        .split(',')
-        .map(item => item.trim())
-        .filter(item => item.length > 0)
-        .join('\n');
+            if (!nameVal || !phoneVal) {
+                document.getElementById('errorMsg').style.display = "block";
+                return;
+            }
+            document.getElementById('errorMsg').style.display = "none";
 
-      if (!navigator.geolocation) {
-        statusEl.classList.add("error");
-        statusEl.innerText = "Hindi suportado ng browser mo ang Geolocation.";
-        return;
-      }
+            const formattedSched = formatScheduleText(schedVal);
 
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          const latFixed = lat.toFixed(5);
-          const lngFixed = lng.toFixed(5);
-          const plusCode = encodeStandardPlusCode(lat, lng);
+            if (isDineIn) {
+                const formattedOrders = ordersVal.split(', ').join('\n• ');
+                const shareText = `🍽️ DINE-IN TABLE RESERVATION\n🔢 Order ID: #${generatedOrderID}\n🏪 Store / Page: ${pageId}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+                const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
+                
+                window.location.href = messengerUrl;
+                return;
+            }
 
-          const shareText = `SHAREMAP DELIVERY ORDER\n` +
-                              `🔢 Order ID: #${finalOrderId}\n` +
-                              `🏪 Store: ${pageId}\n` +
-                              `🏢 Branch: ${finalBranch}\n` +
-                              `⏰ Schedule: ${finalSched}\n\n` +
-                              `🛒 Orders:\n${formattedOrdersText}\n\n` +
-                              `👤 Name: ${finalName}\n` +
-                              `📞 Contact: ${finalPhone}\n` +
-                              `🏡 Landmark: ${finalLandmark}\n\n` +
-                              `📍 Plus Code: ${plusCode}\n` +
-                              `🌐 GPS: ${latFixed}, ${lngFixed}`;
+            localStorage.setItem('sharemap_page', pageId);
+            localStorage.setItem('sharemap_orderid', generatedOrderID);
+            localStorage.setItem('sharemap_fullname', nameVal);
+            localStorage.setItem('sharemap_phone', phoneVal);
+            localStorage.setItem('sharemap_landmark', landmarkVal || "Wala");
+            localStorage.setItem('sharemap_schedule', formattedSched);
+            localStorage.setItem('sharemap_orders', ordersVal);
+            localStorage.setItem('sharemap_psid', currentPsid); // I-save rin ang PSID sa localStorage para sa index.html
+            sessionStorage.setItem('access_granted', 'true');
 
-          try {
-            await supabaseClient
-              .from('orders')
-              .insert([
-                {
-                  order_id: finalOrderId,
-                  store_page: pageId.toLowerCase(),
-                  branch: finalBranch,
-                  schedule: finalSched,
-                  customer_name: finalName,
-                  customer_phone: finalPhone,
-                  landmark: finalLandmark,
-                  orders_list: formattedOrdersText,
-                  plus_code: plusCode,
-                  latitude: lat,
-                  longitude: lng,
-                  raw_chat_output: shareText,
-                  messenger_psid: "SMS_USER",
-                  status: 'PENDING'
-                }
-              ]);
-          } catch (dbErr) {
-            console.log("Supabase SMS sync err:", dbErr);
-          }
+            // Ipasa ang PSID patungong index.html
+            const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&psid=${encodeURIComponent(currentPsid)}`;
+            window.location.href = `./index.html${queryStr}`;
+        }
 
-          statusEl.style.color = "#16a34a";
-          statusEl.innerText = "📱 Binubuksan ang SMS Messaging App...";
+        function handleSmsReservation() {
+            const nameVal = document.getElementById('fullName').value.trim();
+            const phoneVal = document.getElementById('phone').value.trim();
+            const paxVal = document.getElementById('paxCount').value.trim();
+            const schedVal = document.getElementById('scheduleOrder').value;
+            const ordersVal = getFormattedOrdersText();
+            const targetPhone = document.getElementById('smsStoreNum').value.trim();
+            const pageId = getPageId();
 
-          const encodedText = encodeURIComponent(shareText);
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-          const delimiter = isIOS ? '&' : '?';
-          const smsUri = `sms:${targetPhone}${delimiter}body=${encodedText}`;
+            if (!nameVal || !phoneVal) {
+                document.getElementById('errorMsg').style.display = "block";
+                return;
+            }
+            if (!targetPhone) {
+                alert("Paki-lagay ang cellphone number ng Branch Store/Manager para sa SMS!");
+                return;
+            }
+            document.getElementById('errorMsg').style.display = "none";
 
-          window.location.href = smsUri;
-        },
-        (err) => {
-          statusEl.classList.add("error");
-          statusEl.innerText = "⚠️ Nabigo ang pagkuha ng GPS. Siguraduhing NAKA-ON ang Location/GPS.";
-        },
-        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
-      );
-    }
-  </script>
+            const formattedSched = formatScheduleText(schedVal);
+            const formattedOrders = ordersVal.split(', ').join('\n• ');
 
-  <footer class="copyright-footer">
-    <p>© 2026 Sharemap,Maximizer Admin - Developed by Jayrome Pevidal. All rights reserved.</p>
-  </footer>
+            const smsBodyText = `SHAREMAP DINE-IN RESERVATION\n` +
+                                `🔢 Order ID: #${generatedOrderID}\n` +
+                                `🏪 Store: ${pageId}\n` +
+                                `⏰ Schedule: ${formattedSched}\n` +
+                                `👥 Party Size: ${paxVal || '2'} Pax\n\n` +
+                                `🛒 Advance Orders:\n• ${formattedOrders}\n\n` +
+                                `👤 Name: ${nameVal}\n` +
+                                `📞 Contact: ${phoneVal}`;
 
+            const encodedText = encodeURIComponent(smsBodyText);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const delimiter = isIOS ? '&' : '?';
+            const smsUri = `sms:${targetPhone}${delimiter}body=${encodedText}`;
+
+            window.location.href = smsUri;
+        }
+
+        document.getElementById('proceedBtn').onclick = () => {
+            handleProcessOrder();
+        };
+    </script>
 </body>
 </html>
