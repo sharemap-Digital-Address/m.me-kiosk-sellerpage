@@ -266,8 +266,8 @@
     <script>
         let currentOrdersList = [];
         let generatedOrderID = "";
+        let currentPsid = "MESSENGER_WEB_USER";
 
-        // Spreadsheet-style Short Order ID Generator (hal. A45, K12, AB89)
         function generateSpreadsheetOrderID() {
             const now = new Date();
             const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -297,19 +297,23 @@
             const pageId = getPageId();
             localStorage.setItem('sharemap_page', pageId);
 
-            // 1. Linisin ang inputs at lumang temporary data para laging blanko/segurado bawat bagong session
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Saluhin at i-save ang PSID mula sa URL o LocalStorage
+            currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+            if (urlParams.get('psid')) {
+                localStorage.setItem('sharemap_psid', currentPsid);
+            }
+
             document.getElementById('fullName').value = "";
             document.getElementById('phone').value = "";
             document.getElementById('landmark').value = "";
             document.getElementById('scheduleOrder').value = "";
             document.getElementById('smsStoreNum').value = "";
             
-            // 2. Mag-generate ng natatanging Spreadsheet Order ID para sa session na ito
             generatedOrderID = generateSpreadsheetOrderID();
             document.getElementById("orderIdBadge").innerText = `🔢 Order ID: #${generatedOrderID}`;
 
-            // 3. Suriin kung galing sa kioskmode.html na may dalang order
-            const urlParams = new URLSearchParams(window.location.search);
             const passedOrders = urlParams.get('ord');
 
             if (passedOrders) {
@@ -322,7 +326,6 @@
                     }
                 });
             } else {
-                // Kung walang dalang param, linisin ang lumang orders array para walang maiwan
                 currentOrdersList = [];
                 localStorage.removeItem('sharemap_orders_array');
                 localStorage.removeItem('sharemap_orders');
@@ -356,10 +359,10 @@
             }
         }
 
-        // Bubuksan ang Kiosk Visual Menu habang dala ang page parameter
+        // Isama ang PSID kapag binuksan ang kiosk menu
         function openKioskMenu() {
             const pageId = getPageId();
-            window.location.href = `./kioskmode.html?page=${encodeURIComponent(pageId)}`;
+            window.location.href = `./kioskmode.html?page=${encodeURIComponent(pageId)}&psid=${encodeURIComponent(currentPsid)}`;
         }
 
         function renderOrderUI() {
@@ -452,9 +455,11 @@
             localStorage.setItem('sharemap_landmark', landmarkVal || "Wala");
             localStorage.setItem('sharemap_schedule', formattedSched);
             localStorage.setItem('sharemap_orders', ordersVal);
+            localStorage.setItem('sharemap_psid', currentPsid); // I-save rin ang PSID sa localStorage para sa index.html
             sessionStorage.setItem('access_granted', 'true');
 
-            const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}`;
+            // Ipasa ang PSID patungong index.html
+            const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&psid=${encodeURIComponent(currentPsid)}`;
             window.location.href = `./index.html${queryStr}`;
         }
 
