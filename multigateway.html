@@ -214,6 +214,12 @@
             </div>
         </div>
 
+        <!-- Non-clickable PSID Display Field -->
+        <div class="form-group" style="background: #0f172a; padding: 8px; border-radius: 6px; border: 1px dashed #334155; margin-bottom: 12px;">
+            <label style="font-size: 11px; color: #38bdf8; margin-bottom: 2px;">🔒 Customer PSID (Messenger ID):</label>
+            <input type="text" id="displayPsid" readonly style="background: transparent; border: none; color: #cbd5e1; font-size: 12px; font-weight: bold; padding: 2px 0; cursor: not-allowed;" value="Loading PSID...">
+        </div>
+
         <div class="form-group">
             <label for="fullName">👤 Buong Pangalan (Full Name):</label>
             <input type="text" id="fullName" placeholder="hal. Juan Dela Cruz" autocomplete="off">
@@ -297,10 +303,20 @@
 
             const urlParams = new URLSearchParams(window.location.search);
             
-            currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
-            if (urlParams.get('psid') && urlParams.get('psid') !== "USER_ACTUAL_PSID_DITO") {
+            // MAHIGPIT NA PSID VALIDATION & SANITIZATION
+            let rawPsid = urlParams.get('psid');
+            if (!rawPsid || rawPsid.includes("PSID") || rawPsid.includes("DITO") || rawPsid === "USER_ACTUAL_PSID_DITO") {
+                currentPsid = localStorage.getItem('sharemap_psid');
+                if (!currentPsid || currentPsid.includes("PSID") || currentPsid.includes("DITO")) {
+                    currentPsid = "MESSENGER_WEB_USER";
+                }
+            } else {
+                currentPsid = rawPsid.trim();
                 localStorage.setItem('sharemap_psid', currentPsid);
             }
+
+            // Ipakita sa non-clickable text field ang nakuhang PSID
+            document.getElementById('displayPsid').value = currentPsid;
 
             document.getElementById('fullName').value = "";
             document.getElementById('phone').value = "";
@@ -437,7 +453,7 @@
 
             if (isDineIn) {
                 const formattedOrders = ordersVal.split(', ').join('\n• ');
-                const shareText = `🍽️ DINE-IN TABLE RESERVATION\n🔢 Order ID: #${generatedOrderID}\n🏪 Store / Page: ${pageId}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+                const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${currentPsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store / Page: ${pageId}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
                 const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
                 
                 window.location.href = messengerUrl;
@@ -454,6 +470,7 @@
             localStorage.setItem('sharemap_psid', currentPsid);
             sessionStorage.setItem('access_granted', 'true');
 
+            // Ipasa ang PSID kasama sa query string patungong index.html
             const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&psid=${encodeURIComponent(currentPsid)}`;
             window.location.href = `./index.html${queryStr}`;
         }
@@ -481,6 +498,7 @@
             const formattedOrders = ordersVal.split(', ').join('\n• ');
 
             const smsBodyText = `SHAREMAP DINE-IN RESERVATION\n` +
+                                `psid: ${currentPsid}\n` +
                                 `🔢 Order ID: #${generatedOrderID}\n` +
                                 `🏪 Store: ${pageId}\n` +
                                 `⏰ Schedule: ${formattedSched}\n` +
