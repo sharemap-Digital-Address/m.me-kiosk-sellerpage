@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShareMap - Order & Service Gateway</title>
 
-    <!-- SUPABASE CLIENT LIBRARY -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
@@ -241,7 +240,6 @@
             <small id="scheduleNote" style="font-size: 11px; color: #38bdf8;">*Iwanang blanko kung para sa AGAD-AGAD na order (Now).</small>
         </div>
 
-        <!-- FULL KIOSK ORDER SECTION -->
         <div class="order-section">
             <h4>🛒 Order List (Mga Bibilhin):</h4>
             <button type="button" class="btn-add-order" onclick="openKioskMenu()">
@@ -299,9 +297,8 @@
 
             const urlParams = new URLSearchParams(window.location.search);
             
-            // Saluhin at i-save ang PSID mula sa URL o LocalStorage
             currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
-            if (urlParams.get('psid')) {
+            if (urlParams.get('psid') && urlParams.get('psid') !== "USER_ACTUAL_PSID_DITO") {
                 localStorage.setItem('sharemap_psid', currentPsid);
             }
 
@@ -359,7 +356,6 @@
             }
         }
 
-        // Isama ang PSID kapag binuksan ang kiosk menu
         function openKioskMenu() {
             const pageId = getPageId();
             window.location.href = `./kioskmode.html?page=${encodeURIComponent(pageId)}&psid=${encodeURIComponent(currentPsid)}`;
@@ -455,10 +451,9 @@
             localStorage.setItem('sharemap_landmark', landmarkVal || "Wala");
             localStorage.setItem('sharemap_schedule', formattedSched);
             localStorage.setItem('sharemap_orders', ordersVal);
-            localStorage.setItem('sharemap_psid', currentPsid); // I-save rin ang PSID sa localStorage para sa index.html
+            localStorage.setItem('sharemap_psid', currentPsid);
             sessionStorage.setItem('access_granted', 'true');
 
-            // Ipasa ang PSID patungong index.html
             const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&psid=${encodeURIComponent(currentPsid)}`;
             window.location.href = `./index.html${queryStr}`;
         }
