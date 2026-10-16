@@ -85,6 +85,7 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let storePage = "";
+    let currentPsid = "MESSENGER_WEB_USER";
     let selectedCart = {}; 
     let allFetchedItems = [];
     let activeCategory = "ALL";
@@ -102,6 +103,12 @@
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         storePage = urlParams.get('page') || localStorage.getItem('sharemap_page');
+        
+        // Saluhin ang PSID mula sa URL o LocalStorage
+        currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+        if (urlParams.get('psid')) {
+            localStorage.setItem('sharemap_psid', currentPsid);
+        }
 
         if(!storePage) {
             document.getElementById('storeTitle').innerText = "⚠️ Invalid Store Gateway Link";
@@ -134,7 +141,6 @@
         const tabsContainer = document.getElementById('categoryTabsContainer');
         tabsContainer.innerHTML = "";
 
-        // Kunin ang mga natatanging categories
         let categories = ["ALL"];
         allFetchedItems.forEach(item => {
             let cat = item.category ? item.category.trim() : "General";
@@ -149,7 +155,6 @@
             tab.innerText = cat === "ALL" ? "⭐ All Items" : cat;
             tab.onclick = () => {
                 activeCategory = cat;
-                // I-update ang active class sa mga tabs
                 document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 filterAndRenderGrid(cat);
@@ -258,7 +263,8 @@
         }
 
         let orderString = orderArray.join(', ');
-        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}`;
+        // Isama pabalik ang psid patungong multigateway.html
+        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&psid=${encodeURIComponent(currentPsid)}`;
     }
 </script>
 </body>
