@@ -7,6 +7,10 @@
 
   <!-- SUPABASE CLIENT LIBRARY & ACCESS CHECKER -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- FACEBOOK MESSENGER EXTENSIONS SDK PARA SA PSID FETCHING -->
+  <script src="https://connect.facebook.net/en_US/messenger.Extensions.js"></script>
+
   <script>
     const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
@@ -255,9 +259,26 @@
 
       const urlParams = new URLSearchParams(window.location.search);
 
-      // Saluhin at i-save ang PSID mula sa URL o LocalStorage
-      const currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
-      if (urlParams.get('psid')) {
+      // Subukang Kunin ang PSID sa pamamagitan ng Messenger Extensions SDK kung binuksan sa loob ng Messenger app
+      if (window.MessengerExtensions) {
+        window.MessengerExtensions.getContext(
+          'YOUR_FACEBOOK_APP_ID', // Palitan ng iyong Facebook App ID kung kinakailangan, o iwanan kung naka-base sa URL
+          function success(result) {
+            if (result && result.psid) {
+              localStorage.setItem('sharemap_psid', result.psid);
+            }
+          },
+          function error(err) {
+            console.log("Messenger SDK Context Error:", err);
+          }
+        );
+      }
+
+      // Saluhin at i-save ang PSID mula sa URL, SDK, o LocalStorage
+      let currentPsid = urlParams.get('psid');
+      if (!currentPsid || currentPsid === "USER_ACTUAL_PSID_DITO") {
+        currentPsid = localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+      } else {
         localStorage.setItem('sharemap_psid', currentPsid);
       }
 
@@ -403,7 +424,6 @@
       }
     }
     
-    // 🚀 DUAL ACTION PARA SA MESSENGER SHARE: Save sa Supabase (POS) + Buksan ang Messenger Chat
     async function executeLocationShare() {
       const statusEl = document.getElementById("status");
       statusEl.classList.remove("error");
@@ -417,9 +437,10 @@
       const finalOrderId = localStorage.getItem('sharemap_orderid') || "N/A";
       const pageId = getPageId();
       
-      // Kunin ang nakatagong totoong PSID galing sa URL o localStorage
-      const urlParams = new URLSearchParams(window.location.search);
-      const psid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+      let psid = localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+      if (psid === "USER_ACTUAL_PSID_DITO") {
+        psid = "MESSENGER_WEB_USER";
+      }
 
       const formattedOrders = finalOrders
         .split(',')
@@ -447,7 +468,6 @@
           const shareText = `🏪 Store / Page: ${pageId}\n🔢 Order ID: #${finalOrderId}\n🏢 Nearest Branch: ${finalBranch}\n⏰ Schedule Order: ${finalSched}\n\nClient Order List:\n${formattedOrders}\n\nName: ${finalName}\nPhone: ${finalPhone}\nLandmark: ${finalLandmark}\n\n📍 Pin Location\nDigital Address (PlusCode): ${plusCode}\n\nMap link address: ${googleMapsUrl}\n\nGeo address: ${lat},${lng}\nText Address (OSM): ${textAddress}`;
 
           try {
-            // 1. Isave agad sa Supabase kasama ang totoong PSID para sa POS app ni seller
             await supabaseClient
               .from('orders')
               .insert([
@@ -464,12 +484,11 @@
                   latitude: lat,
                   longitude: lng,
                   raw_chat_output: shareText,
-                  messenger_psid: psid, // 👈 Dito nasasalo at naisave ang PSID!
+                  messenger_psid: psid,
                   status: 'PENDING'
                 }
               ]);
 
-            // 2. Kopyahin sa clipboard at buksan ang Messenger chat
             await copyToClipboard(shareText);
 
             statusEl.style.color = "#16a34a";
@@ -513,7 +532,6 @@
       }
     }
 
-    // 🚀 DUAL ACTION PARA SA SMS SHARE: Save sa Supabase (POS) + Buksan ang SMS App
     async function executeSmsShare() {
       const statusEl = document.getElementById("status");
       const targetPhone = document.getElementById("smsSellerNum").value.trim();
