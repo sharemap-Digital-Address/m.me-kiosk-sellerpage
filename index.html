@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Instant Delivery Location Share</title>
 
-  <!-- SUPABASE CLIENT LIBRARY & ACCESS CHECKER -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- FACEBOOK MESSENGER EXTENSIONS SDK PARA SA PSID FETCHING -->
   <script src="https://connect.facebook.net/en_US/messenger.Extensions.js"></script>
 
   <script>
@@ -72,7 +69,6 @@
     });
   </script>
 
-  <!-- OPEN GRAPH META TAGS -->
   <meta property="og:title" content="📍 Instant Delivery Location Share">
   <meta property="og:description" content="Pindutin para ma-share agad ang inyong Digital Address (Plus Code) para sa delivery.">
   <meta property="og:image" content="https://maximizer-share-location.github.io/digital-address-byDevAdmin-JayromePevidal/1788426150049_transfer_2026-09-03_195332.png">
@@ -192,6 +188,7 @@
       <div class="buyer-info-item" id="branchDisplayRow">🏢 <b>Nearest Branch:</b> <span id="dispBranch">Pumili sa ibaba</span></div>
       <div class="buyer-info-item">⏰ <b>Schedule Order:</b> <span id="dispSched">Now (Agad-agad)</span></div>
       <div class="buyer-info-item">🛒 <b>Orders:</b> <span id="dispOrders">-</span></div>
+      <div class="buyer-info-item">🔒 <b>PSID:</b> <span id="dispPsid" style="font-family: monospace; color: #0284c7;">-</span></div>
       <div class="buyer-info-item">👤 <b>Pangalan:</b> <span id="dispName">-</span></div>
       <div class="buyer-info-item">📞 <b>Contact:</b> <span id="dispPhone">-</span></div>
       <div class="buyer-info-item">🏠 <b>Landmark:</b> <span id="dispLandmark">-</span></div>
@@ -259,33 +256,19 @@
 
       const urlParams = new URLSearchParams(window.location.search);
 
-      // Subukang Kunin ang PSID sa pamamagitan ng Messenger Extensions SDK kung binuksan sa loob ng Messenger app
-      if (window.MessengerExtensions) {
-        window.MessengerExtensions.getContext(
-          'YOUR_FACEBOOK_APP_ID', // Palitan ng iyong Facebook App ID kung kinakailangan, o iwanan kung naka-base sa URL
-          function success(result) {
-            if (result && result.psid) {
-              localStorage.setItem('sharemap_psid', result.psid);
-            }
-          },
-          function error(err) {
-            console.log("Messenger SDK Context Error:", err);
-          }
-        );
-      }
+      // MAHIGPIT NA PSID VALIDATION & SANITIZATION SA INDEX.HTML
+      let rawPsid = urlParams.get('psid');
+      let currentPsid = "MESSENGER_WEB_USER";
 
-      // Saluhin at i-save ang PSID mula sa URL, SDK, o LocalStorage
-            let currentPsid = urlParams.get('psid');
-      // Kung ang pumasok ay placeholder text o walang laman, gawing MESSENGER_WEB_USER
-      if (!currentPsid || currentPsid.includes("PSID") || currentPsid.includes("DITO") || currentPsid === "USER_ACTUAL_PSID_DITO") {
+      if (!rawPsid || rawPsid.includes("PSID") || rawPsid.includes("DITO") || rawPsid === "USER_ACTUAL_PSID_DITO") {
         currentPsid = localStorage.getItem('sharemap_psid');
         if (!currentPsid || currentPsid.includes("PSID") || currentPsid.includes("DITO")) {
           currentPsid = "MESSENGER_WEB_USER";
         }
       } else {
+        currentPsid = rawPsid.trim();
         localStorage.setItem('sharemap_psid', currentPsid);
       }
-
 
       const orderIdVal = urlParams.get('oid') || localStorage.getItem('sharemap_orderid') || "N/A";
       const buyerBranch = urlParams.get('branch') || localStorage.getItem('sharemap_branch') || "Main Branch";
@@ -309,6 +292,7 @@
       document.getElementById("dispSched").innerText = buyerSchedule;
       localStorage.setItem('sharemap_schedule', buyerSchedule);
 
+      document.getElementById("dispPsid").innerText = currentPsid;
       document.getElementById("dispName").innerText = buyerName;
       localStorage.setItem('sharemap_fullname', buyerName);
 
@@ -442,10 +426,7 @@
       const finalOrderId = localStorage.getItem('sharemap_orderid') || "N/A";
       const pageId = getPageId();
       
-      let psid = localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
-      if (psid === "USER_ACTUAL_PSID_DITO") {
-        psid = "MESSENGER_WEB_USER";
-      }
+      const psid = localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
 
       const formattedOrders = finalOrders
         .split(',')
@@ -470,7 +451,21 @@
           
           const textAddress = await getStreetAddress(lat, lng);
 
-          const shareText = `🏪 Store / Page: ${pageId}\n🔢 Order ID: #${finalOrderId}\n🏢 Nearest Branch: ${finalBranch}\n⏰ Schedule Order: ${finalSched}\n\nClient Order List:\n${formattedOrders}\n\nName: ${finalName}\nPhone: ${finalPhone}\nLandmark: ${finalLandmark}\n\n📍 Pin Location\nDigital Address (PlusCode): ${plusCode}\n\nMap link address: ${googleMapsUrl}\n\nGeo address: ${lat},${lng}\nText Address (OSM): ${textAddress}`;
+          // SAKTO SA FORMAT NA GUSTO MO (Kasamang PSID)
+          const shareText = `🏪 Store / Page: ${pageId}\n` +
+                            `🔢 Order ID: #${finalOrderId}\n` +
+                            `🏢 Nearest Branch: ${finalBranch}\n` +
+                            `⏰ Schedule Order: ${finalSched}\n\n` +
+                            `Client Order List:\n${formattedOrders}\n\n` +
+                            `psid: ${psid}\n` +
+                            `Name: ${finalName}\n` +
+                            `Phone: ${finalPhone}\n` +
+                            `Landmark: ${finalLandmark}\n\n` +
+                            `📍 Pin Location\n` +
+                            `Digital Address (PlusCode): ${plusCode}\n\n` +
+                            `Map link address: ${googleMapsUrl}\n\n` +
+                            `Geo address: ${lat},${lng}\n` +
+                            `Text Address (OSM): ${textAddress}`;
 
           try {
             await supabaseClient
@@ -489,7 +484,7 @@
                   latitude: lat,
                   longitude: lng,
                   raw_chat_output: shareText,
-                  messenger_psid: psid,
+                  messenger_psid: psid, // Tamang PSID na pumasok sa database!
                   status: 'PENDING'
                 }
               ]);
@@ -557,6 +552,7 @@
       const finalSched = localStorage.getItem('sharemap_schedule') || "Now (Agad-agad)";
       const finalOrderId = localStorage.getItem('sharemap_orderid') || "N/A";
       const pageId = getPageId();
+      const psid = localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
 
       const formattedOrdersText = finalOrders
         .split(',')
@@ -579,6 +575,7 @@
           const plusCode = encodeStandardPlusCode(lat, lng);
 
           const shareText = `SHAREMAP DELIVERY ORDER\n` +
+                              `psid: ${psid}\n` +
                               `🔢 Order ID: #${finalOrderId}\n` +
                               `🏪 Store: ${pageId}\n` +
                               `🏢 Branch: ${finalBranch}\n` +
@@ -607,7 +604,7 @@
                   latitude: lat,
                   longitude: lng,
                   raw_chat_output: shareText,
-                  messenger_psid: "SMS_USER",
+                  messenger_psid: psid,
                   status: 'PENDING'
                 }
               ]);
