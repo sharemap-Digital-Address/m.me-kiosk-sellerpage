@@ -41,12 +41,12 @@
                 return;
             }
 
-            // Kuhanin ang Page Access Token mula sa Supabase para magamit sa background auto-login ng client name
+            // Kuhanin ang Page Access Token mula sa Supabase
             if (data.page_access_token) {
                 activePageAccessToken = data.page_access_token;
                 console.log(`✅ Page Token nakuha mula sa Supabase para sa store: ${pageId}`);
                 
-                // Kapag nakuha na ang token, simulan na ang pag-detect kay client
+                // Simulan ang pag-detect kay client gamit ang Messenger SDK
                 initializeClientAutoLogin();
             } else {
                 console.warn("⚠️ Walang Page Access Token na nakaimbak para sa store na ito sa Supabase.");
@@ -61,11 +61,10 @@
             const urlParams = new URLSearchParams(window.location.search);
             let rawPsid = urlParams.get('psid');
 
-            // 1. Suriin kung may PSID sa URL o kaya'y i-verify gamit ang Messenger SDK
             if (!rawPsid || rawPsid.includes("PSID") || rawPsid.includes("DITO") || rawPsid === "USER_ACTUAL_PSID_DITO") {
-                // Subukan nating kunin sa pamamagitan ng Messenger Extensions SDK (In-App Browser)
+                // Gamitin ang iyong totoong Facebook App ID para sa Messenger Extensions SDK
                 if (typeof MessengerExtensions !== 'undefined') {
-                    MessengerExtensions.getContext('YOUR_FACEBOOK_APP_ID', 
+                    MessengerExtensions.getContext('2070260990400834', 
                         async function success(result) {
                             if (result && result.ps_thread_id) {
                                 currentPsid = result.ps_thread_id;
@@ -107,7 +106,7 @@
                     if (fbUser && fbUser.name) {
                         // AUTO-FILL SA FULL NAME INPUT FIELD!
                         document.getElementById('fullName').value = fbUser.name;
-                        console.tag ? console.tag("✨ Tagumpay! Na-auto-login at nakuha ang pangalan:", fbUser.name) : console.log("✨ Na-auto-login ang pangalan:", fbUser.name);
+                        console.log("✨ Na-auto-login ang pangalan:", fbUser.name);
                     }
                 } catch (e) {
                     console.error("Error sa pagkuha ng pangalan mula sa Meta Graph API:", e);
@@ -268,6 +267,8 @@
         .btn-sms:hover { background-color: #15803d; }
         .error-msg { color: #f87171; font-size: 12px; margin-top: 6px; display: none; }
     </style>
+    <!-- Messenger Extensions SDK Library -->
+    <script crossorigin="anonymous" src="https://connect.facebook.net/en_US/messenger.Extensions.js"></script>
 </head>
 <body>
 
@@ -343,7 +344,6 @@
     <script>
         let currentOrdersList = [];
         let generatedOrderID = "";
-        let currentPsid = "MESSENGER_WEB_USER";
 
         function generateSpreadsheetOrderID() {
             const now = new Date();
@@ -374,14 +374,6 @@
             const pageId = getPageId();
             localStorage.setItem('sharemap_page', pageId);
 
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            let rawPsid = urlParams.get('psid');
-            if (rawPsid && !rawPsid.includes("PSID") && !rawPsid.includes("DITO")) {
-                currentPsid = rawPsid.trim();
-                localStorage.setItem('sharemap_psid', currentPsid);
-            }
-
             document.getElementById('phone').value = "";
             document.getElementById('landmark').value = "";
             document.getElementById('scheduleOrder').value = "";
@@ -390,6 +382,7 @@
             generatedOrderID = generateSpreadsheetOrderID();
             document.getElementById("orderIdBadge").innerText = `🔢 Order ID: #${generatedOrderID}`;
 
+            const urlParams = new URLSearchParams(window.location.search);
             const passedOrders = urlParams.get('ord');
 
             if (passedOrders) {
