@@ -7,12 +7,48 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #334155; }
-    .header { text-align: center; margin-bottom: 25px; }
+    .header { text-align: center; margin-bottom: 20px; }
+    
+    /* LOGIN & GO CARD STYLES */
+    .fb-login-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      max-width: 600px;
+      margin: 0 auto 20px auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #cbd5e1;
+      text-align: center;
+    }
+    .btn-fb {
+      background-color: #0084FF;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-fb:hover { background-color: #006bce; }
+    .btn-logout { background-color: #dc2626; margin-left: 8px; }
+    .token-status-box {
+      margin-top: 10px;
+      font-size: 12px;
+      padding: 8px;
+      border-radius: 6px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      word-break: break-all;
+    }
+
     .test-banner { background: #dcfce7; border: 1px dashed #16a34a; padding: 12px; border-radius: 8px; max-width: 600px; margin: 0 auto 20px auto; text-align: center; font-size: 13px; color: #166534; }
     .sim-btn-group { display: flex; justify-content: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
     .sim-btn { background: #16a34a; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; }
     .sim-btn-dinein { background: #d97706; }
-    .sim-btn:active { opacity: 0.8; }
     
     .nav-container { max-width: 1200px; margin: 0 auto 20px auto; display: flex; flex-direction: column; gap: 12px; }
     .nav-tabs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
@@ -47,14 +83,12 @@
     .btn-finish { background-color: #16a34a; }
     .btn-cancel { background-color: #dc2626; }
     .btn-copy { background-color: #475569; }
-    .btn:active { opacity: 0.8; }
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
     .modal-content { background: white; padding: 25px; border-radius: 12px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     .keypad-display { background: #f8fafc; border: 2px solid #cbd5e1; padding: 12px; font-size: 22px; font-weight: bold; margin-bottom: 15px; border-radius: 6px; }
     .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
     .key-btn { padding: 12px; font-size: 18px; font-weight: bold; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; }
-    .key-btn:active { background: #cbd5e1; }
 
     @media print {
       body * { visibility: hidden; }
@@ -71,8 +105,23 @@
     <p>Live Orders Queue para sa store: <b id="currentStoreDisplay">sharemapdammystore</b></p>
   </div>
 
+  <!-- FACEBOOK LOGIN & GO CONTROLLER -->
+  <div class="fb-login-card">
+    <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #0284c7;">
+      🔑 Meta API Activation & Store Page Token Setup
+    </div>
+    <div id="loginControlArea">
+      <button class="btn-fb" onclick="loginWithFacebook()">
+        <span>🔓 Login with Facebook & Activate POS</span>
+      </button>
+    </div>
+    <div class="token-status-box" id="tokenStatusDisplay">
+      🔴 Offline: Walang active Page Access Token. I-click ang button sa taas para mag-login.
+    </div>
+  </div>
+
   <div class="test-banner">
-    🚀 <b>Live Cloud Sync Active:</b> Awtomatikong isinasama sa lokal na device storage ang lahat ng detalye (pati PSID) mula sa Supabase.<br>
+    🚀 <b>Live Cloud Sync Active:</b> Awtomatikong isinasama sa lokal na device storage ang lahat ng detalye mula sa Supabase.<br>
     <div class="sim-btn-group">
       <button class="sim-btn" onclick="simulateOrder('TAKEOUT', 'UNPAID')">🛵 Simulate Takeout</button>
       <button class="sim-btn sim-btn-dinein" onclick="simulateOrder('DINE_IN', 'UNPAID')">🍽️ Simulate Dine-In</button>
@@ -135,6 +184,28 @@
 
   <div id="printArea" style="display:none;"></div>
 
+  <!-- Meta Facebook SDK -->
+  <script>
+    const FACEBOOK_APP_ID = "1288382807701408"; // Facebook App ID
+
+    window.fbAsyncInit = function() {
+        FB.init({
+            appId      : FACEBOOK_APP_ID,
+            cookie     : true,
+            xfbml      : true,
+            version    : 'v26.0'
+        });
+    };
+
+    (function(d, s, id){
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {return;}
+        js = d.createElement(s); js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+  </script>
+
   <script>
     const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
@@ -145,6 +216,7 @@
     document.getElementById("currentStoreDisplay").innerText = storePageId;
 
     let currentStoreToken = "";
+    let activePageId = "";
     let currentTab = 'waiting';
     let selectedOrderIdForPayment = null;
     let currentCashInput = "250";
@@ -153,6 +225,60 @@
     const STORAGE_PREPARING = `sharemap_pos_preparing_${storePageId.toLowerCase()}`;
     const STORAGE_CANCELLED = `sharemap_pos_cancelled_${storePageId.toLowerCase()}`;
     const STORAGE_HISTORY = `sharemap_pos_history_${storePageId.toLowerCase()}`;
+
+    // --- FACEBOOK LOGIN & GO FUNCTIONALITY ---
+    function loginWithFacebook() {
+      FB.login(function(response) {
+          if (response.authResponse) {
+              FB.api('/me/accounts', async function(accountsResponse) {
+                  if (accountsResponse && accountsResponse.data && accountsResponse.data.length > 0) {
+                      const page = accountsResponse.data[0];
+                      activePageId = page.id; 
+                      currentStoreToken = page.access_token;
+                      
+                      // 1. I-update agad sa Supabase 'licenses' table ang bagong Page Access Token!
+                      await updateTokenInSupabase(storePageId, currentStoreToken);
+
+                      // 2. I-update ang UI
+                      document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Connected to Page:</b> ${page.name}<br><small style="color:#15803d;">Active Page Token Auto-Saved to Supabase!</small>`;
+                      document.getElementById("loginControlArea").innerHTML = `
+                        <button class="btn-fb btn-logout" onclick="logoutFacebook()">🔒 Logout & Switch Page</button>
+                      `;
+                  } else {
+                      alert("⚠️ Walang nakitang Facebook Page na naka-link sa account mo.");
+                  }
+              });
+          }
+      }, {scope: 'pages_show_list, pages_messaging, pages_manage_metadata'});
+    }
+
+    async function updateTokenInSupabase(username, token) {
+      try {
+        const { error } = await supabaseClient
+          .from('licenses')
+          .update({ page_access_token: token })
+          .eq('username', username.toLowerCase());
+
+        if (error) {
+          console.error("Supabase token save error:", error);
+        } else {
+          console.log("✅ Page Token saved successfully to Supabase for:", username);
+        }
+      } catch (err) {
+        console.error("Supabase exception:", err);
+      }
+    }
+
+    function logoutFacebook() {
+      currentStoreToken = "";
+      document.getElementById("tokenStatusDisplay").innerHTML = `🔴 Offline: Walang active Page Access Token. I-click ang button sa taas para mag-login.`;
+      document.getElementById("loginControlArea").innerHTML = `
+        <button class="btn-fb" onclick="loginWithFacebook()">
+          <span>🔓 Login with Facebook & Activate POS</span>
+        </button>
+      `;
+      alert("Naka-logout na ang POS API session.");
+    }
 
     function switchTab(tab) {
       currentTab = tab;
@@ -173,13 +299,16 @@
 
         if (!error && data && data.page_access_token) {
           currentStoreToken = data.page_access_token;
+          document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Page Token Loaded from Database</b> (${currentStoreToken.substring(0, 12)}...)`;
+          document.getElementById("loginControlArea").innerHTML = `
+            <button class="btn-fb btn-logout" onclick="logoutFacebook()">🔒 Logout & Switch Page</button>
+          `;
         }
       } catch (err) {
         console.error("Token fetch error:", err);
       }
     }
 
-    // Kinukuha at isinasama ang BUONG detalye (kasama ang PSID, Plus Code, GPS) sa local storage ng device
     async function syncAndFetchNewOrders() {
       try {
         const { data: cloudOrders, error } = await supabaseClient
@@ -187,12 +316,7 @@
           .select('*')
           .eq('store_page', storePageId.toLowerCase());
 
-        if (error) {
-          console.error("Supabase fetch error:", error);
-          return;
-        }
-
-        if (cloudOrders && cloudOrders.length > 0) {
+        if (!error && cloudOrders && cloudOrders.length > 0) {
           let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
 
           cloudOrders.forEach(cloudOrder => {
@@ -200,7 +324,6 @@
             if (!exists) {
               const isDineIn = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("DINE-IN"));
               
-              // Buong object na isinasave sa local device storage ni seller
               waitingOrders.unshift({ 
                 order_id: cloudOrder.order_id,
                 order_type: isDineIn ? "DINE_IN" : "TAKEOUT",
@@ -215,7 +338,7 @@
                 latitude: cloudOrder.latitude,
                 longitude: cloudOrder.longitude,
                 raw_chat_output: cloudOrder.raw_chat_output,
-                messenger_psid: cloudOrder.messenger_psid, // 👈 Naka-save na nang buo sa local device!
+                messenger_psid: cloudOrder.messenger_psid,
                 payment_status: 'UNPAID',
                 status: 'PENDING',
                 received_at: new Date().toLocaleTimeString() 
@@ -225,7 +348,6 @@
 
           localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
 
-          // Burahin na sa cloud table pagkatapos masalo ng lokal na device ni seller
           for (const ord of cloudOrders) {
             await supabaseClient.from('orders').delete().eq('order_id', ord.order_id);
           }
@@ -246,7 +368,7 @@
         order_type: type,
         store_page: storePageId.toLowerCase(),
         branch: "Main Branch",
-        schedule: "Oct 16, 2026, 2:15 AM",
+        schedule: "Oct 18, 2026, 11:15 AM",
         customer_name: "Juan Dela Cruz",
         customer_phone: "09124356789",
         landmark: "Malapit sa Panaderia",
@@ -265,7 +387,7 @@
       waitingOrders.unshift(sampleOrder);
       localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
       loadOrdersFromDevice();
-      alert(`✅ May pumasok na test ${type} order sa Waiting Room (Naka-save sa device)!`);
+      alert(`✅ May pumasok na test ${type} order sa Waiting Room!`);
     }
 
     function loadOrdersFromDevice() {
@@ -397,7 +519,6 @@
         localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
         localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders));
         
-        // Magpapadala ng notification gamit ang PSID na nakapaloob sa lokal na data
         sendApiNotification(item.customer_name, item.messenger_psid, `Salamat! Na-verify na ang bayad (${method}) para sa Order #${selectedOrderIdForPayment}. Inihahanda na ito sa kusina.`);
         alert(`✅ Na-proseso ang bayad (${method}) para sa Order #${selectedOrderIdForPayment}! Nailipat na sa Preparing Room.`);
         
@@ -436,7 +557,6 @@
         localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders));
         localStorage.setItem(STORAGE_CANCELLED, JSON.stringify(cancelledOrders));
 
-        // Magpapadala ng cancellation notice gamit ang lokal na PSID
         sendApiNotification(targetItem.customer_name, targetItem.messenger_psid, `Paumanhin po, kinansela ang Order #${orderId}. Dahilan: ${reason}`);
         alert(`❌ Nakansela ang Order #${orderId}.`);
         loadOrdersFromDevice();
@@ -496,7 +616,7 @@
     async function sendApiNotification(customerName, psid, messageText) {
       if (!currentStoreToken || !psid || psid === "MESSENGER_WEB_USER" || psid === "SMS_USER") return;
 
-      const url = `https://graph.facebook.com/v18.0/me/messages?access_token=${currentStoreToken}`;
+      const url = `https://graph.facebook.com/v26.0/me/messages?access_token=${currentStoreToken}`;
       const payload = { recipient: { id: psid }, message: { text: messageText } };
 
       try {
