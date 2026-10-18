@@ -41,7 +41,7 @@
                 return;
             }
 
-            // PANSAMANTALANG DEBUGGER: Ilalagay natin sa screen ang token para makita kung nakuha sa Supabase
+            // Kuhanin ang Page Access Token mula sa Supabase
             if (data.page_access_token) {
                 activePageAccessToken = data.page_access_token;
                 document.getElementById('debugToken').value = "SUCCESS: Nakuha ang Token (" + activePageAccessToken.substring(0, 10) + "...)";
@@ -54,31 +54,34 @@
         }
 
         async function initializeClientAutoLogin() {
-            let currentPsid = "";
             const urlParams = new URLSearchParams(window.location.search);
             let rawPsid = urlParams.get('psid');
 
-            // Linisin ang rawPsid kung sakaling pumasok ang {{user_id}} template tag nang hindi napalitan
-            if (!rawPsid || rawPsid.includes("PSID") || rawPsid.includes("DITO") || rawPsid.includes("user_id")) {
-                if (typeof MessengerExtensions !== 'undefined') {
-                    MessengerExtensions.getContext('2070260990400834', 
-                        async function success(result) {
-                            if (result && result.ps_thread_id) {
-                                currentPsid = result.ps_thread_id;
-                                processCustomerDetails(currentPsid);
-                            }
-                        },
-                        function error(err) {
-                            console.log("Messenger SDK context error:", err);
+            // 1. Unang suriin kung may valid na PSID na nanggaling sa URL query parameter
+            if (rawPsid && !rawPsid.includes("PSID") && !rawPsid.includes("DITO") && !rawPsid.includes("user_id")) {
+                console.log("✅ PSID nakuha sa URL Parameter:", rawPsid);
+                processCustomerDetails(rawPsid.trim());
+                return;
+            }
+
+            // 2. Kung wala sa URL, subukan sa pamamagitan ng Messenger Extensions SDK (In-App Browser)
+            if (typeof MessengerExtensions !== 'undefined') {
+                MessengerExtensions.getContext('2070260990400834', 
+                    async function success(result) {
+                        if (result && result.ps_thread_id) {
+                            console.log("✅ PSID nakuha sa Messenger SDK:", result.ps_thread_id);
+                            processCustomerDetails(result.ps_thread_id);
+                        } else {
                             fallbackDefaultPsid();
                         }
-                    );
-                } else {
-                    fallbackDefaultPsid();
-                }
+                    },
+                    function error(err) {
+                        console.log("Messenger SDK context error:", err);
+                        fallbackDefaultPsid();
+                    }
+                );
             } else {
-                currentPsid = rawPsid.trim();
-                processCustomerDetails(currentPsid);
+                fallbackDefaultPsid();
             }
         }
 
@@ -94,6 +97,7 @@
             document.getElementById('displayPsid').value = psid;
             localStorage.setItem('sharemap_psid', psid);
 
+            // Kung mayroong Page Access Token at Valid PSID, kuhanin ang pangalan mula sa Meta Graph API
             if (activePageAccessToken && psid && psid !== "MESSENGER_WEB_USER") {
                 try {
                     const response = await fetch(`https://graph.facebook.com/v26.0/${psid}?fields=name&access_token=${activePageAccessToken}`);
@@ -328,6 +332,14 @@
         <p id="errorMsg" class="error-msg">⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy.</p>
 
         <button id="proceedBtn" class="btn">📍 Sunod: Kunin ang GPS Location ➔</button>
+
+        <div id="dineInSmsContainer" style="display: none; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #475569;">
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label for="smsStoreNum" style="font-size: 11px; color: #38bdf8;">📱 Opsyonal: Cellphone Number ng Store/Manager para sa SMS:</label>
+                <input type="tel" id="smsStoreNum" placeholder="hal. 09123456789" autocomplete="off">
+            </div>
+            <button type="button" id="smsBtn" class="btn btn-sms" onclick="handleSmsReservation()">📱 I-send ang Reservation via SMS</button>
+        </div>
     </div>
 
     <script>
@@ -352,7 +364,200 @@
             localStorage.setItem('sharemap_page', pageId);
             generatedOrderID = generateSpreadsheetOrderID();
             document.getElementById("orderIdBadge").innerText = `🔢 Order ID: #${generatedOrderID}`;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const passedOrders = urlParams.get('ord');
+
+            if (passedOrders) {
+                passedOrders.split(',').forEach(itemStr => {
+                    let parts = itemStr.trim().split(' x');
+                    if (parts.length === 2) {
+                        currentOrdersList.push({ name: parts[0].trim(), qty: parseInt(parts[1]) || 1 });
+                    } else if (parts.length === 1 && parts[0]) {
+                        currentOrdersList.push({ name: parts[0].trim(), qty: 1 });
+                    }
+                });
+            } else {
+                currentOrdersList = [];
+                localStorage.removeItem('sharemap_orders_array');
+                localStorage.removeItem('sharemap_orders');
+            }
+            renderOrderUI();
         });
+
+        function toggleServiceType() {
+            const isDineIn = document.getElementById("typeDineIn").checked;
+            const landmarkGroup = document.getElementById("landmarkGroup");
+            const paxGroup = document.getElementById("paxGroup");
+            const scheduleLabel = document.getElementById("scheduleLabel");
+            const scheduleNote = document.getElementById("scheduleNote");
+            const proceedBtn = document.getElementById("proceedBtn");
+            const dineInSmsContainer = document.getElementById("dineInSmsContainer");
+
+            if (isDineIn) {
+                landmarkGroup.style.display = "none";
+                paxGroup.style.display = "block";
+                scheduleLabel.innerText = "⏰ Petsa at Oras ng Pagkain (Dine-In Schedule):";
+                scheduleNote.innerText = "*Iwanang blanko kung pupunta na AGAD-AGAD sa store.";
+                proceedBtn.innerText = "📩 I-send ang Reservation sa Messenger ➔";
+                dineInSmsContainer.style.display = "block";
+            } else {
+                landmarkGroup.style.display = "block";
+                paxGroup.style.display = "none";
+                scheduleLabel.innerText = "⏰ Schedule Order / Oras ng Delivery (Opsyonal):";
+                scheduleNote.innerText = "*Iwanang blanko kung para sa AGAD-AGAD na order (Now).";
+                proceedBtn.innerText = "📍 Sunod: Kunin ang GPS Location ➔";
+                dineInSmsContainer.style.display = "none";
+            }
+        }
+
+        function openKioskMenu() {
+            const pageId = getPageId();
+            window.location.href = `./kioskmode.html?page=${encodeURIComponent(pageId)}&psid=${encodeURIComponent(document.getElementById('displayPsid').value)}`;
+        }
+
+        function renderOrderUI() {
+            const container = document.getElementById("orderListContainer");
+            container.innerHTML = "";
+
+            if (currentOrdersList.length === 0) {
+                container.innerHTML = `<p style="font-size:12px; color:#94a3b8; text-align:center; margin:8px 0;">Walang pang order. Pindutin ang button sa taas para mamili.</p>`;
+                return;
+            }
+
+            currentOrdersList.forEach((item, index) => {
+                let row = document.createElement("div");
+                row.className = "item-row";
+                row.innerHTML = `
+                    <span class="saved-text"><b>${item.name}</b> x${item.qty}</span>
+                    <button type="button" class="act-btn btn-edit" onclick="editOrderQty(${index})">✏️ Edit Qty</button>
+                    <button type="button" class="act-btn btn-del" onclick="deleteOrderItem(${index})">🗑️</button>
+                `;
+                container.appendChild(row);
+            });
+
+            let summaryText = currentOrdersList.map(i => `${i.name} x${i.qty}`).join(', ');
+            localStorage.setItem('sharemap_orders', summaryText);
+        }
+
+        function editOrderQty(index) {
+            let current = currentOrdersList[index];
+            let newQty = prompt(`Ilagay ang bagong quantity para sa "${current.name}":`, current.qty);
+            if (newQty !== null) {
+                let parsed = parseInt(newQty);
+                if (!isNaN(parsed) && parsed > 0) {
+                    currentOrdersList[index].qty = parsed;
+                    renderOrderUI();
+                } else if (parsed === 0) {
+                    currentOrdersList.splice(index, 1);
+                    renderOrderUI();
+                }
+            }
+        }
+
+        function deleteOrderItem(index) {
+            currentOrdersList.splice(index, 1);
+            renderOrderUI();
+        }
+
+        function getFormattedOrdersText() {
+            if (currentOrdersList.length === 0) return "Walang order";
+            return currentOrdersList.map(i => `${i.name} x${i.qty}`).join(', ');
+        }
+
+        function formatScheduleText(rawInput) {
+            if (!rawInput) return "Now (Agad-agad)";
+            const dt = new Date(rawInput);
+            if (isNaN(dt.getTime())) return rawInput;
+            return dt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+        }
+
+        function handleProcessOrder() {
+            const nameVal = document.getElementById('fullName').value.trim();
+            const phoneVal = document.getElementById('phone').value.trim();
+            const landmarkVal = document.getElementById('landmark').value.trim();
+            const paxVal = document.getElementById('paxCount').value.trim();
+            const schedVal = document.getElementById('scheduleOrder').value;
+            const ordersVal = getFormattedOrdersText();
+            const isDineIn = document.getElementById("typeDineIn").checked;
+            const pageId = getPageId();
+            const activePsid = document.getElementById('displayPsid').value;
+
+            if (!nameVal || !phoneVal) {
+                document.getElementById('errorMsg').style.display = "block";
+                return;
+            }
+            document.getElementById('errorMsg').style.display = "none";
+
+            const formattedSched = formatScheduleText(schedVal);
+
+            if (isDineIn) {
+                const formattedOrders = ordersVal.split(', ').join('\n• ');
+                const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store / Page: ${pageId}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+                const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
+                
+                window.location.href = messengerUrl;
+                return;
+            }
+
+            localStorage.setItem('sharemap_page', pageId);
+            localStorage.setItem('sharemap_orderid', generatedOrderID);
+            localStorage.setItem('sharemap_fullname', nameVal);
+            localStorage.setItem('sharemap_phone', phoneVal);
+            localStorage.setItem('sharemap_landmark', landmarkVal || "Wala");
+            localStorage.setItem('sharemap_schedule', formattedSched);
+            localStorage.setItem('sharemap_orders', ordersVal);
+            localStorage.setItem('sharemap_psid', activePsid);
+            sessionStorage.setItem('access_granted', 'true');
+
+            const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&psid=${encodeURIComponent(activePsid)}`;
+            window.location.href = `./index.html${queryStr}`;
+        }
+
+        function handleSmsReservation() {
+            const nameVal = document.getElementById('fullName').value.trim();
+            const phoneVal = document.getElementById('phone').value.trim();
+            const paxVal = document.getElementById('paxCount').value.trim();
+            const schedVal = document.getElementById('scheduleOrder').value;
+            const ordersVal = getFormattedOrdersText();
+            const targetPhone = document.getElementById('smsStoreNum').value.trim();
+            const pageId = getPageId();
+            const activePsid = document.getElementById('displayPsid').value;
+
+            if (!nameVal || !phoneVal) {
+                document.getElementById('errorMsg').style.display = "block";
+                return;
+            }
+            if (!targetPhone) {
+                alert("Paki-lagay ang cellphone number ng Branch Store/Manager para sa SMS!");
+                return;
+            }
+            document.getElementById('errorMsg').style.display = "none";
+
+            const formattedSched = formatScheduleText(schedVal);
+            const formattedOrders = ordersVal.split(', ').join('\n• ');
+
+            const smsBodyText = `SHAREMAP DINE-IN RESERVATION\n` +
+                                `psid: ${activePsid}\n` +
+                                `🔢 Order ID: #${generatedOrderID}\n` +
+                                `🏪 Store: ${pageId}\n` +
+                                `⏰ Schedule: ${formattedSched}\n` +
+                                `👥 Party Size: ${paxVal || '2'} Pax\n\n` +
+                                `🛒 Advance Orders:\n• ${formattedOrders}\n\n` +
+                                `👤 Name: ${nameVal}\n` +
+                                `📞 Contact: ${phoneVal}`;
+
+            const encodedText = encodeURIComponent(smsBodyText);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const delimiter = isIOS ? '&' : '?';
+            const smsUri = `sms:${targetPhone}${delimiter}body=${encodedText}`;
+
+            window.location.href = smsUri;
+        }
+
+        document.getElementById('proceedBtn').onclick = () => {
+            handleProcessOrder();
+        };
     </script>
 </body>
 </html>
