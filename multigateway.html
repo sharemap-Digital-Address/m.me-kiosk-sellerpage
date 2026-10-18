@@ -28,6 +28,52 @@
             console.log("[SDK LOG]:", message);
         }
 
+        // --- FACEBOOK OAUTH LOGIN INTEGRATION ---
+        window.fbAsyncInit = function() {
+            FB.init({
+                appId      : MESSENGER_APP_ID,
+                cookie     : true,
+                xfbml      : true,
+                version    : 'v26.0'
+            });
+            console.log("🔵 Facebook SDK Initialized.");
+        };
+
+        // Load FB SDK Asynchronously
+        (function(d, s, id){
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {return;}
+            js = d.createElement(s); js.id = id;
+            js.src = "https://connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+
+        function loginWithFacebook() {
+            updateSdkDebugToast("🔵 Logging in with Facebook OAuth...");
+            FB.login(function(response) {
+                if (response.authResponse) {
+                    const accessToken = response.authResponse.accessToken;
+                    FB.api('/me', { fields: 'id,name' }, function(userInfo) {
+                        if (userInfo && userInfo.name) {
+                            actualLoggedInPsid = userInfo.id;
+                            document.getElementById('displayPsid').value = actualLoggedInPsid;
+                            document.getElementById('fullName').value = userInfo.name;
+                            localStorage.setItem('sharemap_psid', actualLoggedInPsid);
+                            isPsidVerifiedFromSuggestion = true;
+                            
+                            document.getElementById('notFoundIndicator').style.display = "none";
+                            updateSdkDebugToast(`✅ FB Login Success: ${userInfo.name}`);
+                        } else {
+                            updateSdkDebugToast("⚠️ Nabigong makuha ang user profile mula sa FB.", true);
+                        }
+                    });
+                } else {
+                    updateSdkDebugToast("⚠️ Kinansela o hindi itinuloy ang Facebook Login.", true);
+                }
+            }, {scope: 'public_profile'});
+        }
+        // ---------------------------------------
+
         // FUNCTION PARA SA EXTENSION SDK LOOKUP
         function runMessengerSdkContext() {
             updateSdkDebugToast("📲 Running Messenger SDK Context Lookup...");
@@ -35,7 +81,6 @@
             if (typeof MessengerExtensions !== 'undefined') {
                 MessengerExtensions.getContext(MESSENGER_APP_ID, 
                     function success(result) {
-                        // TAMA: user_id ang ibinabalik ng Meta SDK para sa PSID
                         if (result && result.user_id) {
                             actualLoggedInPsid = result.user_id.trim();
                             updateSdkDebugToast(`✅ Auto-Fetched PSID: ${actualLoggedInPsid}`);
@@ -58,13 +103,11 @@
             }
         }
 
-        // OFFICIAL META SDK INITIALIZATION HOOK
         window.extAsyncInit = function() {
             console.log("📲 extAsyncInit triggered by Meta SDK.");
             runMessengerSdkContext();
         };
 
-        // AGGRESSIVE FALLBACK: Kung sakaling hindi nag-trigger ang extAsyncInit pagkaraan ng 1.5 segundo
         window.addEventListener('load', () => {
             setTimeout(() => {
                 const toastEl = document.getElementById('debugSdkToast');
@@ -461,6 +504,25 @@
         .btn-sms { background-color: #16a34a; margin-top: 10px; }
         .btn-sms:hover { background-color: #15803d; }
         .error-msg { color: #f87171; font-size: 12px; margin-top: 6px; display: none; }
+        
+        .btn-fb-login {
+            background-color: #1877f2;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .btn-fb-login:hover { background-color: #166fe5; }
     </style>
 
     <!-- OFFICIAL MESSENGER EXTENSIONS SDK SCRIPT -->
@@ -472,6 +534,12 @@
         <div id="storeUsernameDisplay" class="store-badge">@store</div>
         <h3 style="margin: 0 0 4px 0;">📍 ShareMap Order Gateway</h3>
         <div id="orderIdBadge" class="order-id-badge">🔢 Order ID: GENERATING...</div>
+
+        <!-- FACEBOOK OAUTH LOGIN BUTTON (TESTING) -->
+        <button type="button" class="btn-fb-login" onclick="loginWithFacebook()">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            Continue with Facebook (Login)
+        </button>
 
         <!-- MESSENGER SDK DEBUG TOAST BOX -->
         <div style="background: #0f172a; padding: 6px; border-radius: 6px; border: 1px solid #0284c7; margin-bottom: 8px; text-align: left;">
@@ -673,8 +741,8 @@
             }
 
             if (!isPsidVerifiedFromSuggestion || activePsid === "MESSENGER_WEB_USER") {
-                alert("⚠️ Facebook account not match! Please select your True Active Facebook account in the suggestion box.");
-                document.getElementById('errorMsg').innerText = "⚠️ Paki-select ang iyong tunay na Facebook Account mula sa suggestion list sa ilalim ng iyong Pangalan.";
+                alert("⚠️ Facebook account not match! Please select your True Active Facebook account in the suggestion box or use the 'Continue with Facebook' button.");
+                document.getElementById('errorMsg').innerText = "⚠️ Paki-click ang 'Continue with Facebook' button sa itaas para kusang makuha ang iyong tunay na FB Account.";
                 document.getElementById('errorMsg').style.display = "block";
                 return;
             }
