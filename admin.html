@@ -137,10 +137,6 @@
 
             <label>Store Password (Admin Reset / Set):</label>
             <input type="text" id="storePasswordInput" placeholder="Iwanang blanko kung si client ang magse-set">
-            
-            <!-- 🔑 BAGONG INPUT FIELD PARA SA META PAGE ACCESS TOKEN -->
-            <label style="color: #38bdf8; font-weight: bold;">🔑 Meta Page Access Token (Para sa Messenger API):</label>
-            <input type="text" id="pageAccessTokenInput" placeholder="I-paste dito ang EAAG... Page Access Token ng Store">
 
             <label>Plan Type:</label>
             <select id="planType" onchange="autoSetExpiry()">
@@ -248,7 +244,6 @@
         document.getElementById('storeUsername').value = "";
         document.getElementById('clientEmailInput').value = "";
         document.getElementById('storePasswordInput').value = "";
-        document.getElementById('pageAccessTokenInput').value = ""; // Clear Token
         document.getElementById('planType').value = "TRIAL_ACCESS";
         autoSetExpiry();
     }
@@ -308,10 +303,10 @@
                 ? `<span class="badge pwd-set">🔑 Pwd: <b>${store.password}</b></span>`
                 : `<span class="badge pwd-unset">⚠️ Pwd: Not Set</span>`;
 
-            // INDICATOR KUNG MAY REHISTRADONG PAGE ACCESS TOKEN
+            // Status indicator para sa Page Token na kusang na-save galing sa POS login
             let tokenLabel = store.page_access_token && store.page_access_token.trim() !== ""
-                ? `<span class="badge token-set">🤖 Meta Token: Configured</span>`
-                : `<span class="badge token-unset">⚠️ Meta Token: Missing</span>`;
+                ? `<span class="badge token-set">🤖 Meta Token: Active</span>`
+                : `<span class="badge token-unset">⚠️ Meta Token: Not Logged In</span>`;
 
             let div = document.createElement('div');
             div.className = "store-item";
@@ -345,7 +340,6 @@
             document.getElementById('storeUsername').readOnly = true;
             document.getElementById('clientEmailInput').value = store.email || "";
             document.getElementById('storePasswordInput').value = store.password || "";
-            document.getElementById('pageAccessTokenInput').value = store.page_access_token || ""; // Load existing token
             document.getElementById('planType').value = store.plan;
             document.getElementById('expiryDate').value = store.expiry || "";
             
@@ -371,7 +365,6 @@
         const username = document.getElementById('storeUsername').value.trim().toLowerCase();
         const email = document.getElementById('clientEmailInput').value.trim();
         const pwd = document.getElementById('storePasswordInput').value.trim();
-        const token = document.getElementById('pageAccessTokenInput').value.trim(); // Get Token
         const plan = document.getElementById('planType').value;
         const expiry = (plan === "PLATINUM_LIFETIME") ? null : document.getElementById('expiryDate').value;
 
@@ -386,8 +379,7 @@
             plan: plan,
             expiry: expiry,
             email: email ? email : null,
-            password: pwd ? pwd : null,
-            page_access_token: token ? token : null // 💾 Save to Supabase 'licenses' table
+            password: pwd ? pwd : null
         };
 
         const { error } = await supabaseClient.from('licenses').upsert(payload, { onConflict: 'username' });
