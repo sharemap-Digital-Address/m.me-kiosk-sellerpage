@@ -28,10 +28,10 @@
             console.log("[SDK LOG]:", message);
         }
 
-        // OFFICIAL META SDK INITIALIZATION HOOK (FIXED)
-        window.extAsyncInit = function() {
-            updateSdkDebugToast("📲 Messenger SDK Loaded! Initializing Context...");
-            
+        // FUNCTION PARA SA EXTENSION SDK LOOKUP
+        function runMessengerSdkContext() {
+            updateSdkDebugToast("📲 Running Messenger SDK Context Lookup...");
+
             if (typeof MessengerExtensions !== 'undefined') {
                 MessengerExtensions.getContext(MESSENGER_APP_ID, 
                     function success(result) {
@@ -54,9 +54,26 @@
                     }
                 );
             } else {
-                updateSdkDebugToast("⚠️ MessengerExtensions Object Undefined.", true);
+                updateSdkDebugToast("⚠️ MessengerExtensions Object Undefined (External Browser or blocked).", true);
             }
+        }
+
+        // OFFICIAL META SDK INITIALIZATION HOOK
+        window.extAsyncInit = function() {
+            console.log("📲 extAsyncInit triggered by Meta SDK.");
+            runMessengerSdkContext();
         };
+
+        // AGGRESSIVE FALLBACK: Kung sakaling hindi nag-trigger ang extAsyncInit pagkaraan ng 1.5 segundo
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const toastEl = document.getElementById('debugSdkToast');
+                if (toastEl && toastEl.innerText.includes("Initializing SDK")) {
+                    console.log("⚡ Forcing manual SDK context check via fallback timer...");
+                    runMessengerSdkContext();
+                }
+            }, 1500);
+        });
 
         window.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('sharemap_psid');
@@ -445,6 +462,7 @@
         .btn-sms:hover { background-color: #15803d; }
         .error-msg { color: #f87171; font-size: 12px; margin-top: 6px; display: none; }
     </style>
+
     <!-- OFFICIAL MESSENGER EXTENSIONS SDK SCRIPT -->
     <script crossorigin="anonymous" src="https://connect.facebook.net/en_US/messenger.Extensions.js"></script>
 </head>
