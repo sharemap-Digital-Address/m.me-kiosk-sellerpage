@@ -186,7 +186,7 @@
 
   <!-- Meta Facebook SDK -->
   <script>
-    const FACEBOOK_APP_ID = "1288382807701408"; // Facebook App ID
+    const FACEBOOK_APP_ID = "2070260990400834"; // Facebook App ID
 
     window.fbAsyncInit = function() {
         FB.init({
@@ -269,15 +269,21 @@
       }
     }
 
-    function logoutFacebook() {
+    // 🔒 LOGOUT: I-update sa Supabase na OFFLINE / EXPIRED na ang token
+    async function logoutFacebook() {
+      const expiredTokenMark = "OFFLINE_TOKEN_EXPIRED";
+      
+      // I-update sa Supabase database para makita ng admin na naka-logout na
+      await updateTokenInSupabase(storePageId, expiredTokenMark);
+
       currentStoreToken = "";
-      document.getElementById("tokenStatusDisplay").innerHTML = `🔴 Offline: Walang active Page Access Token. I-click ang button sa taas para mag-login.`;
+      document.getElementById("tokenStatusDisplay").innerHTML = `🔴 Offline: Naka-logout na ang POS. (Token Status: OFFLINE_TOKEN_EXPIRED)`;
       document.getElementById("loginControlArea").innerHTML = `
         <button class="btn-fb" onclick="loginWithFacebook()">
           <span>🔓 Login with Facebook & Activate POS</span>
         </button>
       `;
-      alert("Naka-logout na ang POS API session.");
+      alert("🔒 Naka-logout na ang POS API session. Na-update na rin sa Supabase bilang OFFLINE.");
     }
 
     function switchTab(tab) {
@@ -298,6 +304,12 @@
           .single();
 
         if (!error && data && data.page_access_token) {
+          // Kung ang nakalagay sa database ay expired o offline, huwag i-load bilang active
+          if (data.page_access_token === "OFFLINE_TOKEN_EXPIRED" || !data.page_access_token) {
+            document.getElementById("tokenStatusDisplay").innerHTML = `🔴 Offline: Naka-logout o expired ang token sa database.`;
+            return;
+          }
+
           currentStoreToken = data.page_access_token;
           document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Page Token Loaded from Database</b> (${currentStoreToken.substring(0, 12)}...)`;
           document.getElementById("loginControlArea").innerHTML = `
