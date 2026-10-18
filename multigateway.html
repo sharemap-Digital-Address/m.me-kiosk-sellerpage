@@ -14,10 +14,50 @@
         let activePageAccessToken = ""; 
         let cachedConversations = []; 
         let isPsidVerifiedFromSuggestion = false; 
-        let actualLoggedInPsid = ""; // Dito iimbak ang tunay na PSID mula sa In-App Messenger SDK
+        let actualLoggedInPsid = ""; 
+
+        // Opsyonal na App ID (Mula sa iyong App dashboard o p pwedeng ibigay ng context)
+        const MESSENGER_APP_ID = "1288382807701408"; 
+
+        function updateSdkDebugToast(message, isError = false) {
+            const toastEl = document.getElementById('debugSdkToast');
+            if (toastEl) {
+                toastEl.innerText = message;
+                toastEl.style.color = isError ? "#f87171" : "#38bdf8";
+            }
+            console.log("[SDK LOG]:", message);
+        }
+
+        // OFFICIAL META SDK INITIALIZATION HOOK
+        window.extAsyncInit = function() {
+            updateSdkDebugToast("📲 Messenger SDK Loaded! Initializing Context...");
+            
+            if (typeof MessengerExtensions !== 'undefined') {
+                MessengerExtensions.getContext(MESSENGER_APP_ID, 
+                    function success(result) {
+                        if (result && result.ps_thread_id) {
+                            actualLoggedInPsid = result.ps_thread_id.trim();
+                            updateSdkDebugToast(`✅ Auto-Fetched PSID: ${actualLoggedInPsid}`);
+                            
+                            document.getElementById('displayPsid').value = actualLoggedInPsid;
+                            localStorage.setItem('sharemap_psid', actualLoggedInPsid);
+                            isPsidVerifiedFromSuggestion = true;
+                            
+                            processCustomerDetails(actualLoggedInPsid);
+                        } else {
+                            updateSdkDebugToast("⚠️ SDK Context Success but no PSID returned.", true);
+                        }
+                    },
+                    function error(err, errorMessage) {
+                        updateSdkDebugToast(`❌ SDK Error: ${errorMessage || 'Context failed / External Browser'}`, true);
+                    }
+                );
+            } else {
+                updateSdkDebugToast("⚠️ MessengerExtensions Object Undefined.", true);
+            }
+        };
 
         window.addEventListener('DOMContentLoaded', () => {
-            // LAGING FRESH SESSION: Burahin ang lumang PSID tuwing magre-refresh
             localStorage.removeItem('sharemap_psid');
             document.getElementById('displayPsid').value = "MESSENGER_WEB_USER";
             isPsidVerifiedFromSuggestion = false;
@@ -30,7 +70,6 @@
             generatedOrderID = generateSpreadsheetOrderID();
             document.getElementById("orderIdBadge").innerText = `🔢 Order ID: #${generatedOrderID}`;
 
-            // Simulan ang secure loading ng access token at Messenger SDK
             checkShareMapAccess(pageId);
             
             const urlParams = new URLSearchParams(window.location.search);
@@ -121,24 +160,7 @@
                 actualLoggedInPsid = rawPsid.trim();
                 isPsidVerifiedFromSuggestion = true;
                 processCustomerDetails(actualLoggedInPsid);
-                return;
-            }
-
-            // Kuhanin ang tunay na logged-in PSID mula sa Messenger In-App Browser SDK
-            if (typeof MessengerExtensions !== 'undefined') {
-                MessengerExtensions.getContext('2070260990400834', 
-                    async function success(result) {
-                        if (result && result.ps_thread_id) {
-                            actualLoggedInPsid = result.ps_thread_id.trim();
-                            console.log("🔒 Actual Logged-in Messenger PSID:", actualLoggedInPsid);
-                            isPsidVerifiedFromSuggestion = true;
-                            processCustomerDetails(actualLoggedInPsid);
-                        }
-                    },
-                    function error(err) {
-                        console.log("Messenger SDK context error:", err);
-                    }
-                );
+                updateSdkDebugToast(`✅ URL Parameter PSID: ${actualLoggedInPsid}`);
             }
         }
 
@@ -162,7 +184,6 @@
             }
         }
 
-        // --- SEARCH SUGGESTIONS & IN-APP MATCH VERIFICATION ---
         function handleFullNameInput(query) {
             const container = document.getElementById("suggestionBox");
             const notFoundInd = document.getElementById("notFoundIndicator");
@@ -205,7 +226,6 @@
         function selectMatchSuggestion(name, chosenPsid) {
             const notFoundInd = document.getElementById("notFoundIndicator");
 
-            // SEGURIDAD: Kung naka-detect ng actual logged-in PSID sa In-App Browser at HINDI MATCH sa pinili:
             if (actualLoggedInPsid && actualLoggedInPsid !== chosenPsid) {
                 notFoundInd.innerText = "🚨 Chosen account does not match your actual logged-in Facebook account!";
                 notFoundInd.style.display = "block";
@@ -218,7 +238,6 @@
                 return;
             }
 
-            // KUNG MATCH O EXTERNAL BROWSER:
             document.getElementById('fullName').value = name;
             document.getElementById('displayPsid').value = chosenPsid;
             localStorage.setItem('sharemap_psid', chosenPsid);
@@ -227,8 +246,6 @@
             
             document.getElementById("suggestionBox").style.display = "none";
             notFoundInd.style.display = "none";
-            
-            console.log("✅ Verified Match! Account confirmed:", name, chosenPsid);
         }
 
         function showBlockScreen(title, message) {
@@ -335,7 +352,6 @@
         }
         .form-group input:focus { border-color: #38bdf8; }
 
-        /* SEARCH SUGGESTION BOX STYLES */
         .suggestion-box {
             position: absolute;
             top: 100%;
@@ -428,6 +444,7 @@
         .btn-sms:hover { background-color: #15803d; }
         .error-msg { color: #f87171; font-size: 12px; margin-top: 6px; display: none; }
     </style>
+    <!-- OFFICIAL MESSENGER EXTENSIONS SDK SCRIPT -->
     <script crossorigin="anonymous" src="https://connect.facebook.net/en_US/messenger.Extensions.js"></script>
 </head>
 <body>
@@ -436,6 +453,13 @@
         <div id="storeUsernameDisplay" class="store-badge">@store</div>
         <h3 style="margin: 0 0 4px 0;">📍 ShareMap Order Gateway</h3>
         <div id="orderIdBadge" class="order-id-badge">🔢 Order ID: GENERATING...</div>
+
+        <!-- MESSENGER SDK DEBUG TOAST BOX -->
+        <div style="background: #0f172a; padding: 6px; border-radius: 6px; border: 1px solid #0284c7; margin-bottom: 8px; text-align: left;">
+            <label style="font-size: 10px; color: #94a3b8; display: block;">🛠️ Messenger Extensions SDK Status:</label>
+            <div id="debugSdkToast" style="font-size: 11px; font-weight: bold; color: #e2e8f0; word-break: break-all;">Initializing SDK...</div>
+        </div>
+
         <p style="font-size: 12px; color: #94a3b8; margin: 0 0 12px 0;">Pumili ng serbisyo at sagutan ang mga detalye:</p>
 
         <div class="service-toggle">
@@ -461,15 +485,13 @@
             <input type="text" id="displayPsid" readonly style="background: transparent; border: none; color: #cbd5e1; font-size: 12px; font-weight: bold; padding: 2px 0; cursor: not-allowed;" value="Loading PSID...">
         </div>
 
-        <!-- FULL NAME INPUT WITH AUTOCOMPLETE SUGGESTIONS & NOT FOUND WARNING -->
+        <!-- FULL NAME INPUT WITH AUTOCOMPLETE SUGGESTIONS -->
         <div class="form-group">
             <label for="fullName">👤 I-type ang iyong tunay na Facebook Full Name Account:</label>
             <input type="text" id="fullName" placeholder="I-type ang pangalan sa FB..." autocomplete="off" oninput="handleFullNameInput(this.value)">
             
-            <!-- Red Indicator kung walang tugma o mali ang napili -->
             <div id="notFoundIndicator" class="not-found-text">⚠️ No Meta message accounts found. Please check spelling or select from active chat.</div>
 
-            <!-- Floating Suggestion Box -->
             <div id="suggestionBox" class="suggestion-box"></div>
         </div>
 
