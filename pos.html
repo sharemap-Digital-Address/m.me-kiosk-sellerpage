@@ -236,11 +236,11 @@
                       activePageId = page.id; 
                       currentStoreToken = page.access_token;
                       
-                      // 1. I-update agad sa Supabase 'licenses' table ang bagong Page Access Token!
-                      await updateTokenInSupabase(storePageId, currentStoreToken);
+                      // 1. I-update sa Supabase 'licenses' table ang parehas na Page Access Token at Page ID!
+                      await updateTokenAndPageIdInSupabase(storePageId, currentStoreToken, activePageId);
 
                       // 2. I-update ang UI
-                      document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Connected to Page:</b> ${page.name}<br><small style="color:#15803d;">Active Page Token Auto-Saved to Supabase!</small>`;
+                      document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Connected to Page:</b> ${page.name} (ID: ${activePageId})<br><small style="color:#15803d;">Active Page Token & Page ID Auto-Saved to Supabase!</small>`;
                       document.getElementById("loginControlArea").innerHTML = `
                         <button class="btn-fb btn-logout" onclick="logoutFacebook()">🔒 Logout & Switch Page</button>
                       `;
@@ -252,17 +252,22 @@
       }, {scope: 'pages_show_list, pages_messaging, pages_manage_metadata'});
     }
 
-    async function updateTokenInSupabase(username, token) {
+    async function updateTokenAndPageIdInSupabase(username, token, pageNumId) {
       try {
+        const updatePayload = { page_access_token: token };
+        if (pageNumId) {
+          updatePayload.page_id = pageNumId;
+        }
+
         const { error } = await supabaseClient
           .from('licenses')
-          .update({ page_access_token: token })
+          .update(updatePayload)
           .eq('username', username.toLowerCase());
 
         if (error) {
-          console.error("Supabase token save error:", error);
+          console.error("Supabase license save error:", error);
         } else {
-          console.log("✅ Page Token saved successfully to Supabase for:", username);
+          console.log("✅ Page Token & Page ID saved successfully to Supabase for:", username);
         }
       } catch (err) {
         console.error("Supabase exception:", err);
@@ -274,7 +279,7 @@
       const expiredTokenMark = "OFFLINE_TOKEN_EXPIRED";
       
       // I-update sa Supabase database para makita ng admin na naka-logout na
-      await updateTokenInSupabase(storePageId, expiredTokenMark);
+      await updateTokenAndPageIdInSupabase(storePageId, expiredTokenMark, null);
 
       currentStoreToken = "";
       document.getElementById("tokenStatusDisplay").innerHTML = `🔴 Offline: Naka-logout na ang POS. (Token Status: OFFLINE_TOKEN_EXPIRED)`;
@@ -299,19 +304,22 @@
       try {
         const { data, error } = await supabaseClient
           .from('licenses')
-          .select('page_access_token')
+          .select('page_access_token, page_id')
           .eq('username', storePageId.toLowerCase())
           .single();
 
         if (!error && data && data.page_access_token) {
-          // Kung ang nakalagay sa database ay expired o offline, huwag i-load bilang active
           if (data.page_access_token === "OFFLINE_TOKEN_EXPIRED" || !data.page_access_token) {
             document.getElementById("tokenStatusDisplay").innerHTML = `🔴 Offline: Naka-logout o expired ang token sa database.`;
             return;
           }
 
           currentStoreToken = data.page_access_token;
-          document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Page Token Loaded from Database</b> (${currentStoreToken.substring(0, 12)}...)`;
+          if (data.page_id) {
+            activePageId = data.page_id;
+          }
+
+          document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Page Token Loaded from Database</b> (Page ID: ${data.page_id || 'N/A'})`;
           document.getElementById("loginControlArea").innerHTML = `
             <button class="btn-fb btn-logout" onclick="logoutFacebook()">🔒 Logout & Switch Page</button>
           `;
