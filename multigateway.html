@@ -28,15 +28,16 @@
             console.log("[SDK LOG]:", message);
         }
 
-        // OFFICIAL META SDK INITIALIZATION HOOK
+        // OFFICIAL META SDK INITIALIZATION HOOK (FIXED)
         window.extAsyncInit = function() {
             updateSdkDebugToast("📲 Messenger SDK Loaded! Initializing Context...");
             
             if (typeof MessengerExtensions !== 'undefined') {
                 MessengerExtensions.getContext(MESSENGER_APP_ID, 
                     function success(result) {
-                        if (result && result.ps_thread_id) {
-                            actualLoggedInPsid = result.ps_thread_id.trim();
+                        // TAMA: user_id ang ibinabalik ng Meta SDK para sa PSID
+                        if (result && result.user_id) {
+                            actualLoggedInPsid = result.user_id.trim();
                             updateSdkDebugToast(`✅ Auto-Fetched PSID: ${actualLoggedInPsid}`);
                             
                             document.getElementById('displayPsid').value = actualLoggedInPsid;
@@ -45,7 +46,7 @@
                             
                             processCustomerDetails(actualLoggedInPsid);
                         } else {
-                            updateSdkDebugToast("⚠️ SDK Context Success but no PSID returned.", true);
+                            updateSdkDebugToast("⚠️ SDK Context Success but no user_id returned.", true);
                         }
                     },
                     function error(err, errorMessage) {
