@@ -12,8 +12,8 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let activePageAccessToken = ""; 
-        let cachedConversations = []; // Iimbak ang listahan mula sa Meta Inbox
-        let isPsidVerifiedFromSuggestion = false; // Flag para malaman kung tunay na napili sa suggestion
+        let cachedConversations = []; 
+        let isPsidVerifiedFromSuggestion = false; 
 
         async function checkShareMapAccess() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -43,14 +43,11 @@
                 return;
             }
 
-            // Kuhanin ang Page Access Token mula sa Supabase
             if (data.page_access_token) {
                 activePageAccessToken = data.page_access_token;
                 document.getElementById('debugToken').value = "SUCCESS: Nakuha ang Token (" + activePageAccessToken.substring(0, 10) + "...)";
                 
-                // Pre-fetch ang Meta Inbox/Conversations para handa na sa search suggestions!
                 fetchMetaConversations();
-                
                 initializeClientAutoLogin();
             } else {
                 document.getElementById('debugToken').value = "ERROR: Walang page_access_token sa Supabase record!";
@@ -59,7 +56,6 @@
             console.log(`✅ Access Granted for ${pageId} [Plan: ${data.plan}]`);
         }
 
-        // Kuhanin ang active conversations ng Page sa Meta Graph API
         async function fetchMetaConversations() {
             if (!activePageAccessToken) return;
             try {
@@ -71,7 +67,6 @@
                     result.data.forEach(conv => {
                         if (conv.participants && conv.participants.data) {
                             conv.participants.data.forEach(participant => {
-                                // Iimbak ang participant na may name at id
                                 cachedConversations.push({
                                     name: participant.name,
                                     psid: participant.id
@@ -81,8 +76,8 @@
                     });
                     console.log("📥 Na-cache na ang Meta Conversations:", cachedConversations.length, "participants.");
                 }
-            } catch (err) {
-                console.error("Error sa pag-cache ng conversations:", err);
+            } else {
+                cachedConversations = [];
             }
         }
 
@@ -90,7 +85,6 @@
             const urlParams = new URLSearchParams(window.location.search);
             let rawPsid = urlParams.get('psid');
 
-            // 1. Unang suriin kung may valid na PSID na nanggaling sa URL query parameter
             if (rawPsid && !rawPsid.includes("PSID") && !rawPsid.includes("DITO") && !rawPsid.includes("user_id")) {
                 console.log("✅ PSID nakuha sa URL Parameter:", rawPsid);
                 isPsidVerifiedFromSuggestion = true;
@@ -98,7 +92,6 @@
                 return;
             }
 
-            // 2. Kung wala sa URL, subukan sa pamamagitan ng Messenger Extensions SDK (In-App Browser)
             if (typeof MessengerExtensions !== 'undefined') {
                 MessengerExtensions.getContext('2070260990400834', 
                     async function success(result) {
@@ -121,10 +114,8 @@
         }
 
         function fallbackDefaultPsid() {
-            let currentPsid = localStorage.getItem('sharemap_psid');
-            if (!currentPsid || currentPsid.includes("PSID") || currentPsid.includes("DITO") || currentPsid.includes("user_id")) {
-                currentPsid = "MESSENGER_WEB_USER";
-            }
+            // Bagong session: Huwag mag-load ng lumang PSID sa localStorage kung nag-refresh para laging sariwa
+            let currentPsid = "MESSENGER_WEB_USER";
             document.getElementById('displayPsid').value = currentPsid;
         }
 
@@ -132,7 +123,6 @@
             document.getElementById('displayPsid').value = psid;
             localStorage.setItem('sharemap_psid', psid);
 
-            // Kung mayroong Page Access Token at Valid PSID, kuhanin ang pangalan mula sa Meta Graph API
             if (activePageAccessToken && psid && psid !== "MESSENGER_WEB_USER") {
                 try {
                     const response = await fetch(`https://graph.facebook.com/v26.0/${psid}?fields=name&access_token=${activePageAccessToken}`);
@@ -142,8 +132,6 @@
                         document.getElementById('fullName').value = fbUser.name;
                         isPsidVerifiedFromSuggestion = true;
                         console.log("✨ Na-auto-login ang pangalan:", fbUser.name);
-                    } else {
-                        console.error("Meta Graph API Error Response:", fbUser);
                     }
                 } catch (e) {
                     console.error("Error sa pagkuha ng pangalan mula sa Meta Graph API:", e);
@@ -151,24 +139,27 @@
             }
         }
 
-        // --- SEARCH SUGGESTIONS CONTROLLER ---
+        // --- SEARCH SUGGESTIONS & WARNING CONTROLLER ---
         function handleFullNameInput(query) {
             const container = document.getElementById("suggestionBox");
+            const warningIndicator = document.getElementById("nameWarning");
             const cleanQuery = query.trim().toLowerCase();
-            isPsidVerifiedFromSuggestion = false; // Reset verification
+            isPsidVerifiedFromSuggestion = false; 
+            document.getElementById('displayPsid').value = "MESSENGER_WEB_USER";
 
-            if (!cleanQuery || cachedConversations.length === 0) {
+            if (!cleanQuery) {
                 container.style.display = "none";
                 container.innerHTML = "";
+                warningIndicator.style.display = "none";
                 return;
             }
 
-            // I-match ang tina-type ni buyer sa cached names mula sa Meta Inbox
             const matches = cachedConversations.filter(item => 
                 item.name && item.name.toLowerCase().includes(cleanQuery)
             );
 
             if (matches.length > 0) {
+                warningIndicator.style.display = "none"; // Itago ang warning kapag may nakitang match
                 container.innerHTML = "";
                 matches.forEach(match => {
                     const div = document.createElement("div");
@@ -184,6 +175,9 @@
             } else {
                 container.style.display = "none";
                 container.innerHTML = "";
+                // Magpakita ng pulang warning kapag walang nakitang meta message account
+                warningIndicator.innerText = "⚠️ Nothing found: No Meta message accounts found matching this name.";
+                warningIndicator.style.display = "block";
             }
         }
 
@@ -192,10 +186,10 @@
             document.getElementById('displayPsid').value = psid;
             localStorage.setItem('sharemap_psid', psid);
             
-            isPsidVerifiedFromSuggestion = true; // Markadong verified na galing sa tunay na FB account!
+            isPsidVerifiedFromSuggestion = true; 
             
-            const container = document.getElementById("suggestionBox");
-            container.style.display = "none";
+            document.getElementById("suggestionBox").style.display = "none";
+            document.getElementById("nameWarning").style.display = "none";
             
             console.log("🎯 Nakuha ang verified FB Name & PSID:", name, psid);
         }
@@ -216,6 +210,8 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            // Linisan ang lumang PSID sa storage tuwing fresh load o refresh ng page
+            localStorage.removeItem('sharemap_psid');
             checkShareMapAccess();
         });
     </script>
@@ -292,6 +288,15 @@
             outline: none;
         }
         .form-group input:focus { border-color: #38bdf8; }
+
+        /* WARNING RED TEXT */
+        .name-warning-text {
+            color: #f87171;
+            font-size: 11px;
+            margin-top: 4px;
+            display: none;
+            font-weight: bold;
+        }
 
         /* SEARCH SUGGESTION BOX STYLES */
         .suggestion-box {
@@ -410,11 +415,14 @@
             <input type="text" id="displayPsid" readonly style="background: transparent; border: none; color: #cbd5e1; font-size: 12px; font-weight: bold; padding: 2px 0; cursor: not-allowed;" value="Loading PSID...">
         </div>
 
-        <!-- FULL NAME INPUT WITH AUTOCOMPLETE SUGGESTIONS -->
+        <!-- FULL NAME INPUT WITH CLEAR LABEL & RED WARNING INDICATOR -->
         <div class="form-group">
-            <label for="fullName">👤 Buong Pangalan (Full Name):</label>
-            <input type="text" id="fullName" placeholder="I-type ang iyong tunay na pangalan..." autocomplete="off" oninput="handleFullNameInput(this.value)">
+            <label for="fullName" style="color: #38bdf8; font-weight: bold;">👤 Facebook Fullname Account:</label>
+            <input type="text" id="fullName" placeholder="I-type ang iyong Facebook Fullname..." autocomplete="off" oninput="handleFullNameInput(this.value)">
             
+            <!-- Red Warning Text kung walang mahanap na Meta message account -->
+            <div id="nameWarning" class="name-warning-text"></div>
+
             <!-- Floating Suggestion Box -->
             <div id="suggestionBox" class="suggestion-box"></div>
         </div>
@@ -608,10 +616,9 @@
                 return;
             }
 
-            // CHECK VALIDATION: Siguraduhing napili ang totoong FB account mula sa Suggestion Box kung walang natukoy na PSID
             if (!isPsidVerifiedFromSuggestion || activePsid === "MESSENGER_WEB_USER") {
                 alert("⚠️ Facebook account not match! Please select your True Active Facebook account in the suggestion box.");
-                document.getElementById('errorMsg').innerText = "⚠️ Paki-select ang iyong tunay na Facebook Account mula sa suggestion list sa ilalim ng iyong Pangalan.";
+                document.getElementById('errorMsg').innerText = "⚠️ Facebook account not match! Please select your True Active Facebook account in the suggestion box.";
                 document.getElementById('errorMsg').style.display = "block";
                 return;
             }
