@@ -14,11 +14,14 @@
         let activePageAccessToken = ""; 
         let cachedConversations = []; 
         let isPsidVerifiedFromSuggestion = false; 
+        let actualLoggedInPsid = ""; // Dito iimbak ang tunay na PSID mula sa In-App Messenger SDK
 
         window.addEventListener('DOMContentLoaded', () => {
             // LAGING FRESH SESSION: Burahin ang lumang PSID tuwing magre-refresh
             localStorage.removeItem('sharemap_psid');
             document.getElementById('displayPsid').value = "MESSENGER_WEB_USER";
+            isPsidVerifiedFromSuggestion = false;
+            actualLoggedInPsid = "";
 
             const pageId = getPageId();
             localStorage.setItem('sharemap_page', pageId);
@@ -27,7 +30,7 @@
             generatedOrderID = generateSpreadsheetOrderID();
             document.getElementById("orderIdBadge").innerText = `🔢 Order ID: #${generatedOrderID}`;
 
-            // Simulan ang secure loading ng access token nang hindi naghahang ang browser
+            // Simulan ang secure loading ng access token at Messenger SDK
             checkShareMapAccess(pageId);
             
             const urlParams = new URLSearchParams(window.location.search);
@@ -74,7 +77,6 @@
                     activePageAccessToken = data.page_access_token;
                     document.getElementById('debugToken').value = "SUCCESS: Nakuha ang Token (" + activePageAccessToken.substring(0, 10) + "...)";
                     
-                    // Non-blocking background fetch para sa Meta conversations
                     fetchMetaConversations();
                     initializeClientAutoLogin();
                 } else {
@@ -116,17 +118,21 @@
             let rawPsid = urlParams.get('psid');
 
             if (rawPsid && !rawPsid.includes("PSID") && !rawPsid.includes("DITO") && !rawPsid.includes("user_id")) {
+                actualLoggedInPsid = rawPsid.trim();
                 isPsidVerifiedFromSuggestion = true;
-                processCustomerDetails(rawPsid.trim());
+                processCustomerDetails(actualLoggedInPsid);
                 return;
             }
 
+            // Kuhanin ang tunay na logged-in PSID mula sa Messenger In-App Browser SDK
             if (typeof MessengerExtensions !== 'undefined') {
                 MessengerExtensions.getContext('2070260990400834', 
                     async function success(result) {
                         if (result && result.ps_thread_id) {
+                            actualLoggedInPsid = result.ps_thread_id.trim();
+                            console.log("🔒 Actual Logged-in Messenger PSID:", actualLoggedInPsid);
                             isPsidVerifiedFromSuggestion = true;
-                            processCustomerDetails(result.ps_thread_id);
+                            processCustomerDetails(actualLoggedInPsid);
                         }
                     },
                     function error(err) {
@@ -156,7 +162,7 @@
             }
         }
 
-        // --- SEARCH SUGGESTIONS & NOT FOUND INDICATOR ---
+        // --- SEARCH SUGGESTIONS & IN-APP MATCH VERIFICATION ---
         function handleFullNameInput(query) {
             const container = document.getElementById("suggestionBox");
             const notFoundInd = document.getElementById("notFoundIndicator");
@@ -191,20 +197,38 @@
             } else {
                 container.style.display = "none";
                 container.innerHTML = "";
-                // Magpakita ng pulang indicator kung walang tugma sa Meta message accounts
+                notFoundInd.innerText = "⚠️ No Meta message accounts found. Please check spelling or select from active chat.";
                 notFoundInd.style.display = "block";
             }
         }
 
-        function selectMatchSuggestion(name, psid) {
+        function selectMatchSuggestion(name, chosenPsid) {
+            const notFoundInd = document.getElementById("notFoundIndicator");
+
+            // SEGURIDAD: Kung naka-detect ng actual logged-in PSID sa In-App Browser at HINDI MATCH sa pinili:
+            if (actualLoggedInPsid && actualLoggedInPsid !== chosenPsid) {
+                notFoundInd.innerText = "🚨 Chosen account does not match your actual logged-in Facebook account!";
+                notFoundInd.style.display = "block";
+                
+                document.getElementById('fullName').value = name;
+                isPsidVerifiedFromSuggestion = false; 
+                document.getElementById("suggestionBox").style.display = "none";
+                
+                alert("⚠️ Babala: Ang napili mong account ay hindi tumutugma sa kasalukuyang Facebook account na ginagamit mo sa pag-chat!");
+                return;
+            }
+
+            // KUNG MATCH O EXTERNAL BROWSER:
             document.getElementById('fullName').value = name;
-            document.getElementById('displayPsid').value = psid;
-            localStorage.setItem('sharemap_psid', psid);
+            document.getElementById('displayPsid').value = chosenPsid;
+            localStorage.setItem('sharemap_psid', chosenPsid);
             
             isPsidVerifiedFromSuggestion = true; 
             
             document.getElementById("suggestionBox").style.display = "none";
-            document.getElementById("notFoundIndicator").style.display = "none";
+            notFoundInd.style.display = "none";
+            
+            console.log("✅ Verified Match! Account confirmed:", name, chosenPsid);
         }
 
         function showBlockScreen(title, message) {
@@ -442,7 +466,7 @@
             <label for="fullName">👤 I-type ang iyong tunay na Facebook Full Name Account:</label>
             <input type="text" id="fullName" placeholder="I-type ang pangalan sa FB..." autocomplete="off" oninput="handleFullNameInput(this.value)">
             
-            <!-- Red Indicator kung walang tugma -->
+            <!-- Red Indicator kung walang tugma o mali ang napili -->
             <div id="notFoundIndicator" class="not-found-text">⚠️ No Meta message accounts found. Please check spelling or select from active chat.</div>
 
             <!-- Floating Suggestion Box -->
