@@ -29,17 +29,25 @@
             console.log("[SDK LOG]:", message);
         }
 
-        // --- FACEBOOK OAUTH DIRECT REDIRECT LOGIN ---
+        // --- FACEBOOK OAUTH DIRECT BROWSER REDIRECT (NO APP JUMP) ---
         function loginWithFacebook() {
-            updateSdkDebugToast("🔵 Redirecting to Facebook Login...");
+            updateSdkDebugToast("🔵 Opening browser login securely...");
             
-            // Kunin ang kasalukuyang URL nang walang lumang tokens/parameters
-            const currentUrl = window.location.href.split('#')[0];
+            const exactRedirectUri = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/multigateway.html";
             
-            // Direktang i-redirect ang user sa OAuth dialog ng Facebook sa loob ng parehong webview
-            const oauthUrl = `https://www.facebook.com/v26.0/dialog/oauth?client_id=${MESSENGER_APP_ID}&redirect_uri=${encodeURIComponent(currentUrl)}&config_id=${CONFIG_ID}&response_type=token`;
+            // Gamitin ang display=touch parameter para pilitin ang mobile browser webview
+            // at pigilan ang Android system na i-intercept ito patungo sa FB app package.
+            const oauthUrl = `https://www.facebook.com/v26.0/dialog/oauth?client_id=${MESSENGER_APP_ID}&redirect_uri=${encodeURIComponent(exactRedirectUri)}&config_id=${CONFIG_ID}&response_type=token&display=touch`;
             
-            window.location.href = oauthUrl;
+            // Pilitin itong buksan sa pamamagitan ng window.open o location replacement
+            try {
+                let loginWindow = window.open(oauthUrl, '_self');
+                if (!loginWindow) {
+                    window.location.href = oauthUrl;
+                }
+            } catch (e) {
+                window.location.href = oauthUrl;
+            }
         }
 
         // Suriin kung may pumasok na Access Token mula sa OAuth Redirect
@@ -52,7 +60,6 @@
                 if (accessToken) {
                     updateSdkDebugToast("✅ FB Login Token Received. Fetching user...");
                     
-                    // Gamitin ang token para kunin ang user info sa pamamagitan ng Graph API
                     fetch(`https://graph.facebook.com/v26.0/me?fields=id,name&access_token=${accessToken}`)
                         .then(response => response.json())
                         .then(userInfo => {
@@ -79,7 +86,6 @@
         // ---------------------------------------
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Suriin kung galing sa Facebook OAuth login redirect
             checkOAuthRedirectCallback();
 
             if (!window.location.hash.includes('access_token=')) {
@@ -494,7 +500,7 @@
 
     <div class="card">
         <div id="storeUsernameDisplay" class="store-badge">@store</div>
-        <h3 style="margin: 0 0 4px 0;">📍 ShareMap Orders Gateway</h3>
+        <h3 style="margin: 0 0 4px 0;">📍 ShareMap Order's Gateway</h3>
         <div id="orderIdBadge" class="order-id-badge">🔢 Order ID: GENERATING...</div>
 
         <!-- FACEBOOK OAUTH LOGIN BUTTON -->
