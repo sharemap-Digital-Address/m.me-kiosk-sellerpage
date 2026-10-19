@@ -29,15 +29,14 @@
             console.log("[SDK LOG]:", message);
         }
 
-        // --- FACEBOOK OAUTH DIRECT REDIRECT LOGIN ---
+        // --- FACEBOOK OAUTH DIRECT REDIRECT LOGIN (FIXED URI) ---
         function loginWithFacebook() {
             updateSdkDebugToast("🔵 Redirecting to Facebook Login...");
             
-            // Kunin ang kasalukuyang URL nang walang lumang tokens/parameters
-            const currentUrl = window.location.href.split('#')[0];
+            // Gamitin ang eksaktong Whitelisted Valid OAuth Redirect URI mula sa Meta Console
+            const exactRedirectUri = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/multigateway.html";
             
-            // Direktang i-redirect ang user sa OAuth dialog ng Facebook sa loob ng parehong webview
-            const oauthUrl = `https://www.facebook.com/v26.0/dialog/oauth?client_id=${MESSENGER_APP_ID}&redirect_uri=${encodeURIComponent(currentUrl)}&config_id=${CONFIG_ID}&response_type=token`;
+            const oauthUrl = `https://www.facebook.com/v26.0/dialog/oauth?client_id=${MESSENGER_APP_ID}&redirect_uri=${encodeURIComponent(exactRedirectUri)}&config_id=${CONFIG_ID}&response_type=token`;
             
             window.location.href = oauthUrl;
         }
@@ -52,7 +51,6 @@
                 if (accessToken) {
                     updateSdkDebugToast("✅ FB Login Token Received. Fetching user...");
                     
-                    // Gamitin ang token para kunin ang user info sa pamamagitan ng Graph API
                     fetch(`https://graph.facebook.com/v26.0/me?fields=id,name&access_token=${accessToken}`)
                         .then(response => response.json())
                         .then(userInfo => {
@@ -79,7 +77,6 @@
         // ---------------------------------------
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Suriin kung galing sa Facebook OAuth login redirect
             checkOAuthRedirectCallback();
 
             if (!window.location.hash.includes('access_token=')) {
