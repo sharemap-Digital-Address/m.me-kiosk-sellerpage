@@ -50,6 +50,10 @@
 
         function loginWithFacebook() {
             updateSdkDebugToast("🔵 Logging in with Facebook OAuth...");
+            
+            // Gamit ang iyong opisyal na Configuration ID mula sa Meta Console
+            const CONFIG_ID = "2161603454736875";
+
             FB.login(function(response) {
                 if (response.authResponse) {
                     const accessToken = response.authResponse.accessToken;
@@ -70,7 +74,10 @@
                 } else {
                     updateSdkDebugToast("⚠️ Kinansela o hindi itinuloy ang Facebook Login.", true);
                 }
-            }, { scope: 'public_profile' });
+            }, { 
+                config_id: CONFIG_ID, 
+                scope: 'public_profile' 
+            });
         }
         // ---------------------------------------
 
