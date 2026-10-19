@@ -29,24 +29,66 @@
             console.log("[SDK LOG]:", message);
         }
 
-        // --- FACEBOOK OAUTH DIRECT BROWSER REDIRECT (NO APP JUMP) ---
+        // --- SMART ADAPTIVE FACEBOOK OAUTH LOGIN (BY ANDROID VERSION) ---
         function loginWithFacebook() {
-            updateSdkDebugToast("🔵 Opening browser login securely...");
+            updateSdkDebugToast("🔵 Analyzing device & opening login...");
             
             const exactRedirectUri = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/multigateway.html";
-            
-            // Gamitin ang display=touch parameter para pilitin ang mobile browser webview
-            // at pigilan ang Android system na i-intercept ito patungo sa FB app package.
-            const oauthUrl = `https://www.facebook.com/v26.0/dialog/oauth?client_id=${MESSENGER_APP_ID}&redirect_uri=${encodeURIComponent(exactRedirectUri)}&config_id=${CONFIG_ID}&response_type=token&display=touch`;
-            
-            // Pilitin itong buksan sa pamamagitan ng window.open o location replacement
-            try {
-                let loginWindow = window.open(oauthUrl, '_self');
-                if (!loginWindow) {
-                    window.location.href = oauthUrl;
+            const oauthUrl = "https://www.facebook.com/v26.0/dialog/oauth";
+
+            const params = {
+                client_id: MESSENGER_APP_ID,
+                redirect_uri: exactRedirectUri,
+                config_id: CONFIG_ID,
+                response_type: "token",
+                display: "touch"
+            };
+
+            // I-detect ang Android Version mula sa User Agent
+            const ua = navigator.userAgent;
+            let androidVersion = 99; // Default kung hindi Android
+            const match = ua.match(/Android\s([0-9\.]+)/);
+            if (match) {
+                androidVersion = parseFloat(match[1]);
+            }
+
+            console.log("Detected Android Version:", androidVersion);
+
+            // KUNG ANDROID 12 PABAABA (Gaya ng Tecno Spark 10): Gamitin ang Form Submit para iwas-warning
+            // KUNG ANDROID 13+ / BAGONG OS (Gaya ng GT30 Pro): Gamitin ang diretsong window.location
+            if (androidVersion <= 12) {
+                updateSdkDebugToast("📱 Legacy Android detected: Using secure form submit...");
+                
+                const form = document.createElement("form");
+                form.method = "GET";
+                form.action = oauthUrl;
+
+                for (const key in params) {
+                    if (params.hasOwnProperty(key)) {
+                        const hiddenField = document.createElement("input");
+                        hiddenField.type = "hidden";
+                        hiddenField.name = key;
+                        hiddenField.value = params[key];
+                        form.appendChild(hiddenField);
+                    }
                 }
-            } catch (e) {
-                window.location.href = oauthUrl;
+
+                document.body.appendChild(form);
+                form.submit();
+            } else {
+                updateSdkDebugToast("📱 Modern Android/OS detected: Using direct redirect...");
+                
+                const queryParams = new URLSearchParams(params).toString();
+                const finalUrl = `${oauthUrl}?${queryParams}`;
+                
+                try {
+                    let loginWindow = window.open(finalUrl, '_self');
+                    if (!loginWindow) {
+                        window.location.href = finalUrl;
+                    }
+                } catch (e) {
+                    window.location.href = finalUrl;
+                }
             }
         }
 
