@@ -33,6 +33,13 @@
         function loginWithFacebook() {
             updateSdkDebugToast("🔵 Analyzing device & opening login...");
             
+            // ISAVE MUNA SA LOCALSTORAGE ANG MGA PINAMILI AT INPUTS BAGO MAG-LOGIN
+            const currentOrdersString = JSON.stringify(currentOrdersList);
+            localStorage.setItem('sharemap_temp_orders', currentOrdersString);
+            localStorage.setItem('sharemap_temp_name', document.getElementById('fullName').value);
+            localStorage.setItem('sharemap_temp_phone', document.getElementById('phone').value);
+            localStorage.setItem('sharemap_temp_landmark', document.getElementById('landmark').value);
+
             const exactRedirectUri = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/multigateway.html";
             const oauthUrl = "https://www.facebook.com/v26.0/dialog/oauth";
 
@@ -44,9 +51,8 @@
                 display: "touch"
             };
 
-            // I-detect ang Android Version mula sa User Agent
             const ua = navigator.userAgent;
-            let androidVersion = 99; // Default kung hindi Android
+            let androidVersion = 99;
             const match = ua.match(/Android\s([0-9\.]+)/);
             if (match) {
                 androidVersion = parseFloat(match[1]);
@@ -54,8 +60,6 @@
 
             console.log("Detected Android Version:", androidVersion);
 
-            // KUNG ANDROID 12 PABAABA (Gaya ng Tecno Spark 10): Gamitin ang Form Submit para iwas-warning
-            // KUNG ANDROID 13+ / BAGONG OS (Gaya ng GT30 Pro): Gamitin ang diretsong window.location
             if (androidVersion <= 12) {
                 updateSdkDebugToast("📱 Legacy Android detected: Using secure form submit...");
                 
@@ -108,7 +112,10 @@
                             if (userInfo && userInfo.name) {
                                 actualLoggedInPsid = userInfo.id;
                                 document.getElementById('displayPsid').value = actualLoggedInPsid;
-                                document.getElementById('fullName').value = userInfo.name;
+                                
+                                const savedName = localStorage.getItem('sharemap_temp_name');
+                                document.getElementById('fullName').value = savedName ? savedName : userInfo.name;
+                                
                                 localStorage.setItem('sharemap_psid', actualLoggedInPsid);
                                 isPsidVerifiedFromSuggestion = true;
                                 
@@ -130,11 +137,37 @@
         window.addEventListener('DOMContentLoaded', () => {
             checkOAuthRedirectCallback();
 
+            // KUNIN ANG MGA NAKA-SAVE NA ORDERS PABALIK MULA SA LOCALSTORAGE
+            const savedOrdersJson = localStorage.getItem('sharemap_temp_orders');
+            if (savedOrdersJson) {
+                try {
+                    currentOrdersList = JSON.parse(savedOrdersJson);
+                    localStorage.removeItem('sharemap_temp_orders');
+                } catch(e) {
+                    currentOrdersList = [];
+                }
+            }
+
+            if (localStorage.getItem('sharemap_temp_name')) {
+                document.getElementById('fullName').value = localStorage.getItem('sharemap_temp_name');
+                localStorage.removeItem('sharemap_temp_name');
+            }
+            if (localStorage.getItem('sharemap_temp_phone')) {
+                document.getElementById('phone').value = localStorage.getItem('sharemap_temp_phone');
+                localStorage.removeItem('sharemap_temp_phone');
+            }
+            if (localStorage.getItem('sharemap_temp_landmark')) {
+                document.getElementById('landmark').value = localStorage.getItem('sharemap_temp_landmark');
+                localStorage.removeItem('sharemap_temp_landmark');
+            }
+
             if (!window.location.hash.includes('access_token=')) {
-                localStorage.removeItem('sharemap_psid');
-                document.getElementById('displayPsid').value = "MESSENGER_WEB_USER";
-                isPsidVerifiedFromSuggestion = false;
-                actualLoggedInPsid = "";
+                if (!savedOrdersJson) {
+                    localStorage.removeItem('sharemap_psid');
+                    document.getElementById('displayPsid').value = "MESSENGER_WEB_USER";
+                    isPsidVerifiedFromSuggestion = false;
+                    actualLoggedInPsid = "";
+                }
             }
 
             const pageId = getPageId();
@@ -149,7 +182,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const passedOrders = urlParams.get('ord');
 
-            if (passedOrders) {
+            if (passedOrders && currentOrdersList.length === 0) {
                 passedOrders.split(',').forEach(itemStr => {
                     let parts = itemStr.trim().split(' x');
                     if (parts.length === 2) {
@@ -158,10 +191,6 @@
                         currentOrdersList.push({ name: parts[0].trim(), qty: 1 });
                     }
                 });
-            } else {
-                currentOrdersList = [];
-                localStorage.removeItem('sharemap_orders_array');
-                localStorage.removeItem('sharemap_orders');
             }
             renderOrderUI();
         });
@@ -450,9 +479,7 @@
             justify-content: space-between;
             align-items: center;
         }
-        .suggestion-item:hover {
-            background-color: #1e293b;
-        }
+        .suggestion-item:hover { background-color: #1e293b; }
 
         .not-found-text {
             color: #f87171;
