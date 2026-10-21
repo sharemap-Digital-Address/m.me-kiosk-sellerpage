@@ -76,10 +76,14 @@
             <button onclick="logoutStore()" style="width: auto; padding: 5px 10px; background: #dc2626; font-size: 11px; margin:0;">Log Out / Switch Store</button>
         </div>
 
-        <!-- FIRST TIME USER SETUP CARD -->
+        <!-- FIRST TIME SETUP / RECONFIG CARD -->
         <div id="firstTimeSetupCard" class="card" style="display: none;">
-            <h3 style="text-align: center; margin-top: 0; color:#38bdf8;">📌 Setup Your Menu Storage</h3>
-            <p style="color:#94a3b8; font-size: 13px; text-align: center;">Wala ka pang nakakabit na Google Sheet storage para sa iyong menu.</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; color:#38bdf8;">📌 Setup Your Menu Storage</h3>
+                <button onclick="cancelReconfig()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">⬅️ Bumalik / Cancel</button>
+            </div>
+            
+            <p style="color:#94a3b8; font-size: 13px; text-align: center;">Ikabit ang iyong Google Sheet storage para sa iyong menu.</p>
 
             <div class="warning-box">
                 <b>📱 PAALALA SA CELLPHONE / TABLET USERS:</b><br>
@@ -96,7 +100,11 @@
 
         <!-- STEP 2: PAALALA CARD -->
         <div id="urlInputReminderCard" class="card" style="display: none;">
-            <h3 style="margin-top: 0; color: #38bdf8;">⚙️ Huling Hakbang sa Web Browser</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; color: #38bdf8;">⚙️ Huling Hakbang sa Web Browser</h3>
+                <button onclick="cancelReconfig()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">⬅️ Bumalik / Cancel</button>
+            </div>
+
             <div class="notice-box">
                 1. I-click ang <b>Extensions > Apps Script</b> sa Google Sheet.<br>
                 2. Burahin ang luma at i-paste ang code.<br>
@@ -121,6 +129,7 @@
                 <label style="font-size: 12px; font-weight: bold; margin-top: 10px; display: block;">Product Category:</label>
                 <input type="text" id="prodCategory" placeholder="hal. Meals / Desserts / Shirts" list="catSuggestions">
                 <datalist id="catSuggestions">
+                    <option value="Mix & Match">
                     <option value="Best Sellers">
                     <option value="Main Meals">
                     <option value="Snacks & Sides">
@@ -197,7 +206,7 @@
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
                     <h3 style="margin:0;">Lista ng mga Item sa Google Sheet</h3>
-                    <button class="btn-blue" onclick="showReconfigCard()" style="width: auto; padding: 6px 12px; font-size: 12px; margin:0;">⚙️ Re-config Sheet</button>
+                    <button class="btn-blue" onclick="promptPasswordForReconfig()" style="width: auto; padding: 6px 12px; font-size: 12px; margin:0;">⚙️ Re-config Sheet</button>
                 </div>
 
                 <button class="btn-green" onclick="showAddMenuForm()" style="font-size: 15px; padding: 12px; margin-bottom: 10px;">
@@ -215,7 +224,7 @@
 <!-- MODAL: CODE POPUP -->
 <div id="codeModal" class="modal-overlay">
     <div class="modal-content">
-        <h3 style="margin-top: 0; color: #38bdf8;">📜 Apps Script Webhook Code (Updated with Special Desc)</h3>
+        <h3 style="margin-top: 0; color: #38bdf8;">📜 Apps Script Webhook Code</h3>
         <div class="code-box-wrapper">
             <div id="webhookCodeText" class="code-box" onclick="copyWebhookCode()">function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
@@ -269,6 +278,7 @@ function doGet(e) {
 
     let activeStore = "";
     let activeWebhookUrl = "";
+    let activeStorePassword = "";
     let loadedMenuItems = [];
 
     const CLEAN_APPS_SCRIPT_CODE = 
@@ -375,6 +385,7 @@ function doGet(e) {
         if(error || !data || data.password !== pwd) { alert("❌ Mali ang Username o Password!"); return; }
 
         activeStore = username;
+        activeStorePassword = pwd;
         document.getElementById('activeStoreLabel').innerText = "@" + username;
         document.getElementById('loginCard').style.display = 'none';
         document.getElementById('managerSection').style.display = 'block';
@@ -382,7 +393,7 @@ function doGet(e) {
     }
 
     function logoutStore() {
-        activeStore = ""; activeWebhookUrl = ""; loadedMenuItems = [];
+        activeStore = ""; activeWebhookUrl = ""; activeStorePassword = ""; loadedMenuItems = [];
         document.getElementById('storeUsername').value = "";
         document.getElementById('storePassword').value = "";
         document.getElementById('loginCard').style.display = 'block';
@@ -415,15 +426,45 @@ function doGet(e) {
         navigator.clipboard.writeText(CLEAN_APPS_SCRIPT_CODE).then(() => alert("📋 Na-copy na ang code sa Clipboard!"));
     }
 
+    function promptPasswordForReconfig() {
+        const inputPwd = prompt("🔑 Pakipasok ang iyong Store Password bago mag-Reconfig:");
+        if (inputPwd === null) return;
+        if (inputPwd === activeStorePassword) {
+            showReconfigCard();
+        } else {
+            alert("❌ Mali ang Password! Hindi makakapag-reconfig.");
+        }
+    }
+
     function showReconfigCard() {
         document.getElementById("mainMenuSection").style.display = "none";
         document.getElementById("firstTimeSetupCard").style.display = "block";
+        document.getElementById("urlInputReminderCard").style.display = "none";
+    }
+
+    function cancelReconfig() {
+        if (activeWebhookUrl) {
+            document.getElementById("firstTimeSetupCard").style.display = "none";
+            document.getElementById("urlInputReminderCard").style.display = "none";
+            document.getElementById("mainMenuSection").style.display = "block";
+        } else {
+            alert("Wala ka pang nakakabit na Google Sheet link. Kailangan mo munang i-setup ito.");
+        }
     }
 
     function toggleMixMatchFields() {
         const isChecked = document.getElementById("mixMatchToggle").checked;
+        const catInput = document.getElementById("prodCategory");
         document.getElementById("mixMatchBox").style.display = isChecked ? "block" : "none";
-        if (isChecked) updateMixMatchDropdown();
+        
+        if (isChecked) {
+            catInput.value = "Mix & Match";
+            updateMixMatchDropdown();
+        } else {
+            if (catInput.value === "Mix & Match") {
+                catInput.value = "";
+            }
+        }
     }
 
     function updateMixMatchDropdown() {
