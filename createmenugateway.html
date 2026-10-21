@@ -26,7 +26,6 @@
         .alert-box { background: #0284c7; color: white; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; text-align: center; }
         
         .notice-box { background: #0284c715; border: 1px solid #0284c7; padding: 14px; border-radius: 8px; font-size: 13px; line-height: 1.6; color: #38bdf8; margin-bottom: 15px; text-align: left; }
-        .guide-box { background: #102a43; border-left: 4px solid #38bdf8; padding: 10px; border-radius: 4px; font-size: 12px; margin-bottom: 12px; color: #cbd5e1; line-height: 1.5; }
         .warning-box { background: #7f1d1d33; border-left: 4px solid #ef4444; padding: 10px; border-radius: 4px; font-size: 12px; margin-bottom: 12px; color: #fca5a5; line-height: 1.5; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
@@ -36,7 +35,6 @@
         .code-box { background: #090d16; border: 1px solid #0284c7; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; color: #38bdf8; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 200px; cursor: pointer; }
         
         .copy-btn-main { background: #16a34a; color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; font-size: 14px; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
-        .copy-btn-main:hover { background: #15803d; }
 
         .switch-container { display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #475569; margin-bottom: 12px; }
         .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
@@ -46,13 +44,14 @@
         input:checked + .slider { background-color: #16a34a; }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        /* VARIANT CHIPS DESIGN */
-        .variant-chips-container { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-        .variant-chip { background: #8b5cf6; color: white; padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
-        .variant-chip span { cursor: pointer; color: #fca5a5; font-weight: bold; margin-left: 2px; }
-        .variant-chip span:hover { color: #ef4444; }
+        /* ADVANCED VARIANT CHIPS DESIGN */
+        .variant-chips-container { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; margin-bottom: 12px; }
+        .variant-chip-card { background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .variant-chip-card select { width: auto; margin: 0; padding: 4px; font-size: 11px; background: #1e293b; }
+        .variant-chip-card input { width: 70px; margin: 0; padding: 4px; font-size: 12px; text-align: center; }
+        .variant-name-label { font-weight: bold; font-size: 13px; color: #38bdf8; flex-grow: 1; }
+        .btn-remove-var { background: #ef4444; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; font-weight: bold; }
 
-        /* CHECKBOX SELECTION LIST FOR MIX MATCH */
         .mix-checkbox-list { max-height: 160px; overflow-y: auto; background: #0f172a; border: 1px solid #334155; padding: 8px; border-radius: 6px; margin-top: 6px; margin-bottom: 12px; }
         .mix-checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 0; color: #cbd5e1; }
         .mix-checkbox-item input { width: auto; margin: 0; }
@@ -150,23 +149,29 @@
                 <label style="font-size: 12px; font-weight: bold;">Product Name:</label>
                 <input type="text" id="prodName" placeholder="halimbawa: Halo-Halo Special">
 
-                <!-- VARIANT CREATOR / SELECTOR CHIPS -->
-                <label style="font-size: 12px; font-weight: bold;">Variants / Size / Dimension (Opsyonal):</label>
-                <div style="display: flex; gap: 6px;">
-                    <input type="text" id="variantInput" placeholder="I-type hal. Regular, Large, 16oz" style="margin-bottom:0;">
-                    <button type="button" class="btn-blue" onclick="addVariantChip()" style="width: auto; padding: 8px 12px; margin-bottom:0; font-size:12px; white-space:nowrap;">➕ Add Variant</button>
-                </div>
-                <div class="variant-chips-container" id="variantChipsContainer" style="margin-top: 8px;"></div>
-
                 <div style="display: flex; gap: 10px;">
                     <div style="flex: 1;">
-                        <label style="font-size: 12px; font-weight: bold;">Price (₱):</label>
+                        <label style="font-size: 12px; font-weight: bold;">Base / Default Price (₱):</label>
                         <input type="number" id="prodPrice" placeholder="99">
                     </div>
                     <div style="flex: 1;">
-                        <label style="font-size: 12px; font-weight: bold;">Promo Discount (₱) (Optional):</label>
+                        <label style="font-size: 12px; font-weight: bold;">Promo Discount (₱):</label>
                         <input type="number" id="prodDiscount" placeholder="0">
                     </div>
+                </div>
+
+                <!-- ADVANCED VARIANT CREATOR -->
+                <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid #334155; margin-bottom:12px;">
+                    <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">➕ Gumawa ng Variant (Opsyonal):</label>
+                    <p style="font-size:11px; color:#94a3b8; margin:2px 0 8px 0;">Kung may variant, i-type ang pangalan at presyo sa ibaba:</p>
+                    
+                    <div style="display: flex; gap: 6px;">
+                        <input type="text" id="varNameInput" placeholder="hal. Large / 16oz" style="margin-bottom:0; flex:2;">
+                        <input type="number" id="varPriceInput" placeholder="₱ Presyo" style="margin-bottom:0; flex:1;">
+                        <button type="button" class="btn-blue" onclick="addVariantCard()" style="width: auto; padding: 8px 12px; margin-bottom:0; font-size:12px; white-space:nowrap;">➕ Add</button>
+                    </div>
+
+                    <div class="variant-chips-container" id="variantChipsContainer"></div>
                 </div>
 
                 <!-- MIX & MATCH SWITCH & OPTIONS -->
@@ -200,7 +205,7 @@
                 <label style="font-size: 12px; font-weight: bold;">Special Description / Tagline (Fullscreen Modal Promo):</label>
                 <textarea id="prodSpecialDesc" rows="2" placeholder="hal. Try our best crispy chicken skin paired with hot rice! (Kung blangko, gagamitin ang Description)"></textarea>
 
-                <label style="font-size: 12px; font-weight: bold;">Availability Status:</label>
+                <label style="font-size: 12px; font-weight: bold;">Main Availability Status:</label>
                 <select id="prodAvailability">
                     <option value="Available">Available</option>
                     <option value="In Stock">In Stock</option>
@@ -294,7 +299,7 @@ function doGet(e) {
     let activeWebhookUrl = "";
     let activeStorePassword = "";
     let loadedMenuItems = [];
-    let currentVariantsList = [];
+    let currentVariantsList = []; // Objects: { name, price, status }
 
     const CLEAN_APPS_SCRIPT_CODE = 
 "function doPost(e) {\n" +
@@ -356,30 +361,53 @@ function doGet(e) {
         return rawUrl;
     }
 
-    /* VARIANT CHIPS LOGIC */
-    function addVariantChip() {
-        const val = document.getElementById("variantInput").value.trim();
-        if(!val) return;
-        if(!currentVariantsList.includes(val)) {
-            currentVariantsList.push(val);
-            renderVariantChips();
-        }
-        document.getElementById("variantInput").value = "";
+    /* ADVANCED VARIANT CARDS LOGIC */
+    function addVariantCard() {
+        const nameVal = document.getElementById("varNameInput").value.trim();
+        let priceVal = document.getElementById("varPriceInput").value.trim();
+        const basePrice = document.getElementById("prodPrice").value.trim();
+
+        if(!nameVal) { alert("Pakipasok ang pangalan ng Variant!"); return; }
+        if(!priceVal) priceVal = basePrice || "0";
+
+        currentVariantsList.push({
+            name: nameVal,
+            price: priceVal,
+            status: "Available"
+        });
+
+        renderVariantCards();
+        document.getElementById("varNameInput").value = "";
+        document.getElementById("varPriceInput").value = "";
     }
 
-    function removeVariantChip(index) {
+    function removeVariantCard(index) {
         currentVariantsList.splice(index, 1);
-        renderVariantChips();
+        renderVariantCards();
     }
 
-    function renderVariantChips() {
+    function updateVariantCard(index, field, val) {
+        currentVariantsList[index][field] = val;
+    }
+
+    function renderVariantCards() {
         const container = document.getElementById("variantChipsContainer");
         container.innerHTML = "";
         currentVariantsList.forEach((v, idx) => {
-            const chip = document.createElement("div");
-            chip.className = "variant-chip";
-            chip.innerHTML = `${v} <span onclick="removeVariantChip(${idx})">✕</span>`;
-            container.appendChild(chip);
+            const card = document.createElement("div");
+            card.className = "variant-chip-card";
+            card.innerHTML = `
+                <select onchange="updateVariantCard(${idx}, 'status', this.value)">
+                    <option value="Available" ${v.status === 'Available' ? 'selected':''}>Available</option>
+                    <option value="In Stock" ${v.status === 'In Stock' ? 'selected':''}>In Stock</option>
+                    <option value="Out of Stock" ${v.status === 'Out of Stock' ? 'selected':''}>Out of Stock</option>
+                </select>
+                <div class="variant-name-label">${v.name}</div>
+                <span style="font-size:11px; color:#cbd5e1;">₱</span>
+                <input type="number" value="${v.price}" onchange="updateVariantCard(${idx}, 'price', this.value)">
+                <button type="button" class="btn-remove-var" onclick="removeVariantCard(${idx})">✕</button>
+            `;
+            container.appendChild(card);
         });
     }
 
@@ -509,7 +537,6 @@ function doGet(e) {
         }
     }
 
-    /* MIX MATCH CHECKBOX LIST WITH VARIANT DETAILS */
     function updateMixMatchSelectionList() {
         const type = document.getElementById("mixMatchType").value;
         const container = document.getElementById("mixCheckboxContainer");
@@ -602,9 +629,10 @@ function doGet(e) {
     function resetMenuFormFields() {
         document.getElementById('prodName').value = "";
         document.getElementById('prodCategory').value = "";
-        document.getElementById('variantInput').value = "";
+        document.getElementById('varNameInput').value = "";
+        document.getElementById('varPriceInput').value = "";
         currentVariantsList = [];
-        renderVariantChips();
+        renderVariantCards();
         document.getElementById('prodPrice').value = "";
         document.getElementById('prodDiscount').value = "";
         document.getElementById('prodImage').value = "";
@@ -618,14 +646,15 @@ function doGet(e) {
     async function addMenuItemToSheet() {
         if (!activeWebhookUrl) { alert("I-save muna ang Google Sheet Webhook URL!"); return; }
         const name = document.getElementById("prodName").value.trim();
-        const price = document.getElementById("prodPrice").value.trim();
+        const price = document.getElementById("prodPrice").value.trim() || "0";
         const category = document.getElementById("prodCategory").value.trim() || "General";
         const rawImageInput = document.getElementById("prodImage").value.trim();
 
-        if (!name || !price) { alert("Lagyan ng Product Name at Price!"); return; }
+        if (!name) { alert("Lagyan ng Product Name!"); return; }
         const finalImageUrl = convertGoogleDriveLink(rawImageInput);
 
-        const variantsString = currentVariantsList.length > 0 ? currentVariantsList.join(', ') : "N/A";
+        // I-save ang Variants bilang JSON String kung may laman, kung wala ay "N/A"
+        const variantsString = currentVariantsList.length > 0 ? JSON.stringify(currentVariantsList) : "N/A";
         const mixTargets = getSelectedMixMatchTargets();
 
         const payload = {
@@ -678,7 +707,7 @@ function doGet(e) {
                     <div style="display:flex; align-items:center;">
                         <img src="${item.image || 'https://via.placeholder.com/50'}" style="width:50px; height:50px; object-fit:cover; border-radius:6px; margin-right:10px;">
                         <div>
-                            <b>${item.name}</b> ${hasSize ? `<span class="size-badge">Variants: ${item.size}</span>` : ''} - ₱${item.price}
+                            <b>${item.name}</b> ${hasSize ? `<span class="size-badge">Multi-Variants</span>` : ''} - ₱${item.price}
                             <span class="cat-badge">${item.category || 'General'}</span>
                             <span class="status-badge ${isAvail ? 'avail':'not-avail'}">${item.status}</span><br>
                             <small style="color:#cbd5e1;">${item.description || ''}</small>
