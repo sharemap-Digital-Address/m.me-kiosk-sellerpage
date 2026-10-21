@@ -37,7 +37,6 @@
         
         .copy-btn-main { background: #16a34a; color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; font-size: 14px; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
         .copy-btn-main:hover { background: #15803d; }
-        .copy-btn-main svg { fill: currentColor; width: 18px; height: 18px; }
 
         .switch-container { display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #475569; margin-bottom: 12px; }
         .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
@@ -46,6 +45,17 @@
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
         input:checked + .slider { background-color: #16a34a; }
         input:checked + .slider:before { transform: translateX(22px); }
+
+        /* VARIANT CHIPS DESIGN */
+        .variant-chips-container { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .variant-chip { background: #8b5cf6; color: white; padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+        .variant-chip span { cursor: pointer; color: #fca5a5; font-weight: bold; margin-left: 2px; }
+        .variant-chip span:hover { color: #ef4444; }
+
+        /* CHECKBOX SELECTION LIST FOR MIX MATCH */
+        .mix-checkbox-list { max-height: 160px; overflow-y: auto; background: #0f172a; border: 1px solid #334155; padding: 8px; border-radius: 6px; margin-top: 6px; margin-bottom: 12px; }
+        .mix-checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 0; color: #cbd5e1; }
+        .mix-checkbox-item input { width: auto; margin: 0; }
     </style>
 </head>
 <body>
@@ -126,8 +136,8 @@
                     <button onclick="hideMenuForm()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">❌ Isara</button>
                 </div>
                 
-                <label style="font-size: 12px; font-weight: bold; margin-top: 10px; display: block;">Product Category:</label>
-                <input type="text" id="prodCategory" placeholder="hal. Meals / Desserts / Shirts" list="catSuggestions">
+                <label style="font-size: 12px; font-weight: bold; margin-top: 10px; display: block;">Item Tab Category:</label>
+                <input type="text" id="prodCategory" placeholder="hal. Meals / Desserts / Drinks" list="catSuggestions">
                 <datalist id="catSuggestions">
                     <option value="Mix & Match">
                     <option value="Best Sellers">
@@ -140,8 +150,13 @@
                 <label style="font-size: 12px; font-weight: bold;">Product Name:</label>
                 <input type="text" id="prodName" placeholder="halimbawa: Halo-Halo Special">
 
-                <label style="font-size: 12px; font-weight: bold;">Size / Dimension (Opsyonal):</label>
-                <input type="text" id="prodSize" placeholder="hal. Small, Medium, Large / 16oz, 22oz">
+                <!-- VARIANT CREATOR / SELECTOR CHIPS -->
+                <label style="font-size: 12px; font-weight: bold;">Variants / Size / Dimension (Opsyonal):</label>
+                <div style="display: flex; gap: 6px;">
+                    <input type="text" id="variantInput" placeholder="I-type hal. Regular, Large, 16oz" style="margin-bottom:0;">
+                    <button type="button" class="btn-blue" onclick="addVariantChip()" style="width: auto; padding: 8px 12px; margin-bottom:0; font-size:12px; white-space:nowrap;">➕ Add Variant</button>
+                </div>
+                <div class="variant-chips-container" id="variantChipsContainer" style="margin-top: 8px;"></div>
 
                 <div style="display: flex; gap: 10px;">
                     <div style="flex: 1;">
@@ -165,17 +180,17 @@
 
                 <div id="mixMatchBox" style="display: none; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px dashed #0284c7; margin-bottom: 12px;">
                     <label style="font-size: 12px; font-weight: bold;">Pumili ng Match Type:</label>
-                    <select id="mixMatchType" onchange="updateMixMatchDropdown()">
-                        <option value="Category">Product Category</option>
-                        <option value="Selected Item">Selected Item</option>
+                    <select id="mixMatchType" onchange="updateMixMatchSelectionList()">
+                        <option value="Category">Item Tab Category</option>
+                        <option value="Selected Item">Selected Item / Variant</option>
                     </select>
 
-                    <label style="font-size: 12px; font-weight: bold;">Pumili ng Ka-Match Item / Category:</label>
-                    <select id="mixMatchTarget">
-                        <option value="">-- Pumili sa listahan --</option>
-                    </select>
+                    <label style="font-size: 12px; font-weight: bold; margin-top: 4px; display: block;">Pumili sa Listahan na Pwedeng I-match:</label>
+                    <div class="mix-checkbox-list" id="mixCheckboxContainer">
+                        <p style="color:#94a3b8; font-size:11px; margin:0; text-align:center;">Lino-load ang mga pagpipilian...</p>
+                    </div>
 
-                    <label style="font-size: 12px; font-weight: bold;">Mix & Match Combo Discount (₱):</label>
+                    <label style="font-size: 12px; font-weight: bold; margin-top: 8px; display: block;">Mix & Match Combo Discount (₱):</label>
                     <input type="number" id="mixMatchDiscount" placeholder="hal. 15">
                 </div>
 
@@ -187,14 +202,13 @@
 
                 <label style="font-size: 12px; font-weight: bold;">Availability Status:</label>
                 <select id="prodAvailability">
-                    <option value="Available">Available (Pagkain)</option>
-                    <option value="Not Available / Out of Stock">Not Available / Out of Stock (Pagkain)</option>
-                    <option value="In Stock">In Stock (Items / Gadgets / Clothes)</option>
-                    <option value="Out of Stock">Out of Stock (Items / Gadgets / Clothes)</option>
+                    <option value="Available">Available</option>
+                    <option value="In Stock">In Stock</option>
+                    <option value="Out of Stock">Out of Stock</option>
                 </select>
 
-                <label style="font-size: 12px; font-weight: bold;">Quantity Availability (Optional):</label>
-                <input type="text" id="prodQuantity" value="Full Stock" placeholder="hal. Full Stock / 50 pcs">
+                <label style="font-size: 12px; font-weight: bold;">Quantity Availability / Storage Count (Opsyonal):</label>
+                <input type="number" id="prodQuantity" placeholder="hal. 50, 20 (Iwanang blangko kung laging available)">
 
                 <label style="font-size: 12px; font-weight: bold;">Image Link URL (Google Drive / ImgBB):</label>
                 <input type="url" id="prodImage" placeholder="I-paste ang Google Drive Share Link dito">
@@ -280,6 +294,7 @@ function doGet(e) {
     let activeWebhookUrl = "";
     let activeStorePassword = "";
     let loadedMenuItems = [];
+    let currentVariantsList = [];
 
     const CLEAN_APPS_SCRIPT_CODE = 
 "function doPost(e) {\n" +
@@ -339,6 +354,33 @@ function doGet(e) {
         const match = rawUrl.match(driveRegex);
         if (match && match[1]) return `https://lh3.googleusercontent.com/d/${match[1]}`;
         return rawUrl;
+    }
+
+    /* VARIANT CHIPS LOGIC */
+    function addVariantChip() {
+        const val = document.getElementById("variantInput").value.trim();
+        if(!val) return;
+        if(!currentVariantsList.includes(val)) {
+            currentVariantsList.push(val);
+            renderVariantChips();
+        }
+        document.getElementById("variantInput").value = "";
+    }
+
+    function removeVariantChip(index) {
+        currentVariantsList.splice(index, 1);
+        renderVariantChips();
+    }
+
+    function renderVariantChips() {
+        const container = document.getElementById("variantChipsContainer");
+        container.innerHTML = "";
+        currentVariantsList.forEach((v, idx) => {
+            const chip = document.createElement("div");
+            chip.className = "variant-chip";
+            chip.innerHTML = `${v} <span onclick="removeVariantChip(${idx})">✕</span>`;
+            container.appendChild(chip);
+        });
     }
 
     async function checkStorePasswordStatus() {
@@ -459,7 +501,7 @@ function doGet(e) {
         
         if (isChecked) {
             catInput.value = "Mix & Match";
-            updateMixMatchDropdown();
+            updateMixMatchSelectionList();
         } else {
             if (catInput.value === "Mix & Match") {
                 catInput.value = "";
@@ -467,19 +509,59 @@ function doGet(e) {
         }
     }
 
-    function updateMixMatchDropdown() {
+    /* MIX MATCH CHECKBOX LIST WITH VARIANT DETAILS */
+    function updateMixMatchSelectionList() {
         const type = document.getElementById("mixMatchType").value;
-        const targetSelect = document.getElementById("mixMatchTarget");
-        targetSelect.innerHTML = '<option value="">-- Pumili sa listahan --</option>';
-        if (type === "Category") {
-            [...new Set(loadedMenuItems.map(i => i.category).filter(Boolean))].forEach(cat => {
-                targetSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+        const container = document.getElementById("mixCheckboxContainer");
+        container.innerHTML = "";
+
+        if (type === "Category" || type === "Item Tab Category") {
+            const categories = [...new Set(loadedMenuItems.map(i => i.category).filter(Boolean))];
+            if (categories.length === 0) {
+                container.innerHTML = `<p style="color:#94a3b8; font-size:11px; margin:0; text-align:center;">Wala pang nakatalang Item Tab Categories.</p>`;
+                return;
+            }
+
+            container.innerHTML += `
+                <div class="mix-checkbox-item">
+                    <input type="checkbox" value="ALL_CATEGORIES" id="cat_all" checked>
+                    <label for="cat_all"><b>⭐ Lahat sa Category</b></label>
+                </div>
+            `;
+
+            categories.forEach((cat, idx) => {
+                container.innerHTML += `
+                    <div class="mix-checkbox-item">
+                        <input type="checkbox" value="${cat}" class="mix-target-check" id="cat_${idx}">
+                        <label for="cat_${idx}">${cat}</label>
+                    </div>
+                `;
             });
         } else {
-            loadedMenuItems.forEach(item => {
-                targetSelect.innerHTML += `<option value="${item.name}">${item.name}</option>`;
+            if (loadedMenuItems.length === 0) {
+                container.innerHTML = `<p style="color:#94a3b8; font-size:11px; margin:0; text-align:center;">Wala pang panindang nakatala sa Sheet.</p>`;
+                return;
+            }
+
+            loadedMenuItems.forEach((item, idx) => {
+                let sizeStr = item.size && item.size !== "N/A" ? ` (${item.size})` : '';
+                container.innerHTML += `
+                    <div class="mix-checkbox-item">
+                        <input type="checkbox" value="${item.name}${sizeStr}" class="mix-target-check" id="item_${idx}">
+                        <label for="item_${idx}">${item.name}${sizeStr}</label>
+                    </div>
+                `;
             });
         }
+    }
+
+    function getSelectedMixMatchTargets() {
+        const checks = document.querySelectorAll('.mix-target-check:checked');
+        const allCatCheck = document.getElementById('cat_all');
+        if (allCatCheck && allCatCheck.checked) return "ALL_CATEGORIES";
+        let selected = [];
+        checks.forEach(c => selected.push(c.value));
+        return selected.length > 0 ? selected.join(', ') : "ALL_CATEGORIES";
     }
 
     async function loadStoreSheetUrl() {
@@ -520,13 +602,15 @@ function doGet(e) {
     function resetMenuFormFields() {
         document.getElementById('prodName').value = "";
         document.getElementById('prodCategory').value = "";
-        document.getElementById('prodSize').value = "";
+        document.getElementById('variantInput').value = "";
+        currentVariantsList = [];
+        renderVariantChips();
         document.getElementById('prodPrice').value = "";
         document.getElementById('prodDiscount').value = "";
         document.getElementById('prodImage').value = "";
         document.getElementById('prodDesc').value = "";
         document.getElementById('prodSpecialDesc').value = "";
-        document.getElementById('prodQuantity').value = "Full Stock";
+        document.getElementById('prodQuantity').value = "";
         document.getElementById('mixMatchToggle').checked = false;
         toggleMixMatchFields();
     }
@@ -536,26 +620,28 @@ function doGet(e) {
         const name = document.getElementById("prodName").value.trim();
         const price = document.getElementById("prodPrice").value.trim();
         const category = document.getElementById("prodCategory").value.trim() || "General";
-        const sizeInput = document.getElementById("prodSize").value.trim();
         const rawImageInput = document.getElementById("prodImage").value.trim();
 
         if (!name || !price) { alert("Lagyan ng Product Name at Price!"); return; }
         const finalImageUrl = convertGoogleDriveLink(rawImageInput);
 
+        const variantsString = currentVariantsList.length > 0 ? currentVariantsList.join(', ') : "N/A";
+        const mixTargets = getSelectedMixMatchTargets();
+
         const payload = {
             action: "ADD_ITEM",
             category: category,
             name: name,
-            size: sizeInput || "N/A",
+            size: variantsString,
             price: price,
             discount: document.getElementById("prodDiscount").value.trim() || "0",
             mixMatchType: document.getElementById("mixMatchToggle").checked ? document.getElementById("mixMatchType").value : "N/A",
-            mixMatchTarget: document.getElementById("mixMatchToggle").checked ? document.getElementById("mixMatchTarget").value : "N/A",
+            mixMatchTarget: document.getElementById("mixMatchToggle").checked ? mixTargets : "N/A",
             mixMatchDiscount: document.getElementById("mixMatchToggle").checked ? document.getElementById("mixMatchDiscount").value.trim() || "0" : "0",
             description: document.getElementById("prodDesc").value.trim() || "",
             specialDesc: document.getElementById("prodSpecialDesc").value.trim() || "",
             status: document.getElementById("prodAvailability").value,
-            quantity: document.getElementById("prodQuantity").value.trim() || "Full Stock",
+            quantity: document.getElementById("prodQuantity").value.trim() || "Unlimited",
             image: finalImageUrl || ""
         };
 
@@ -592,7 +678,7 @@ function doGet(e) {
                     <div style="display:flex; align-items:center;">
                         <img src="${item.image || 'https://via.placeholder.com/50'}" style="width:50px; height:50px; object-fit:cover; border-radius:6px; margin-right:10px;">
                         <div>
-                            <b>${item.name}</b> ${hasSize ? `<span class="size-badge">Size: ${item.size}</span>` : ''} - ₱${item.price}
+                            <b>${item.name}</b> ${hasSize ? `<span class="size-badge">Variants: ${item.size}</span>` : ''} - ₱${item.price}
                             <span class="cat-badge">${item.category || 'General'}</span>
                             <span class="status-badge ${isAvail ? 'avail':'not-avail'}">${item.status}</span><br>
                             <small style="color:#cbd5e1;">${item.description || ''}</small>
