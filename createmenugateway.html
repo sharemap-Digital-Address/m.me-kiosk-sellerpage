@@ -85,7 +85,7 @@
             <p style="color:#94a3b8; font-size: 13px; text-align: center;">Wala ka pang nakakabit na Google Sheet storage para sa iyong menu.</p>
 
             <div class="warning-box">
-                <b>📱 PAALALA SA CELLPHONE USERS:</b><br>
+                <b>📱 PAALALA SA CELLPHONE / TABLET USERS:</b><br>
                 Para hindi kusang magbukas ang Google Sheets App (na walang Apps Script menu):<br>
                 Pumunta sa Phone Settings > <b>Apps > Google Sheets > Open by default</b> at i-<b>OFF</b> ito (o piliin ang <i>Ask every time / Open in Browser</i>).
             </div>
@@ -114,9 +114,10 @@
                 1. Sa browser, siguraduhing naka-<b>Desktop Site</b> mode (3 dots > Desktop site).<br>
                 2. Sa Google Sheet menu, i-click ang <b>Extensions > Apps Script</b>.<br>
                 3. ⚠️ <b>Burahin MUNA LAHAT ng nakasulat</b> doon bago i-paste ang code.<br>
-                4. I-click ang <b>Deploy > New deployment</b>, piliin ang <b>Web app</b>.<br>
-                5. Sa <i>Who has access</i>, piliin ang <b>Anyone</b> at i-click ang <b>Deploy</b>.<br>
-                6. Kopyahin ang lalabas na <b>Web App URL</b> (nagtatapos sa <code>/exec</code>) at i-paste sa ibaba:
+                4. 📱 <b>TIPS SA MOBILE/TABLET PASTE:</b> Sa mismong screen mag-long press at piliin ang <b>Paste</b> mula sa lalabas na pop-up menu ng screen (<i>huwag gamitin ang paste button sa keyboard</i> para hindi masira ang format).<br>
+                5. I-click ang <b>Deploy > New deployment</b>, piliin ang <b>Web app</b>.<br>
+                6. Sa <i>Who has access</i>, piliin ang <b>Anyone</b> at i-click ang <b>Deploy</b>.<br>
+                7. Kopyahin ang lalabas na <b>Web App URL</b> (nagtatapos sa <code>/exec</code>) at i-paste sa ibaba:
             </div>
 
             <label style="font-size: 12px; font-weight: bold;">2. I-paste ang Web App URL (/exec):</label>
@@ -233,11 +234,9 @@
             <div id="webhookCodeText" class="code-box" onclick="copyWebhookCode()" title="Click to copy code">function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = JSON.parse(e.postData.contents);
-  
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(["Category", "Name", "Price", "Discount", "MixMatch_Type", "MixMatch_Target", "MixMatch_Discount", "Description", "Status", "Quantity", "Image"]);
   }
-  
   if (data.action === "ADD_ITEM") {
     sheet.appendRow([
       data.category, data.name, data.price, data.discount,
@@ -252,7 +251,6 @@ function doGet(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var rows = sheet.getDataRange().getValues();
   var items = [];
-  
   for (var i = 1; i < rows.length; i++) {
     items.push({
       category: rows[i][0],
@@ -268,7 +266,6 @@ function doGet(e) {
       image: rows[i][10]
     });
   }
-  
   return ContentService.createTextOutput(JSON.stringify(items)).setMimeType(ContentService.MimeType.JSON);
 }</div>
         </div>
@@ -291,16 +288,14 @@ function doGet(e) {
     let activeWebhookUrl = "";
     let loadedMenuItems = [];
 
-    // MALINIS NA APPS SCRIPT CODE NA MAY ESCAPED NEWLINES PARA WALANG INDENTATION BUG SA MOBILE
+    // MALINIS NA APPS SCRIPT CODE NA MAY ESCAPED NEWLINES (NO INDENTATION BUG SA MOBILE)
     const CLEAN_APPS_SCRIPT_CODE = 
 "function doPost(e) {\n" +
 "  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();\n" +
 "  var data = JSON.parse(e.postData.contents);\n" +
-"  \n" +
 "  if (sheet.getLastRow() === 0) {\n" +
 "    sheet.appendRow([\"Category\", \"Name\", \"Price\", \"Discount\", \"MixMatch_Type\", \"MixMatch_Target\", \"MixMatch_Discount\", \"Description\", \"Status\", \"Quantity\", \"Image\"]);\n" +
 "  }\n" +
-"  \n" +
 "  if (data.action === \"ADD_ITEM\") {\n" +
 "    sheet.appendRow([\n" +
 "      data.category, data.name, data.price, data.discount,\n" +
@@ -314,7 +309,6 @@ function doGet(e) {
 "  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();\n" +
 "  var rows = sheet.getDataRange().getValues();\n" +
 "  var items = [];\n" +
-"  \n" +
 "  for (var i = 1; i < rows.length; i++) {\n" +
 "    items.push({\n" +
 "      category: rows[i][0],\n" +
@@ -330,7 +324,6 @@ function doGet(e) {
 "      image: rows[i][10]\n" +
 "    });\n" +
 "  }\n" +
-"  \n" +
 "  return ContentService.createTextOutput(JSON.stringify(items)).setMimeType(ContentService.MimeType.JSON);\n" +
 "}";
 
@@ -471,7 +464,7 @@ function doGet(e) {
         const targetWebUrl = forceWebBrowserUrl(rawSheetUrl);
 
         navigator.clipboard.writeText(CLEAN_APPS_SCRIPT_CODE).then(() => {
-            alert("📋 Na-copy na ang Webhook Code sa Clipboard!\n\nPAALALA: Burahin MUNA LAHAT ng nakasulat sa Apps Script bago i-paste!\n\nBinubuksan na ang iyong Sheet sa Browser...");
+            alert("📋 Na-copy na ang Webhook Code sa Clipboard!\n\nPAALALA SA MOBILE/TABLET:\n1. Burahin MUNA LAHAT ng nakasulat sa Apps Script Editor.\n2. Mag-long press sa screen at gamitin ang 'Paste' sa option menu ng screen (HUWAG ang paste button ng keyboard).\n\nBinubuksan na ang iyong Sheet sa Browser...");
             window.open(targetWebUrl, '_blank');
             document.getElementById("firstTimeSetupCard").style.display = "none";
             document.getElementById("urlInputReminderCard").style.display = "block";
@@ -483,7 +476,7 @@ function doGet(e) {
 
     function copyWebhookCode() {
         navigator.clipboard.writeText(CLEAN_APPS_SCRIPT_CODE).then(() => {
-            alert("📋 Na-copy na ang Webhook Code sa iyong Clipboard!\n\nPAALALA: Burahin MUNA LAHAT ng nakasulat sa Apps Script bago i-paste!");
+            alert("📋 Na-copy na ang Webhook Code sa iyong Clipboard!\n\nPAALALA SA MOBILE/TABLET:\n1. Burahin MUNA LAHAT ng nakasulat sa Apps Script Editor.\n2. Mag-long press sa screen at gamitin ang 'Paste' sa option menu ng screen (HUWAG ang paste button ng keyboard).");
         }).catch(err => {
             alert("Failed to copy code: " + err);
         });
