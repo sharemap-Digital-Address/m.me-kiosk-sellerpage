@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+
+  <!--- kiosk mode using Google sheets app script extension-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareMap Kiosk Visual Menu</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #0284c7; --bg: #0f172a; --card: #1e293b; --text: #ffffff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; padding-bottom: 90px; }
+        .container { max-width: 480px; margin: 0 auto; }
+        .store-header { text-align: center; margin-bottom: 15px; }
+        .store-header h2 { margin: 0; color: #38bdf8; font-size: 22px; }
+
+        .category-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            scrollbar-width: none;
+        }
+        .category-tabs::-webkit-scrollbar { display: none; }
+        .cat-tab {
+            background: #1e293b;
+            color: #94a3b8;
+            border: 1px solid #334155;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .cat-tab.active {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #38bdf8;
+        }
+
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .menu-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; }
+        .menu-card img { width: 100%; height: 110px; object-fit: cover; background: #334155; }
+        .menu-details { padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .menu-title { font-weight: bold; font-size: 13px; margin-bottom: 2px; }
+        .menu-desc { font-size: 10px; color: #94a3b8; margin-bottom: 8px; line-height: 1.3; }
+        .size-badge { font-size: 10px; padding: 2px 5px; border-radius: 4px; background: #8b5cf6; color: #fff; display: inline-block; margin-bottom: 4px; font-weight: bold; }
+        
+        .qty-control { display: flex; align-items: center; justify-content: space-between; background: #0f172a; border-radius: 6px; padding: 4px; border: 1px solid #475569; margin-top: 5px; }
+        .qty-btn { background: #334155; color: white; border: none; width: 26px; height: 26px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .qty-val { font-weight: bold; font-size: 13px; }
+        
+        .cart-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); max-width: 450px; width: 90%; background: #16a34a; color: white; padding: 14px 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); font-weight: bold; cursor: pointer; z-index: 1000; }
+        .cart-bar:hover { background: #15803d; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="store-header">
+        <h2 id="storeTitle">🏪 Loading Kiosk Menu...</h2>
+        <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Pumili ng category at i-tap ang (+) para mag-order:</p>
+    </div>
+
+    <div class="category-tabs" id="categoryTabsContainer"></div>
+
+    <div class="menu-grid" id="kioskMenuGrid">
+        <p style="text-align:center; grid-column: 1 / -1; color:#94a3b8;">Lino-load ang Visual Menu...</p>
+    </div>
+</div>
+
+<div class="cart-bar" id="cartBar" onclick="checkoutToGateway()" style="display:none;">
+    <span id="cartSummaryText">🛒 0 Items Selected</span>
+    <span>I-save at Bumalik sa Order ➔</span>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let storePage = "";
+    let currentPsid = "MESSENGER_WEB_USER";
+    let selectedCart = {}; 
+    let allFetchedItems = [];
+    let activeCategory = "ALL";
+
+    const DEFAULT_KIOSK_MENU = [
+        { name: "Chicken Joy Value Meal", category: "Meals", size: "N/A", price: "99", image: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=300", description: "Crispy fried chicken with rice & gravy", status: "Available" },
+        { name: "Family Fiesta Ala Carte", category: "Best Sellers", size: "Family", price: "499", image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=300", description: "Special family size sharing meal", status: "Available" },
+        { name: "Burger Cheezy Large", category: "Best Sellers", size: "Large", price: "120", image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", description: "Juicy beef patty with extra melted cheese", status: "Available" },
+        { name: "Halo-Halo Special", category: "Desserts", size: "Regular", price: "85", image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", description: "Loaded with leche flan, ube, and ice cream", status: "Available" },
+        { name: "Spaghetti Panalo", category: "Meals", size: "N/A", price: "75", image: "https://images.unsplash.com/photo-1621996346565-e3d5d6281298?w=300", description: "Sweet style spaghetti with hotdog slices", status: "Available" },
+        { name: "Regular Fries", category: "Snacks", size: "Medium", price: "50", image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=300", description: "Golden crispy potato fries", status: "Available" }
+    ];
+
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        storePage = urlParams.get('page') || localStorage.getItem('sharemap_page');
+        
+        currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+        if (urlParams.get('psid') && urlParams.get('psid') !== "USER_ACTUAL_PSID_DITO") {
+            localStorage.setItem('sharemap_psid', currentPsid);
+        }
+
+        if(!storePage) {
+            document.getElementById('storeTitle').innerText = "⚠️ Invalid Store Gateway Link";
+            document.getElementById('kioskMenuGrid').innerHTML = "";
+            return;
+        }
+
+        document.getElementById('storeTitle').innerText = "🏪 @" + storePage + " - Kiosk Menu";
+        loadKioskMenu();
+    };
+
+    async function loadKioskMenu() {
+        try {
+            // 1. Kunin ang menu_sheet_url mula sa Supabase 'licenses' table
+            const { data: licenseData, error: licenseError } = await supabaseClient
+                .from('licenses')
+                .select('menu_sheet_url')
+                .eq('username', storePage.toLowerCase())
+                .single();
+
+            if (licenseError || !licenseData || !licenseData.menu_sheet_url) {
+                console.warn("Walang nahanap na Google Sheet URL, ginagamit ang Default Menu.");
+                allFetchedItems = DEFAULT_KIOSK_MENU;
+                buildCategoryTabs();
+                filterAndRenderGrid("ALL");
+                return;
+            }
+
+            const sheetWebhookUrl = licenseData.menu_sheet_url;
+
+            // 2. Kunin ang mga menu items mula sa Google Sheet Webhook
+            const res = await fetch(sheetWebhookUrl + "?action=GET_ITEMS");
+            const sheetItems = await res.json();
+
+            if (!sheetItems || sheetItems.length === 0) {
+                allFetchedItems = DEFAULT_KIOSK_MENU;
+            } else {
+                allFetchedItems = sheetItems;
+            }
+
+        } catch (err) {
+            console.error("Error sa pag-load ng Google Sheet menu:", err);
+            allFetchedItems = DEFAULT_KIOSK_MENU;
+        }
+
+        buildCategoryTabs();
+        filterAndRenderGrid("ALL");
+    }
+
+    function buildCategoryTabs() {
+        const tabsContainer = document.getElementById('categoryTabsContainer');
+        tabsContainer.innerHTML = "";
+
+        let categories = ["ALL"];
+        allFetchedItems.forEach(item => {
+            let cat = item.category ? item.category.trim() : "General";
+            if (!categories.includes(cat)) {
+                categories.push(cat);
+            }
+        });
+
+        categories.forEach(cat => {
+            let tab = document.createElement('button');
+            tab.className = `cat-tab ${cat === activeCategory ? 'active' : ''}`;
+            tab.innerText = cat === "ALL" ? "⭐ All Items" : cat;
+            tab.onclick = () => {
+                activeCategory = cat;
+                document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                filterAndRenderGrid(cat);
+            };
+            tabsContainer.appendChild(tab);
+        });
+    }
+
+    function filterAndRenderGrid(category) {
+        let itemsToDisplay = allFetchedItems;
+        if (category !== "ALL") {
+            itemsToDisplay = allFetchedItems.filter(item => {
+                let itemCat = item.category ? item.category.trim() : "General";
+                return itemCat === category;
+            });
+        }
+        renderGrid(itemsToDisplay);
+    }
+
+    function renderGrid(items) {
+        const grid = document.getElementById('kioskMenuGrid');
+        grid.innerHTML = "";
+
+        if (items.length === 0) {
+            grid.innerHTML = `<p style="text-align:center; grid-column: 1 / -1; color:#94a3b8;">Walang item sa kategoryang ito.</p>`;
+            return;
+        }
+
+        items.forEach(item => {
+            let statusStr = item.status ? item.status.toLowerCase() : "";
+            let isAvail = statusStr.includes("available") || statusStr.includes("in stock") || !item.status;
+            
+            let itemName = item.name;
+            let itemSize = item.size && item.size !== "N/A" ? item.size : "";
+            let itemPrice = item.price || "0";
+            let displayKey = itemSize ? `${itemName} (${itemSize})` : itemName;
+            let currentQty = selectedCart[displayKey] || 0;
+
+            let card = document.createElement('div');
+            card.className = "menu-card";
+            card.innerHTML = `
+                <img src="${item.image || 'https://via.placeholder.com/150'}" alt="${itemName}">
+                <div class="menu-details">
+                    <div>
+                        <div class="menu-title">${itemName}</div>
+                        ${itemSize ? `<span class="size-badge">${itemSize}</span>` : ''}
+                        <div style="font-size: 12px; font-weight: bold; color: #38bdf8; margin-bottom: 4px;">₱${itemPrice}</div>
+                        <div class="menu-desc">${item.description || ''}</div>
+                    </div>
+                    <div>
+                        ${isAvail ? `
+                            <div class="qty-control">
+                                <button type="button" class="qty-btn" onclick="updateQty('${escapeQuotes(displayKey)}', -1)">-</button>
+                                <span class="qty-val" id="qty-val-${CSS.escape(displayKey)}">${currentQty}</span>
+                                <button type="button" class="qty-btn" onclick="updateQty('${escapeQuotes(displayKey)}', 1)">+</button>
+                            </div>
+                        ` : '<div style="color:#ef4444; font-size:11px; font-weight:bold; text-align:center; padding:4px;">Out of Stock</div>'}
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+        updateCartBar();
+    }
+
+    function updateQty(itemKey, delta) {
+        if (!selectedCart[itemKey]) {
+            selectedCart[itemKey] = 0;
+        }
+        selectedCart[itemKey] += delta;
+
+        if (selectedCart[itemKey] < 0) {
+            selectedCart[itemKey] = 0;
+        }
+
+        if (selectedCart[itemKey] === 0) {
+            delete selectedCart[itemKey];
+        }
+
+        let valEl = document.getElementById(`qty-val-${CSS.escape(itemKey)}`);
+        if (valEl) {
+            valEl.innerText = selectedCart[itemKey] || 0;
+        }
+
+        updateCartBar();
+    }
+
+    function updateCartBar() {
+        let totalCount = 0;
+        for (let key in selectedCart) {
+            totalCount += selectedCart[key];
+        }
+
+        const bar = document.getElementById('cartBar');
+        if (totalCount > 0) {
+            bar.style.display = 'flex';
+            document.getElementById('cartSummaryText').innerText = `🛒 ${totalCount} Item(s) in Cart`;
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    function escapeQuotes(str) {
+        return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function checkoutToGateway() {
+        let orderArray = [];
+        for (let name in selectedCart) {
+            if (selectedCart[name] > 0) {
+                orderArray.push(`${name} x${selectedCart[name]}`);
+            }
+        }
+
+        let orderString = orderArray.join(', ');
+        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&psid=${encodeURIComponent(currentPsid)}`;
+    }
+</script>
+</body>
+</html>
