@@ -20,6 +20,7 @@
         .item-row { background: #334155; padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .cat-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #0284c7; color: #fff; margin-left: 4px; font-weight: bold; }
+        .size-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #8b5cf6; color: #fff; margin-left: 4px; font-weight: bold; }
         .avail { background: #166534; color: #dcfce7; }
         .not-avail { background: #991b1b; color: #fee2e2; }
         .alert-box { background: #0284c7; color: white; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; text-align: center; }
@@ -149,6 +150,9 @@
                 <label style="font-size: 12px; font-weight: bold;">Product Name:</label>
                 <input type="text" id="prodName" placeholder="halimbawa: Halo-Halo Special">
 
+                <label style="font-size: 12px; font-weight: bold;">Size / Dimension (Opsyonal):</label>
+                <input type="text" id="prodSize" placeholder="hal. Small, Medium, Large / 16oz, 22oz / XL (Iwanang blanko kung wala)">
+
                 <div style="display: flex; gap: 10px;">
                     <div style="flex: 1;">
                         <label style="font-size: 12px; font-weight: bold;">Price (₱):</label>
@@ -235,11 +239,11 @@
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = JSON.parse(e.postData.contents);
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["Category", "Name", "Price", "Discount", "MixMatch_Type", "MixMatch_Target", "MixMatch_Discount", "Description", "Status", "Quantity", "Image"]);
+    sheet.appendRow(["Category", "Name", "Size", "Price", "Discount", "MixMatch_Type", "MixMatch_Target", "MixMatch_Discount", "Description", "Status", "Quantity", "Image"]);
   }
   if (data.action === "ADD_ITEM") {
     sheet.appendRow([
-      data.category, data.name, data.price, data.discount,
+      data.category, data.name, data.size, data.price, data.discount,
       data.mixMatchType, data.mixMatchTarget, data.mixMatchDiscount,
       data.description, data.status, data.quantity, data.image
     ]);
@@ -255,15 +259,16 @@ function doGet(e) {
     items.push({
       category: rows[i][0],
       name: rows[i][1],
-      price: rows[i][2],
-      discount: rows[i][3],
-      mixMatchType: rows[i][4],
-      mixMatchTarget: rows[i][5],
-      mixMatchDiscount: rows[i][6],
-      description: rows[i][7],
-      status: rows[i][8],
-      quantity: rows[i][9],
-      image: rows[i][10]
+      size: rows[i][2],
+      price: rows[i][3],
+      discount: rows[i][4],
+      mixMatchType: rows[i][5],
+      mixMatchTarget: rows[i][6],
+      mixMatchDiscount: rows[i][7],
+      description: rows[i][8],
+      status: rows[i][9],
+      quantity: rows[i][10],
+      image: rows[i][11]
     });
   }
   return ContentService.createTextOutput(JSON.stringify(items)).setMimeType(ContentService.MimeType.JSON);
@@ -288,17 +293,17 @@ function doGet(e) {
     let activeWebhookUrl = "";
     let loadedMenuItems = [];
 
-    // MALINIS NA APPS SCRIPT CODE NA MAY ESCAPED NEWLINES (NO INDENTATION BUG SA MOBILE)
+    // MALINIS NA APPS SCRIPT CODE NA MAY SIZE COLUMN
     const CLEAN_APPS_SCRIPT_CODE = 
 "function doPost(e) {\n" +
 "  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();\n" +
 "  var data = JSON.parse(e.postData.contents);\n" +
 "  if (sheet.getLastRow() === 0) {\n" +
-"    sheet.appendRow([\"Category\", \"Name\", \"Price\", \"Discount\", \"MixMatch_Type\", \"MixMatch_Target\", \"MixMatch_Discount\", \"Description\", \"Status\", \"Quantity\", \"Image\"]);\n" +
+"    sheet.appendRow([\"Category\", \"Name\", \"Size\", \"Price\", \"Discount\", \"MixMatch_Type\", \"MixMatch_Target\", \"MixMatch_Discount\", \"Description\", \"Status\", \"Quantity\", \"Image\"]);\n" +
 "  }\n" +
 "  if (data.action === \"ADD_ITEM\") {\n" +
 "    sheet.appendRow([\n" +
-"      data.category, data.name, data.price, data.discount,\n" +
+"      data.category, data.name, data.size, data.price, data.discount,\n" +
 "      data.mixMatchType, data.mixMatchTarget, data.mixMatchDiscount,\n" +
 "      data.description, data.status, data.quantity, data.image\n" +
 "    ]);\n" +
@@ -313,15 +318,16 @@ function doGet(e) {
 "    items.push({\n" +
 "      category: rows[i][0],\n" +
 "      name: rows[i][1],\n" +
-"      price: rows[i][2],\n" +
-"      discount: rows[i][3],\n" +
-"      mixMatchType: rows[i][4],\n" +
-"      mixMatchTarget: rows[i][5],\n" +
-"      mixMatchDiscount: rows[i][6],\n" +
-"      description: rows[i][7],\n" +
-"      status: rows[i][8],\n" +
-"      quantity: rows[i][9],\n" +
-"      image: rows[i][10]\n" +
+"      size: rows[i][2],\n" +
+"      price: rows[i][3],\n" +
+"      discount: rows[i][4],\n" +
+"      mixMatchType: rows[i][5],\n" +
+"      mixMatchTarget: rows[i][6],\n" +
+"      mixMatchDiscount: rows[i][7],\n" +
+"      description: rows[i][8],\n" +
+"      status: rows[i][9],\n" +
+"      quantity: rows[i][10],\n" +
+"      image: rows[i][11]\n" +
 "    });\n" +
 "  }\n" +
 "  return ContentService.createTextOutput(JSON.stringify(items)).setMimeType(ContentService.MimeType.JSON);\n" +
@@ -571,6 +577,7 @@ function doGet(e) {
     function resetMenuFormFields() {
         document.getElementById('prodName').value = "";
         document.getElementById('prodCategory').value = "";
+        document.getElementById('prodSize').value = "";
         document.getElementById('prodPrice').value = "";
         document.getElementById('prodDiscount').value = "";
         document.getElementById('prodImage').value = "";
@@ -589,6 +596,7 @@ function doGet(e) {
         const name = document.getElementById("prodName").value.trim();
         const price = document.getElementById("prodPrice").value.trim();
         const category = document.getElementById("prodCategory").value.trim() || "General";
+        const sizeInput = document.getElementById("prodSize").value.trim();
         const rawImageInput = document.getElementById("prodImage").value.trim();
 
         if (!name || !price) {
@@ -602,6 +610,7 @@ function doGet(e) {
             action: "ADD_ITEM",
             category: category,
             name: name,
+            size: sizeInput || "N/A",
             price: price,
             discount: document.getElementById("prodDiscount").value.trim() || "0",
             mixMatchType: document.getElementById("mixMatchToggle").checked ? document.getElementById("mixMatchType").value : "N/A",
@@ -647,13 +656,14 @@ function doGet(e) {
 
             data.forEach(item => {
                 let isAvail = item.status === "Available" || item.status === "In Stock";
+                let hasSize = item.size && item.size !== "N/A" && item.size.trim() !== "";
                 const div = document.createElement("div");
                 div.className = "item-row";
                 div.innerHTML = `
                     <div style="display:flex; align-items:center;">
                         <img src="${item.image || 'https://via.placeholder.com/50'}" style="width:50px; height:50px; object-fit:cover; border-radius:6px; margin-right:10px;">
                         <div>
-                            <b>${item.name}</b> - ₱${item.price} <small style="color:#ef4444;">${item.discount > 0 ? '(₱' + item.discount + ' OFF)' : ''}</small>
+                            <b>${item.name}</b> ${hasSize ? `<span class="size-badge">Size: ${item.size}</span>` : ''} - ₱${item.price} <small style="color:#ef4444;">${item.discount > 0 ? '(₱' + item.discount + ' OFF)' : ''}</small>
                             <span class="cat-badge">${item.category || 'General'}</span>
                             <span class="status-badge ${isAvail ? 'avail':'not-avail'}">${item.status}</span><br>
                             <small style="color:#cbd5e1;">${item.description || ''} (${item.quantity})</small>
