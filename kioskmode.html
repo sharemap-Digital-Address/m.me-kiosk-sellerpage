@@ -32,7 +32,8 @@
         .rating-badge { font-size: 10px; color: #f59e0b; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
         
         .qty-control { display: flex; align-items: center; justify-content: space-between; background: #0f172a; border-radius: 6px; padding: 4px; border: 1px solid #475569; margin-top: 5px; }
-        .qty-btn { background: #334155; color: white; border: none; width: 26px; height: 26px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .qty-btn { background: #334155; color: white; border: none; width: 28px; height: 28px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .qty-btn:hover { background: #0284c7; }
         .qty-val { font-weight: bold; font-size: 13px; }
 
         .mix-btn { background: #d97706; color: white; border: none; padding: 6px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
@@ -45,7 +46,10 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 15px; box-sizing: border-box; }
         .modal-box { background: #1e293b; border-radius: 16px; padding: 20px; max-width: 420px; width: 100%; border: 1px solid #475569; max-height: 90vh; overflow-y: auto; box-sizing: border-box; text-align: left; }
         .modal-box img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 12px; }
-        .close-modal { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; float: right; }
+        .close-modal { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; float: right; font-size: 12px; }
+
+        .variant-select-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 8px; cursor: pointer; }
+        .variant-select-item:hover { border-color: #38bdf8; background: #1e293b; }
     </style>
 </head>
 <body>
@@ -68,7 +72,7 @@
     <span>I-save at Bumalik sa Order ➔</span>
 </div>
 
-<!-- MODAL 1: FULLSCREEN ITEM DETAILS & RATINGS (1-10 Scale) -->
+<!-- MODAL 1: FULLSCREEN ITEM DETAILS & RATINGS -->
 <div id="itemModal" class="modal-overlay">
     <div class="modal-box">
         <button class="close-modal" onclick="closeItemModal()">Isara ✕</button>
@@ -81,8 +85,7 @@
         
         <div style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155; text-align:center;">
             <p style="font-size: 12px; margin:0 0 8px 0; color:#38bdf8; font-weight:bold;">⭐ Mag-rate (1 hanggang 10):</p>
-            <div style="display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;" id="ratingButtonsContainer">
-                <!-- Buttons 1 to 10 -->
+            <div style="display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;">
                 <button onclick="submitRating(1)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">1</button>
                 <button onclick="submitRating(2)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">2</button>
                 <button onclick="submitRating(3)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">3</button>
@@ -112,6 +115,26 @@
     </div>
 </div>
 
+<!-- MODAL 3: ADD VARIANT SELECTOR DIALOG CARD -->
+<div id="variantAddModal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="close-modal" onclick="closeVariantAddModal()">Isara ✕</button>
+        <h3 id="varAddTitle" style="color:#38bdf8; margin-top:0; margin-bottom:6px;">Pumili ng Variant</h3>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">I-tap ang variant na nais idagdag sa cart:</p>
+        <div id="variantAddListContainer" style="max-height: 280px; overflow-y: auto;"></div>
+    </div>
+</div>
+
+<!-- MODAL 4: REMOVE VARIANT ORDER DIALOG CARD -->
+<div id="variantRemoveModal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="close-modal" onclick="closeVariantRemoveModal()">Isara ✕</button>
+        <h3 id="varRemoveTitle" style="color:#ef4444; margin-top:0; margin-bottom:6px;">Bawasan ang Order</h3>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">Pumili ng nakaraang order variant na babawasan:</p>
+        <div id="variantRemoveListContainer" style="max-height: 280px; overflow-y: auto;"></div>
+    </div>
+</div>
+
 <script>
     const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
@@ -125,10 +148,10 @@
     let activeModalItem = null;
 
     const DEFAULT_KIOSK_MENU = [
-        { name: "Chicken Joy Value Meal", category: "Meals", size: "1-Pc", price: "99", discount: "0", mixMatchType: "Category", mixMatchTarget: "Drinks & Beverages", mixMatchDiscount: "15", description: "Crispy fried chicken with rice & gravy.", specialDesc: "Try our best crispy chicken skin paired with steaming hot rice and signature gravy!", rating: 4.8, ratingCount: 120, image: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=300", status: "Available" },
-        { name: "Coke Large", category: "Drinks & Beverages", size: "Large", price: "50", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Iced cold Coca-Cola large size cup.", specialDesc: "Refreshingly cold drink to quench your thirst!", rating: 4.9, ratingCount: 240, image: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=300", status: "Available" },
-        { name: "Burger Cheezy Large", category: "Best Sellers", size: "Large", price: "120", discount: "10", mixMatchType: "Category", mixMatchTarget: "Drinks & Beverages", mixMatchDiscount: "20", description: "Juicy beef patty with extra melted cheese", specialDesc: "Try our best juicy beef burger packed with double melted cheese!", rating: 4.9, ratingCount: 310, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", status: "Available" },
-        { name: "Halo-Halo Special", category: "Desserts", size: "Regular", price: "85", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Loaded with leche flan, ube, and ice cream", specialDesc: "Our award-winning summer dessert loaded with homemade leche flan and rich ube!", rating: 5.0, ratingCount: 512, image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", status: "Available" }
+        { name: "Chicken Joy Value Meal", category: "Meals", size: '[{"name":"1-Pc Meal","price":"99","status":"Available"},{"name":"2-Pc Meal","price":"175","status":"Available"}]', price: "99", discount: "0", mixMatchType: "Category", mixMatchTarget: "Drinks & Beverages", mixMatchDiscount: "15", description: "Crispy fried chicken with rice & gravy.", specialDesc: "Try our best crispy chicken skin paired with steaming hot rice and signature gravy!", rating: 4.8, ratingCount: 120, image: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=300", status: "Available" },
+        { name: "Coke", category: "Drinks & Beverages", size: '[{"name":"Regular","price":"35","status":"Available"},{"name":"Large","price":"50","status":"Available"}]', price: "35", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Iced cold Coca-Cola soda.", specialDesc: "Refreshingly cold drink to quench your thirst!", rating: 4.9, ratingCount: 240, image: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=300", status: "Available" },
+        { name: "Burger Cheezy", category: "Best Sellers", size: "N/A", price: "120", discount: "10", mixMatchType: "Category", mixMatchTarget: "Drinks & Beverages", mixMatchDiscount: "20", description: "Juicy beef patty with extra melted cheese", specialDesc: "Try our best juicy beef burger packed with double melted cheese!", rating: 4.9, ratingCount: 310, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", status: "Available" },
+        { name: "Halo-Halo Special", category: "Desserts", size: "N/A", price: "85", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Loaded with leche flan, ube, and ice cream", specialDesc: "Our award-winning summer dessert loaded with homemade leche flan and rich ube!", rating: 5.0, ratingCount: 512, image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", status: "Available" }
     ];
 
     window.onload = function() {
@@ -199,7 +222,6 @@
             if (!categories.includes(cat)) categories.push(cat);
         });
 
-        // Idagdag ang Mix & Match tab kung may mga item na may mix match
         let hasMixMatchItems = allFetchedItems.some(i => i.mixMatchType && i.mixMatchType !== "N/A");
         if (hasMixMatchItems && !categories.includes("🔄 Mix & Match")) {
             categories.push("🔄 Mix & Match");
@@ -232,6 +254,28 @@
         renderGrid(itemsToDisplay);
     }
 
+    function parseVariants(sizeData) {
+        if (!sizeData || sizeData === "N/A") return [];
+        try {
+            let parsed = JSON.parse(sizeData);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            // Fallback kung lumang string comma list
+            return sizeData.split(',').map(s => ({ name: s.trim(), price: "0", status: "Available" }));
+        }
+        return [];
+    }
+
+    function getProductTotalCartQty(itemName) {
+        let count = 0;
+        for (let key in selectedCart) {
+            if (key === itemName || key.startsWith(`${itemName} (`)) {
+                count += selectedCart[key];
+            }
+        }
+        return count;
+    }
+
     function renderGrid(items) {
         const grid = document.getElementById('kioskMenuGrid');
         grid.innerHTML = "";
@@ -246,10 +290,10 @@
             let isAvail = statusStr.includes("available") || statusStr.includes("in stock") || !item.status;
             
             let itemName = item.name;
-            let itemSize = item.size && item.size !== "N/A" ? item.size : "";
+            let variantsArr = parseVariants(item.size);
+            let hasVariants = variantsArr.length > 0;
             let itemPrice = item.price || "0";
-            let displayKey = itemSize ? `${itemName} (${itemSize})` : itemName;
-            let currentQty = selectedCart[displayKey] || 0;
+            let totalQty = getProductTotalCartQty(itemName);
             let hasMixMatch = item.mixMatchType && item.mixMatchType !== "N/A";
 
             let card = document.createElement('div');
@@ -259,9 +303,9 @@
                 <div class="menu-details">
                     <div>
                         <div class="menu-title" onclick='openItemModal(${JSON.stringify(item)})' style="cursor:pointer;">${itemName}</div>
-                        ${itemSize ? `<span class="size-badge">${itemSize}</span>` : ''}
+                        ${hasVariants ? `<span class="size-badge">${variantsArr.length} Variants</span>` : ''}
                         <div class="rating-badge">⭐ ${parseFloat(item.rating || 4.8).toFixed(1)} <span style="color:#94a3b8; font-weight:normal;">(${item.ratingCount || 50})</span></div>
-                        <div style="font-size: 13px; font-weight: bold; color: #38bdf8; margin-bottom: 4px;">₱${itemPrice}</div>
+                        <div style="font-size: 13px; font-weight: bold; color: #38bdf8; margin-bottom: 4px;">₱${itemPrice}${hasVariants ? '+' : ''}</div>
                         <div class="menu-desc">${item.description || ''}</div>
                     </div>
                     <div>
@@ -270,9 +314,9 @@
                                 <button type="button" class="mix-btn" onclick='openMixMatchModal(${JSON.stringify(item)})'>🔄 Piliin ang Ka-Match</button>
                             ` : `
                                 <div class="qty-control">
-                                    <button type="button" class="qty-btn" onclick="updateQty('${escapeQuotes(displayKey)}', -1)">-</button>
-                                    <span class="qty-val" id="qty-val-${CSS.escape(displayKey)}">${currentQty}</span>
-                                    <button type="button" class="qty-btn" onclick="updateQty('${escapeQuotes(displayKey)}', 1)">+</button>
+                                    <button type="button" class="qty-btn" onclick="handleMinusClick('${escapeQuotes(itemName)}')">-</button>
+                                    <span class="qty-val" id="qty-val-${CSS.escape(itemName)}">${totalQty}</span>
+                                    <button type="button" class="qty-btn" onclick="handlePlusClick('${escapeQuotes(itemName)}')">+</button>
                                 </div>
                             `}
                         ` : '<div style="color:#ef4444; font-size:11px; font-weight:bold; text-align:center; padding:4px;">Out of Stock</div>'}
@@ -284,16 +328,121 @@
         updateCartBar();
     }
 
+    /* PLUS (+) CLICK LOGIC WITH VARIANT CHECK */
+    function handlePlusClick(itemName) {
+        let itemObj = allFetchedItems.find(i => i.name === itemName);
+        if (!itemObj) return;
+
+        let variantsArr = parseVariants(itemObj.size);
+        if (variantsArr.length > 0) {
+            // May Variants: Ipakita ang Variant Dialog Card
+            openVariantAddModal(itemObj, variantsArr);
+        } else {
+            // Single Item: Direct add sa cart
+            updateQty(itemName, 1);
+        }
+    }
+
+    /* MINUS (-) CLICK LOGIC WITH VARIANT CHECK */
+    function handleMinusClick(itemName) {
+        let itemObj = allFetchedItems.find(i => i.name === itemName);
+        if (!itemObj) return;
+
+        let variantsArr = parseVariants(itemObj.size);
+        if (variantsArr.length > 0) {
+            // May Variants: Ipakita ang Remove Variant Dialog Card
+            openVariantRemoveModal(itemName);
+        } else {
+            // Single Item: Direct minus sa cart
+            updateQty(itemName, -1);
+        }
+    }
+
+    function openVariantAddModal(itemObj, variantsArr) {
+        document.getElementById("varAddTitle").innerText = `➕ ${itemObj.name}`;
+        const container = document.getElementById("variantAddListContainer");
+        container.innerHTML = "";
+
+        variantsArr.forEach(v => {
+            let isAvail = v.status !== "Out of Stock";
+            let displayKey = `${itemObj.name} (${v.name})`;
+            let currentQty = selectedCart[displayKey] || 0;
+
+            let div = document.createElement("div");
+            div.className = "variant-select-item";
+            div.innerHTML = `
+                <div>
+                    <b>${v.name}</b><br>
+                    <span style="font-size:12px; color:#38bdf8; font-weight:bold;">₱${v.price}</span>
+                    <span style="font-size:10px; margin-left:6px; color:${isAvail?'#16a34a':'#ef4444'};">(${v.status})</span>
+                </div>
+                <div>
+                    ${isAvail ? `<button type="button" class="btn-green" style="padding:6px 14px; font-size:12px; margin:0;" onclick="selectVariantToAdd('${escapeQuotes(displayKey)}')">➕ Add (${currentQty})</button>` : '<span style="font-size:11px; color:#ef4444;">Unavailable</span>'}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        document.getElementById("variantAddModal").style.display = "flex";
+    }
+
+    function selectVariantToAdd(displayKey) {
+        updateQty(displayKey, 1);
+        closeVariantAddModal();
+        filterAndRenderGrid(activeCategory);
+    }
+
+    function closeVariantAddModal() { document.getElementById("variantAddModal").style.display = "none"; }
+
+    function openVariantRemoveModal(itemName) {
+        document.getElementById("varRemoveTitle").innerText = `➖ ${itemName}`;
+        const container = document.getElementById("variantRemoveListContainer");
+        container.innerHTML = "";
+
+        let orderedVariants = [];
+        for (let key in selectedCart) {
+            if (key.startsWith(`${itemName} (`)) {
+                orderedVariants.push({ key: key, qty: selectedCart[key] });
+            }
+        }
+
+        if (orderedVariants.length === 0) {
+            container.innerHTML = `<p style="color:#94a3b8; font-size:12px; text-align:center;">Wala ka pang na-order na variant para sa produktong ito.</p>`;
+        } else {
+            orderedVariants.forEach(ov => {
+                let div = document.createElement("div");
+                div.className = "variant-select-item";
+                div.innerHTML = `
+                    <div>
+                        <b>${ov.key}</b><br>
+                        <span style="font-size:12px; color:#38bdf8;">Kasalukuyang Qty: <b>${ov.qty}</b></span>
+                    </div>
+                    <button type="button" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="selectVariantToRemove('${escapeQuotes(ov.key)}')">➖ Bawasan</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        document.getElementById("variantRemoveModal").style.display = "flex";
+    }
+
+    function selectVariantToRemove(displayKey) {
+        updateQty(displayKey, -1);
+        closeVariantRemoveModal();
+        filterAndRenderGrid(activeCategory);
+    }
+
+    function closeVariantRemoveModal() { document.getElementById("variantRemoveModal").style.display = "none"; }
+
     function openItemModal(item) {
         activeModalItem = item;
         document.getElementById('mTitle').innerText = item.name;
-        document.getElementById('mSize').innerText = item.size && item.size !== "N/A" ? `Size: ${item.size}` : '';
+        document.getElementById('mSize').innerText = item.size && item.size !== "N/A" ? `Has Variants` : '';
         document.getElementById('mSize').style.display = item.size && item.size !== "N/A" ? 'inline-block' : 'none';
         document.getElementById('mImg').src = item.image || 'https://via.placeholder.com/300';
         document.getElementById('mPrice').innerText = `₱${item.price}`;
         document.getElementById('mRating').innerHTML = `⭐ ${parseFloat(item.rating || 4.8).toFixed(1)} / 10.0 <span style="color:#38bdf8; margin-left:8px;">(${Math.round(((item.rating || 4.8)/10)*100)}% Satisfied)</span>`;
         
-        // Kung may specialDesc, yun ang gagamitin, kung wala, gagamitin ang description
         let displayDesc = item.specialDesc && item.specialDesc.trim() !== "" ? item.specialDesc : (item.description || "Try our best product!");
         document.getElementById('mDesc').innerText = displayDesc;
         
@@ -301,27 +450,19 @@
         document.getElementById('itemModal').style.display = 'flex';
     }
 
-    function closeItemModal() {
-        document.getElementById('itemModal').style.display = 'none';
-    }
+    function closeItemModal() { document.getElementById('itemModal').style.display = 'none'; }
 
-    // RATINGS 1-10 LOGIC (1 = 0.1 equivalent sa rating, 10 = 1 full rating)
     function submitRating(val) {
         if (!activeModalItem) return;
-        
         let currentRating = parseFloat(activeModalItem.rating || 4.8);
         let currentCount = parseInt(activeModalItem.ratingCount || 50);
-
-        // Ang 1-10 rating ay kino-convert kung saan ang 10 ay nagdadagdag ng 1.0, ang 1 ay 0.1
         let ratingIncrement = val * 0.1;
         
-        // Bagong weighted average o simpleng bagong rating calculation
         let newRating = Math.min(10.0, parseFloat(((currentRating * currentCount + ratingIncrement) / (currentCount + 1)).toFixed(1)));
         
         activeModalItem.rating = newRating;
         activeModalItem.ratingCount = currentCount + 1;
 
-        // I-update sa local array
         let found = allFetchedItems.find(i => i.name === activeModalItem.name);
         if (found) {
             found.rating = newRating;
@@ -355,8 +496,7 @@
             container.innerHTML = `<p style="color:#ef4444; text-align:center; font-size:12px;">Walang nakitang ka-match item para sa kategoryang ito.</p>`;
         } else {
             targetItems.forEach(matchItem => {
-                let matchSize = matchItem.size && matchItem.size !== "N/A" ? ` (${matchItem.size})` : '';
-                let comboKey = `${mainItem.name} + ${matchItem.name}${matchSize} (Mix&Match)`;
+                let comboKey = `${mainItem.name} + ${matchItem.name} (Mix&Match)`;
                 let qty = selectedCart[comboKey] || 0;
                 let finalComboPrice = (parseFloat(mainItem.price) + parseFloat(matchItem.price) - parseFloat(mainItem.mixMatchDiscount || 0));
 
@@ -366,7 +506,7 @@
                     <div style="display:flex; align-items:center; gap:8px;">
                         <img src="${matchItem.image || ''}" style="width:40px; height:40px; object-fit:cover; border-radius:6px;">
                         <div>
-                            <div style="font-size:12px; font-weight:bold;">${matchItem.name}${matchSize}</div>
+                            <div style="font-size:12px; font-weight:bold;">${matchItem.name}</div>
                             <div style="font-size:11px; color:#38bdf8;">Combo Price: ₱${finalComboPrice} <small style="color:#ef4444; text-decoration:line-through;">₱${parseInt(mainItem.price)+parseInt(matchItem.price)}</small></div>
                         </div>
                     </div>
@@ -405,8 +545,11 @@
         if (selectedCart[itemKey] < 0) selectedCart[itemKey] = 0;
         if (selectedCart[itemKey] === 0) delete selectedCart[itemKey];
 
-        let valEl = document.getElementById(`qty-val-${CSS.escape(itemKey)}`);
-        if (valEl) valEl.innerText = selectedCart[itemKey] || 0;
+        // I-update ang total count badge sa main grid card
+        let mainName = itemKey.split(' (')[0];
+        let totalValEl = document.getElementById(`qty-val-${CSS.escape(mainName)}`);
+        if (totalValEl) totalValEl.innerText = getProductTotalCartQty(mainName);
+
         updateCartBar();
     }
 
