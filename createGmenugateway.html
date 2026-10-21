@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareMap - Kiosk Menu Manager (Google Sheets Edition)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #2563eb; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        h2 { text-align: center; color: #38bdf8; margin-top: 0; }
+        .card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
+        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; background: #0f172a; color: #fff; box-sizing: border-box; font-size: 14px; }
+        button { background-color: var(--primary); font-weight: bold; cursor: pointer; border: none; }
+        button:hover { opacity: 0.9; }
+        .btn-blue { background: #0284c7; color: white; }
+        .btn-green { background: #16a34a; color: white; }
+        .btn-secondary { background: #475569; color: white; }
+        .item-row { background: #334155; padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .cat-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #0284c7; color: #fff; margin-left: 4px; font-weight: bold; }
+        .avail { background: #166534; color: #dcfce7; }
+        .not-avail { background: #991b1b; color: #fee2e2; }
+        .alert-box { background: #0284c7; color: white; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; text-align: center; }
+        
+        /* NOTICE & GUIDE BOXES */
+        .notice-box { background: #0284c715; border: 1px solid #0284c7; padding: 14px; border-radius: 8px; font-size: 13px; line-height: 1.6; color: #38bdf8; margin-bottom: 15px; text-align: left; }
+        .guide-box { background: #102a43; border-left: 4px solid #38bdf8; padding: 10px; border-radius: 4px; font-size: 12px; margin-bottom: 12px; color: #cbd5e1; line-height: 1.5; }
+        .warning-box { background: #7f1d1d33; border-left: 4px solid #ef4444; padding: 10px; border-radius: 4px; font-size: 12px; margin-bottom: 12px; color: #fca5a5; line-height: 1.5; }
+
+        /* MODAL POPUP STYLES */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
+        .modal-content { background: #1e293b; border-radius: 12px; padding: 20px; max-width: 500px; width: 100%; border: 1px solid #475569; max-height: 90vh; overflow-y: auto; box-sizing: border-box; }
+        
+        .code-box-wrapper { position: relative; margin-top: 10px; margin-bottom: 15px; }
+        .code-box { background: #090d16; border: 1px solid #0284c7; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; color: #38bdf8; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 200px; cursor: pointer; }
+        
+        .copy-btn-main { background: #16a34a; color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; font-size: 14px; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
+        .copy-btn-main:hover { background: #15803d; }
+        .copy-btn-main svg { fill: currentColor; width: 18px; height: 18px; }
+
+        /* SWITCH BUTTON */
+        .switch-container { display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #475569; margin-bottom: 12px; }
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #16a34a; }
+        input:checked + .slider:before { transform: translateX(22px); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🍔 Store Menu Manager</h2>
+
+    <!-- Store Login Credentials -->
+    <div class="card" id="loginCard">
+        <h3>🔑 Store Login</h3>
+        <label>Store Page Username:</label>
+        <input type="text" id="storeUsername" placeholder="halimbawa: MyFbPageUsername" onchange="checkStorePasswordStatus()">
+        
+        <div id="statusNotice" style="display:none;" class="alert-box"></div>
+
+        <div id="passwordWrapper">
+            <label>Password:</label>
+            <input type="password" id="storePassword" placeholder="I-type ang iyong password">
+        </div>
+        
+        <button id="loginActionBtn" onclick="loginAndLoadMenu()">Log In & Load Menu</button>
+    </div>
+
+    <!-- MAIN MANAGER SECTION (LALABAS PAGKA-LOG IN) -->
+    <div id="managerSection" style="display: none;">
+        <!-- Top Bar with Logout Button -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 13px; color: #38bdf8;">Logged in as: <b id="activeStoreLabel"></b></span>
+            <button onclick="logoutStore()" style="width: auto; padding: 5px 10px; background: #dc2626; font-size: 11px; margin:0;">Log Out / Switch Store</button>
+        </div>
+
+        <!-- FIRST TIME USER SETUP CARD (LALABAS KUNG WALA PANG SHEET LINK) -->
+        <div id="firstTimeSetupCard" class="card" style="display: none;">
+            <h3 style="text-align: center; margin-top: 0; color:#38bdf8;">📌 Setup Your Menu Storage</h3>
+            <p style="color:#94a3b8; font-size: 13px; text-align: center;">Wala ka pang nakakabit na Google Sheet storage para sa iyong menu.</p>
+
+            <div class="warning-box">
+                <b>📱 PAALALA SA CELLPHONE USERS:</b><br>
+                Para hindi kusang magbukas ang Google Sheets App (na walang Apps Script menu):<br>
+                Pumunta sa Phone Settings > <b>Apps > Google Sheets > Open by default</b> at i-<b>OFF</b> ito (o piliin ang <i>Ask every time / Open in Browser</i>).
+            </div>
+
+            <div class="guide-box">
+                <b>💡 Paano makuha ang Link ng Blank Google Sheet?</b><br>
+                1. Gumawa ng Blank Sheet sa Google Sheets / Drive.<br>
+                2. I-click ang <b>3 dots (⋮)</b> sa tabi ng sheet o sa <b>Share / Copy Link</b>.<br>
+                3. Hindi na kailangang baguhin ang Manage Access (kahit Private/Restricted, okay lang).
+            </div>
+
+            <label style="font-size: 12px; font-weight: bold; color: #38bdf8;">1. I-paste ang Link ng Blank Google Sheet Mo:</label>
+            <input type="text" id="blankSheetLinkInput" placeholder="https://docs.google.com/spreadsheets/d/...">
+
+            <button class="btn-blue" onclick="processCopyAndOpenSheet('blankSheetLinkInput')">
+                🚀 Copy Code & Open Google Sheet sa Browser
+            </button>
+        </div>
+
+        <!-- STEP 2: PAALALA CARD (LALABAS MATAPOS NANG COPY & OPEN) -->
+        <div id="urlInputReminderCard" class="card" style="display: none;">
+            <h3 style="margin-top: 0; color: #38bdf8;">⚙️ Huling Hakbang sa Web Browser</h3>
+            
+            <div class="notice-box">
+                <b>💡 Naka-copy na ang code at nabuksan na ang Sheet sa Browser!</b><br><br>
+                1. Sa browser, siguraduhing naka-<b>Desktop Site</b> mode (3 dots > Desktop site).<br>
+                2. Sa Google Sheet menu, i-click ang <b>Extensions > Apps Script</b>.<br>
+                3. ⚠️ <b>Burahin MUNA LAHAT ng nakasulat</b> doon bago i-paste ang code.<br>
+                4. I-click ang <b>Deploy > New deployment</b>, piliin ang <b>Web app</b>.<br>
+                5. Sa <i>Who has access</i>, piliin ang <b>Anyone</b> at i-click ang <b>Deploy</b>.<br>
+                6. Kopyahin ang lalabas na <b>Web App URL</b> (nagtatapos sa <code>/exec</code>) at i-paste sa ibaba:
+            </div>
+
+            <label style="font-size: 12px; font-weight: bold;">2. I-paste ang Web App URL (/exec):</label>
+            <input type="text" id="sheetWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
+            <button class="btn-green" onclick="saveSheetUrlToSupabase()">💾 Save Google Sheet Link</button>
+            
+            <button class="btn-secondary" onclick="openCodeModal()" style="margin-top: 8px;">📜 Tignan Uli ang Code</button>
+        </div>
+
+        <!-- MAIN MENU FORM AND LIST (LALABAS KAPAG OKAY NA ANG LINK) -->
+        <div id="mainMenuSection" style="display: none;">
+            <!-- Add / Edit Menu Form -->
+            <div class="card" id="menuFormCard" style="display: none; border: 1px solid #38bdf8;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 id="formTitle" style="margin: 0; color: #38bdf8;">➕ Magdagdag ng Item</h3>
+                    <button onclick="hideMenuForm()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">❌ Isara</button>
+                </div>
+                
+                <label style="font-size: 12px; font-weight: bold; margin-top: 10px; display: block;">Product Category:</label>
+                <input type="text" id="prodCategory" placeholder="hal. Meals / Desserts / Shirts" list="catSuggestions">
+                <datalist id="catSuggestions">
+                    <option value="Best Sellers">
+                    <option value="Main Meals">
+                    <option value="Snacks & Sides">
+                    <option value="Drinks & Beverages">
+                    <option value="Desserts">
+                </datalist>
+
+                <label style="font-size: 12px; font-weight: bold;">Product Name:</label>
+                <input type="text" id="prodName" placeholder="halimbawa: Halo-Halo Special">
+
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 12px; font-weight: bold;">Price (₱):</label>
+                        <input type="number" id="prodPrice" placeholder="99">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 12px; font-weight: bold;">Promo Discount (₱) (Optional):</label>
+                        <input type="number" id="prodDiscount" placeholder="0">
+                    </div>
+                </div>
+
+                <!-- MIX & MATCH SWITCH & OPTIONS -->
+                <div class="switch-container">
+                    <span style="font-size: 13px; font-weight: bold;">Mix & Match Special Combo</span>
+                    <label class="switch">
+                        <input type="checkbox" id="mixMatchToggle" onchange="toggleMixMatchFields()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div id="mixMatchBox" style="display: none; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px dashed #0284c7; margin-bottom: 12px;">
+                    <label style="font-size: 12px; font-weight: bold;">Pumili ng Match Type:</label>
+                    <select id="mixMatchType" onchange="updateMixMatchDropdown()">
+                        <option value="Category">Product Category</option>
+                        <option value="Selected Item">Selected Item</option>
+                    </select>
+
+                    <label style="font-size: 12px; font-weight: bold;">Pumili ng Ka-Match Item / Category:</label>
+                    <select id="mixMatchTarget">
+                        <option value="">-- Pumili sa listahan --</option>
+                    </select>
+
+                    <label style="font-size: 12px; font-weight: bold;">Mix & Match Combo Discount (₱):</label>
+                    <input type="number" id="mixMatchDiscount" placeholder="hal. 15">
+                </div>
+
+                <label style="font-size: 12px; font-weight: bold;">Description (Opsyonal):</label>
+                <textarea id="prodDesc" rows="2" placeholder="halimbawa: May leche flan at ice cream"></textarea>
+
+                <label style="font-size: 12px; font-weight: bold;">Availability Status:</label>
+                <select id="prodAvailability">
+                    <option value="Available">Available (Pagkain)</option>
+                    <option value="Not Available / Out of Stock">Not Available / Out of Stock (Pagkain)</option>
+                    <option value="In Stock">In Stock (Items / Gadgets / Clothes)</option>
+                    <option value="Out of Stock">Out of Stock (Items / Gadgets / Clothes)</option>
+                </select>
+
+                <label style="font-size: 12px; font-weight: bold;">Quantity Availability (Optional):</label>
+                <input type="text" id="prodQuantity" value="Full Stock" placeholder="hal. Full Stock / 50 pcs">
+
+                <label style="font-size: 12px; font-weight: bold;">Image Link URL (Google Drive / ImgBB):</label>
+                <input type="url" id="prodImage" placeholder="I-paste ang Google Drive Share Link dito">
+
+                <button class="btn-green" onclick="addMenuItemToSheet()" style="margin-bottom:0;">💾 I-save ang Item sa Google Sheet</button>
+            </div>
+
+            <!-- Active Menu List (MAIN VIEW) -->
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                    <h3 style="margin:0;">Lista ng mga Item sa Google Sheet</h3>
+                    <button class="btn-blue" onclick="showReconfigCard()" style="width: auto; padding: 6px 12px; font-size: 12px; margin:0;">⚙️ Re-config Sheet</button>
+                </div>
+
+                <button class="btn-green" onclick="showAddMenuForm()" style="font-size: 15px; padding: 12px; margin-bottom: 10px;">
+                    ➕ Add New Menu Item
+                </button>
+
+                <div id="sheetItemsContainer" style="max-height: 500px; overflow-y: auto; margin-top: 10px;">
+                    <p style="text-align:center; color:#94a3b8;">Lino-load ang menu mula sa Google Sheet...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: CODE POPUP WITH COPY BUTTON -->
+<div id="codeModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; color: #38bdf8;">📜 Apps Script Webhook Code</h3>
+        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 5px;">I-tap ang button sa ibaba para ma-copy ang code:</p>
+        
+        <div class="code-box-wrapper">
+            <div id="webhookCodeText" class="code-box" onclick="copyWebhookCode()" title="Click to copy code">function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["Category", "Name", "Price", "Discount", "MixMatch_Type", "MixMatch_Target", "MixMatch_Discount", "Description", "Status", "Quantity", "Image"]);
+  }
+  
+  if (data.action === "ADD_ITEM") {
+    sheet.appendRow([
+      data.category, data.name, data.price, data.discount,
+      data.mixMatchType, data.mixMatchTarget, data.mixMatchDiscount,
+      data.description, data.status, data.quantity, data.image
+    ]);
+    return ContentService.createTextOutput(JSON.stringify({status: "SUCCESS"})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var rows = sheet.getDataRange().getValues();
+  var items = [];
+  
+  for (var i = 1; i < rows.length; i++) {
+    items.push({
+      category: rows[i][0],
+      name: rows[i][1],
+      price: rows[i][2],
+      discount: rows[i][3],
+      mixMatchType: rows[i][4],
+      mixMatchTarget: rows[i][5],
+      mixMatchDiscount: rows[i][6],
+      description: rows[i][7],
+      status: rows[i][8],
+      quantity: rows[i][9],
+      image: rows[i][10]
+    });
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify(items)).setMimeType(ContentService.MimeType.JSON);
+}</div>
+        </div>
+
+        <button class="copy-btn-main" onclick="copyWebhookCode()">
+            <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            <span>Copy Code to Clipboard</span>
+        </button>
+
+        <button class="btn-secondary" onclick="closeModal('codeModal')" style="margin-top: 5px;">Isara</button>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let activeStore = "";
+    let activeWebhookUrl = "";
+    let loadedMenuItems = [];
+
+    // MALINIS NA APPS SCRIPT CODE NA MAY ESCAPED NEWLINES PARA WALANG INDENTATION BUG SA MOBILE
+    const CLEAN_APPS_SCRIPT_CODE = 
+"function doPost(e) {\n" +
+"  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();\n" +
+"  var data = JSON.parse(e.postData.contents);\n" +
+"  \n" +
+"  if (sheet.getLastRow() === 0) {\n" +
+"    sheet.appendRow([\"Category\", \"Name\", \"Price\", \"Discount\", \"MixMatch_Type\", \"MixMatch_Target\", \"MixMatch_Discount\", \"Description\", \"Status\", \"Quantity\", \"Image\"]);\n" +
+"  }\n" +
+"  \n" +
+"  if (data.action === \"ADD_ITEM\") {\n" +
+"    sheet.appendRow([\n" +
+"      data.category, data.name, data.price, data.discount,\n" +
+"      data.mixMatchType, data.mixMatchTarget, data.mixMatchDiscount,\n" +
+"      data.description, data.status, data.quantity, data.image\n" +
+"    ]);\n" +
+"    return ContentService.createTextOutput(JSON.stringify({status: \"SUCCESS\"})).setMimeType(ContentService.MimeType.JSON);\n" +
+"  }\n" +
+"}\n\n" +
+"function doGet(e) {\n" +
+"  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();\n" +
+"  var rows = sheet.getDataRange().getValues();\n" +
+"  var items = [];\n" +
+"  \n" +
+"  for (var i = 1; i < rows.length; i++) {\n" +
+"    items.push({\n" +
+"      category: rows[i][0],\n" +
+"      name: rows[i][1],\n" +
+"      price: rows[i][2],\n" +
+"      discount: rows[i][3],\n" +
+"      mixMatchType: rows[i][4],\n" +
+"      mixMatchTarget: rows[i][5],\n" +
+"      mixMatchDiscount: rows[i][6],\n" +
+"      description: rows[i][7],\n" +
+"      status: rows[i][8],\n" +
+"      quantity: rows[i][9],\n" +
+"      image: rows[i][10]\n" +
+"    });\n" +
+"  }\n" +
+"  \n" +
+"  return ContentService.createTextOutput(JSON.stringify(items)).setMimeType(ContentService.MimeType.JSON);\n" +
+"}";
+
+    window.onload = function() {
+        document.getElementById('storeUsername').value = "";
+        document.getElementById('storePassword').value = "";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const storeFromUrl = urlParams.get('page');
+        
+        if(storeFromUrl) {
+            document.getElementById('storeUsername').value = storeFromUrl.toLowerCase();
+            checkStorePasswordStatus();
+        }
+    };
+
+    function convertGoogleDriveLink(rawUrl) {
+        if (!rawUrl) return "";
+        rawUrl = rawUrl.trim();
+        const driveRegex = /(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
+        const match = rawUrl.match(driveRegex);
+        if (match && match[1]) {
+            return `https://lh3.googleusercontent.com/d/${match[1]}`;
+        }
+        return rawUrl;
+    }
+
+    async function checkStorePasswordStatus() {
+        const username = document.getElementById('storeUsername').value.trim().toLowerCase();
+        const pwdWrapper = document.getElementById('passwordWrapper');
+        const actionBtn = document.getElementById('loginActionBtn');
+        const notice = document.getElementById('statusNotice');
+
+        if(!username) return;
+
+        const { data, error } = await supabaseClient
+            .from('licenses')
+            .select('password')
+            .eq('username', username)
+            .single();
+
+        if (error || !data) {
+            notice.style.display = "block";
+            notice.style.background = "#ef4444";
+            notice.innerText = "❌ Walang natagpung lisensyadong Store Account sa pangalang ito.";
+            pwdWrapper.style.display = "none";
+            actionBtn.style.display = "none";
+            return;
+        }
+
+        if (!data.password || data.password.trim() === "") {
+            pwdWrapper.style.display = "none";
+            notice.style.display = "block";
+            notice.style.background = "#eab308";
+            notice.style.color = "#000";
+            notice.innerHTML = "⚠️ <b>Wala ka pang nalilikhang Password!</b><br>Kailangan mo munang mag-set ng password para sa iyong store.";
+            
+            actionBtn.style.display = "block";
+            actionBtn.style.background = "#16a34a";
+            actionBtn.innerText = "🔑 Gumawa ng Password Muna (Setup Account)";
+            actionBtn.onclick = function() {
+                window.location.href = `./accountgateway.html?page=${encodeURIComponent(username)}`;
+            };
+        } else {
+            pwdWrapper.style.display = "block";
+            notice.style.display = "none";
+            
+            actionBtn.style.display = "block";
+            actionBtn.style.background = "#2563eb";
+            actionBtn.innerText = "Log In & Load Menu";
+            actionBtn.onclick = loginAndLoadMenu;
+        }
+    }
+
+    async function loginAndLoadMenu() {
+        const username = document.getElementById('storeUsername').value.trim().toLowerCase();
+        const pwd = document.getElementById('storePassword').value.trim();
+
+        if(!username || !pwd) {
+            alert("Pakipunan ang Store Username at Password!");
+            return;
+        }
+
+        const { data, error } = await supabaseClient
+            .from('licenses')
+            .select('*')
+            .eq('username', username)
+            .single();
+
+        if(error || !data || data.password !== pwd) {
+            alert("❌ Mali ang Username o Password!");
+            return;
+        }
+
+        activeStore = username;
+        document.getElementById('activeStoreLabel').innerText = "@" + username;
+        document.getElementById('loginCard').style.display = 'none';
+        document.getElementById('managerSection').style.display = 'block';
+
+        loadStoreSheetUrl();
+    }
+
+    function logoutStore() {
+        activeStore = "";
+        activeWebhookUrl = "";
+        loadedMenuItems = [];
+        document.getElementById('storeUsername').value = "";
+        document.getElementById('storePassword').value = "";
+        if(document.getElementById('statusNotice')) {
+            document.getElementById('statusNotice').style.display = "none";
+        }
+        document.getElementById('loginCard').style.display = 'block';
+        document.getElementById('managerSection').style.display = 'none';
+    }
+
+    // MODAL CONTROLS
+    function openCodeModal() { document.getElementById("codeModal").style.display = "flex"; }
+    function closeModal(id) { document.getElementById(id).style.display = "none"; }
+
+    function forceWebBrowserUrl(originalUrl) {
+        if (!originalUrl) return "";
+        let cleanUrl = originalUrl.replace("/edit?usp=drivesdk", "/edit").replace("/edit?usp=sharing", "/edit");
+        if (!cleanUrl.includes("?")) {
+            cleanUrl += "?mobile=false";
+        } else {
+            cleanUrl += "&mobile=false";
+        }
+        return cleanUrl;
+    }
+
+    function processCopyAndOpenSheet(inputId) {
+        const rawSheetUrl = document.getElementById(inputId).value.trim();
+        if (!rawSheetUrl) {
+            alert("Paki-paste muna ang Link ng Blank Google Sheet mo!");
+            return;
+        }
+
+        const targetWebUrl = forceWebBrowserUrl(rawSheetUrl);
+
+        navigator.clipboard.writeText(CLEAN_APPS_SCRIPT_CODE).then(() => {
+            alert("📋 Na-copy na ang Webhook Code sa Clipboard!\n\nPAALALA: Burahin MUNA LAHAT ng nakasulat sa Apps Script bago i-paste!\n\nBinubuksan na ang iyong Sheet sa Browser...");
+            window.open(targetWebUrl, '_blank');
+            document.getElementById("firstTimeSetupCard").style.display = "none";
+            document.getElementById("urlInputReminderCard").style.display = "block";
+        }).catch(err => {
+            alert("Failed to copy code automatically: " + err);
+            window.open(targetWebUrl, '_blank');
+        });
+    }
+
+    function copyWebhookCode() {
+        navigator.clipboard.writeText(CLEAN_APPS_SCRIPT_CODE).then(() => {
+            alert("📋 Na-copy na ang Webhook Code sa iyong Clipboard!\n\nPAALALA: Burahin MUNA LAHAT ng nakasulat sa Apps Script bago i-paste!");
+        }).catch(err => {
+            alert("Failed to copy code: " + err);
+        });
+    }
+
+    function showReconfigCard() {
+        document.getElementById("mainMenuSection").style.display = "none";
+        document.getElementById("firstTimeSetupCard").style.display = "block";
+    }
+
+    function toggleMixMatchFields() {
+        const isChecked = document.getElementById("mixMatchToggle").checked;
+        document.getElementById("mixMatchBox").style.display = isChecked ? "block" : "none";
+        if (isChecked) updateMixMatchDropdown();
+    }
+
+    function updateMixMatchDropdown() {
+        const type = document.getElementById("mixMatchType").value;
+        const targetSelect = document.getElementById("mixMatchTarget");
+        targetSelect.innerHTML = '<option value="">-- Pumili sa listahan --</option>';
+
+        if (type === "Category") {
+            const categories = [...new Set(loadedMenuItems.map(i => i.category).filter(Boolean))];
+            categories.forEach(cat => {
+                targetSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+        } else {
+            loadedMenuItems.forEach(item => {
+                targetSelect.innerHTML += `<option value="${item.name}">${item.name}</option>`;
+            });
+        }
+    }
+
+    async function loadStoreSheetUrl() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('licenses')
+                .select('menu_sheet_url')
+                .eq('username', activeStore)
+                .single();
+
+            if (!error && data && data.menu_sheet_url) {
+                activeWebhookUrl = data.menu_sheet_url;
+                document.getElementById("sheetWebhookUrl").value = activeWebhookUrl;
+                document.getElementById("firstTimeSetupCard").style.display = "none";
+                document.getElementById("urlInputReminderCard").style.display = "none";
+                document.getElementById("mainMenuSection").style.display = "block";
+                fetchMenuItemsFromSheet();
+            } else {
+                document.getElementById("firstTimeSetupCard").style.display = "block";
+                document.getElementById("urlInputReminderCard").style.display = "none";
+                document.getElementById("mainMenuSection").style.display = "none";
+            }
+        } catch (err) {
+            console.error("Error loading URL:", err);
+        }
+    }
+
+    async function saveSheetUrlToSupabase() {
+        const urlInput = document.getElementById("sheetWebhookUrl").value.trim();
+        if (!urlInput) {
+            alert("Paki-paste ang Google Sheet Web App / Webhook URL!");
+            return;
+        }
+
+        const { error } = await supabaseClient
+            .from('licenses')
+            .update({ menu_sheet_url: urlInput })
+            .eq('username', activeStore);
+
+        if (error) {
+            alert("Error sa pag-save: " + error.message);
+        } else {
+            activeWebhookUrl = urlInput;
+            alert("✅ Matagumpay na naisafe ang Google Sheet Link!");
+            loadStoreSheetUrl();
+        }
+    }
+
+    function showAddMenuForm() {
+        resetMenuFormFields();
+        document.getElementById('formTitle').innerText = "➕ Magdagdag ng Item";
+        document.getElementById('menuFormCard').style.display = 'block';
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function hideMenuForm() {
+        document.getElementById('menuFormCard').style.display = 'none';
+        resetMenuFormFields();
+    }
+
+    function resetMenuFormFields() {
+        document.getElementById('prodName').value = "";
+        document.getElementById('prodCategory').value = "";
+        document.getElementById('prodPrice').value = "";
+        document.getElementById('prodDiscount').value = "";
+        document.getElementById('prodImage').value = "";
+        document.getElementById('prodDesc').value = "";
+        document.getElementById('prodQuantity').value = "Full Stock";
+        document.getElementById('mixMatchToggle').checked = false;
+        toggleMixMatchFields();
+    }
+
+    async function addMenuItemToSheet() {
+        if (!activeWebhookUrl) {
+            alert("I-save muna ang Google Sheet Webhook URL!");
+            return;
+        }
+
+        const name = document.getElementById("prodName").value.trim();
+        const price = document.getElementById("prodPrice").value.trim();
+        const category = document.getElementById("prodCategory").value.trim() || "General";
+        const rawImageInput = document.getElementById("prodImage").value.trim();
+
+        if (!name || !price) {
+            alert("Lagyan ng Product Name at Price!");
+            return;
+        }
+
+        const finalImageUrl = convertGoogleDriveLink(rawImageInput);
+
+        const payload = {
+            action: "ADD_ITEM",
+            category: category,
+            name: name,
+            price: price,
+            discount: document.getElementById("prodDiscount").value.trim() || "0",
+            mixMatchType: document.getElementById("mixMatchToggle").checked ? document.getElementById("mixMatchType").value : "N/A",
+            mixMatchTarget: document.getElementById("mixMatchToggle").checked ? document.getElementById("mixMatchTarget").value : "N/A",
+            mixMatchDiscount: document.getElementById("mixMatchToggle").checked ? document.getElementById("mixMatchDiscount").value.trim() || "0" : "0",
+            description: document.getElementById("prodDesc").value.trim() || "",
+            status: document.getElementById("prodAvailability").value,
+            quantity: document.getElementById("prodQuantity").value.trim() || "Full Stock",
+            image: finalImageUrl || ""
+        };
+
+        try {
+            await fetch(activeWebhookUrl, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            alert("✅ Naipasa ang item sa Google Sheet!");
+            hideMenuForm();
+            setTimeout(fetchMenuItemsFromSheet, 2000);
+        } catch (err) {
+            alert("Error sa pagpasa sa Sheet: " + err);
+        }
+    }
+
+    async function fetchMenuItemsFromSheet() {
+        if (!activeWebhookUrl) return;
+
+        try {
+            const res = await fetch(activeWebhookUrl + "?action=GET_ITEMS");
+            const data = await res.json();
+            loadedMenuItems = data || [];
+
+            const container = document.getElementById("sheetItemsContainer");
+            container.innerHTML = "";
+
+            if (!data || data.length === 0) {
+                container.innerHTML = "<p style='color:#94a3b8; text-align:center;'>Blanko pa ang Google Sheet menu.</p>";
+                return;
+            }
+
+            data.forEach(item => {
+                let isAvail = item.status === "Available" || item.status === "In Stock";
+                const div = document.createElement("div");
+                div.className = "item-row";
+                div.innerHTML = `
+                    <div style="display:flex; align-items:center;">
+                        <img src="${item.image || 'https://via.placeholder.com/50'}" style="width:50px; height:50px; object-fit:cover; border-radius:6px; margin-right:10px;">
+                        <div>
+                            <b>${item.name}</b> - ₱${item.price} <small style="color:#ef4444;">${item.discount > 0 ? '(₱' + item.discount + ' OFF)' : ''}</small>
+                            <span class="cat-badge">${item.category || 'General'}</span>
+                            <span class="status-badge ${isAvail ? 'avail':'not-avail'}">${item.status}</span><br>
+                            <small style="color:#cbd5e1;">${item.description || ''} (${item.quantity})</small>
+                            ${item.mixMatchType !== 'N/A' ? `<br><small style="color:#38bdf8;">🔄 Mix & Match: ${item.mixMatchType} (${item.mixMatchTarget}) - Less ₱${item.mixMatchDiscount}</small>` : ''}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        } catch (err) {
+            console.error("Fetch sheet error:", err);
+        }
+    }
+</script>
+</body>
+</html>
