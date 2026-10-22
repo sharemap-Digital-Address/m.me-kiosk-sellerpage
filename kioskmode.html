@@ -12,40 +12,19 @@
         .store-header { text-align: center; margin-bottom: 15px; }
         .store-header h2 { margin: 0; color: #38bdf8; font-size: 22px; }
 
-        .navigation-row {
-            display: flex; align-items: center; gap: 8px; margin-bottom: 15px; position: relative; height: 38px;
-        }
-
-        .category-tabs {
-            display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex-grow: 1; align-items: center; transition: all 0.3s ease;
-        }
+        .navigation-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; position: relative; height: 38px; }
+        .category-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex-grow: 1; align-items: center; transition: all 0.3s ease; }
         .category-tabs::-webkit-scrollbar { display: none; }
-        .cat-tab {
-            background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; white-space: nowrap; cursor: pointer; transition: 0.2s;
-        }
+        .cat-tab { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; white-space: nowrap; cursor: pointer; transition: 0.2s; }
         .cat-tab.active { background: #0284c7; color: #ffffff; border-color: #38bdf8; }
 
-        .search-trigger-btn {
-            background: #1e293b; color: #38bdf8; border: 1px solid #334155; width: 38px; height: 38px; min-width: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: 0.2s;
-        }
+        .search-trigger-btn { background: #1e293b; color: #38bdf8; border: 1px solid #334155; width: 38px; height: 38px; min-width: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: 0.2s; }
         .search-trigger-btn:hover { background: #0284c7; color: #ffffff; }
 
-        .collapsible-search-box {
-            display: none; width: 100%; height: 38px; background: #1e293b; border: 1px solid #38bdf8; border-radius: 20px; padding: 0 12px; align-items: center; gap: 8px; box-sizing: border-box; animation: expandSearch 0.25s ease-out forwards;
-        }
-
-        @keyframes expandSearch {
-            from { width: 38px; opacity: 0; }
-            to { width: 100%; opacity: 1; }
-        }
-
-        .collapsible-search-box input {
-            background: transparent; border: none; outline: none; color: #ffffff; font-size: 13px; width: 100%;
-        }
-
-        .search-close-btn {
-            background: transparent; border: none; color: #ef4444; font-weight: bold; font-size: 16px; cursor: pointer; padding: 0 4px;
-        }
+        .collapsible-search-box { display: none; width: 100%; height: 38px; background: #1e293b; border: 1px solid #38bdf8; border-radius: 20px; padding: 0 12px; align-items: center; gap: 8px; box-sizing: border-box; animation: expandSearch 0.25s ease-out forwards; }
+        @keyframes expandSearch { from { width: 38px; opacity: 0; } to { width: 100%; opacity: 1; } }
+        .collapsible-search-box input { background: transparent; border: none; outline: none; color: #ffffff; font-size: 13px; width: 100%; }
+        .search-close-btn { background: transparent; border: none; color: #ef4444; font-weight: bold; font-size: 16px; cursor: pointer; padding: 0 4px; }
 
         .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .menu-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; position: relative; }
@@ -54,7 +33,6 @@
         .menu-title { font-weight: bold; font-size: 13px; margin-bottom: 2px; }
         .menu-desc { font-size: 10px; color: #94a3b8; margin-bottom: 6px; line-height: 1.3; }
         .size-badge { font-size: 9px; padding: 2px 5px; border-radius: 4px; background: #8b5cf6; color: #fff; display: inline-block; margin-bottom: 4px; font-weight: bold; }
-        
         .rating-badge { font-size: 10px; color: #f59e0b; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
         
         .qty-control { display: flex; align-items: center; justify-content: space-between; background: #0f172a; border-radius: 6px; padding: 4px; border: 1px solid #475569; margin-top: 5px; }
@@ -76,6 +54,13 @@
 
         .variant-select-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 8px; cursor: pointer; }
         .variant-select-item:hover { border-color: #38bdf8; background: #1e293b; }
+
+        /* TRANSACTION SELECTION CARD STYLES */
+        .txn-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; }
+        .txn-card:hover { border-color: #38bdf8; background: #1e293b; transform: translateY(-2px); }
+        .txn-icon { font-size: 28px; background: #1e293b; border-radius: 10px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .txn-title { font-weight: bold; font-size: 14px; color: #38bdf8; margin-bottom: 3px; }
+        .txn-desc { font-size: 11px; color: #94a3b8; line-height: 1.3; }
     </style>
 </head>
 <body>
@@ -102,9 +87,45 @@
     </div>
 </div>
 
-<div class="cart-bar" id="cartBar" onclick="checkoutToGateway()" style="display:none;">
+<div class="cart-bar" id="cartBar" onclick="openCheckoutTypeModal()" style="display:none;">
     <span id="cartSummaryText">🛒 0 Items | Total: ₱0.00</span>
     <span>Place Order ➔</span>
+</div>
+
+<!-- MODAL 0: TRANSACTION TYPE SELECTION DIALOG CARD -->
+<div id="checkoutTypeModal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="close-modal" onclick="closeCheckoutTypeModal()">Isara ✕</button>
+        <h3 style="color:#38bdf8; margin-top:0; margin-bottom:6px;">Pumili ng Uri ng Order</h3>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Saan mo nais iproseso ang iyong pinamiling order?</p>
+
+        <!-- CARD A: BOOK DELIVERY -->
+        <div class="txn-card" onclick="proceedToGatewayWithType('delivery')">
+            <div class="txn-icon">🛵</div>
+            <div>
+                <div class="txn-title">Book Delivery / Rider COD</div>
+                <div class="txn-desc">Padala sa bahay o pwesto. Magse-set ng GPS location at landmark.</div>
+            </div>
+        </div>
+
+        <!-- CARD B: DINE-IN TABLE -->
+        <div class="txn-card" onclick="proceedToGatewayWithType('dinein')">
+            <div class="txn-icon">🍽️</div>
+            <div>
+                <div class="txn-title">Dine-In / Table Order</div>
+                <div class="txn-desc">Kakain sa store. Maglalagay ng Table Number o Pickup preference.</div>
+            </div>
+        </div>
+
+        <!-- CARD C: OVER THE COUNTER -->
+        <div class="txn-card" onclick="proceedToGatewayWithType('counter')">
+            <div class="txn-icon">💳</div>
+            <div>
+                <div class="txn-title">Over-The-Counter Pickup</div>
+                <div class="txn-desc">Ipapakita ang Order QR Code sa Cashier para bayaran at i-accept.</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- MODAL 1: FULLSCREEN ITEM DETAILS & RATINGS -->
@@ -671,7 +692,16 @@
         return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     }
 
-    function checkoutToGateway() {
+    /* DIALOG MODAL PARA SA TRANSACTION TYPE SELECTION */
+    function openCheckoutTypeModal() {
+        document.getElementById('checkoutTypeModal').style.display = 'flex';
+    }
+
+    function closeCheckoutTypeModal() {
+        document.getElementById('checkoutTypeModal').style.display = 'none';
+    }
+
+    function proceedToGatewayWithType(typeStr) {
         let orderArray = [];
         let grandTotal = 0;
 
@@ -685,7 +715,8 @@
         }
 
         let orderString = orderArray.join(', ');
-        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&total=${grandTotal.toFixed(2)}&psid=${encodeURIComponent(currentPsid)}`;
+        // Ipapasa ang target type (delivery, dinein, counter) sa multigateway.html
+        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&total=${grandTotal.toFixed(2)}&type=${encodeURIComponent(typeStr)}&psid=${encodeURIComponent(currentPsid)}`;
     }
 </script>
 </body>
