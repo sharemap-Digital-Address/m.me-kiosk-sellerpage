@@ -6,6 +6,7 @@
     <title>ShareMap - Order & Service Gateway</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
         const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
@@ -15,8 +16,8 @@
         let cachedConversations = []; 
         let isPsidVerifiedFromSuggestion = false; 
         let actualLoggedInPsid = ""; 
+        let totalAmountPesos = 0;
 
-        // TAMA NA ANG APP ID: Sharemap Messenger Kiosk (Live Mode)
         const MESSENGER_APP_ID = "2070260990400834"; 
         const CONFIG_ID = "2161603454736875";
 
@@ -29,13 +30,12 @@
             console.log("[SDK LOG]:", message);
         }
 
-        // --- SMART ADAPTIVE FACEBOOK OAUTH LOGIN (BY ANDROID VERSION) ---
         function loginWithFacebook() {
             updateSdkDebugToast("🔵 Analyzing device & opening login...");
             
-            // ISAVE MUNA SA LOCALSTORAGE ANG MGA PINAMILI AT INPUTS BAGO MAG-LOGIN
             const currentOrdersString = JSON.stringify(currentOrdersList);
             localStorage.setItem('sharemap_temp_orders', currentOrdersString);
+            localStorage.setItem('sharemap_temp_total', totalAmountPesos);
             localStorage.setItem('sharemap_temp_name', document.getElementById('fullName').value);
             localStorage.setItem('sharemap_temp_phone', document.getElementById('phone').value);
             localStorage.setItem('sharemap_temp_landmark', document.getElementById('landmark').value);
@@ -54,15 +54,9 @@
             const ua = navigator.userAgent;
             let androidVersion = 99;
             const match = ua.match(/Android\s([0-9\.]+)/);
-            if (match) {
-                androidVersion = parseFloat(match[1]);
-            }
-
-            console.log("Detected Android Version:", androidVersion);
+            if (match) androidVersion = parseFloat(match[1]);
 
             if (androidVersion <= 12) {
-                updateSdkDebugToast("📱 Legacy Android detected: Using secure form submit...");
-                
                 const form = document.createElement("form");
                 form.method = "GET";
                 form.action = oauthUrl;
@@ -76,27 +70,20 @@
                         form.appendChild(hiddenField);
                     }
                 }
-
                 document.body.appendChild(form);
                 form.submit();
             } else {
-                updateSdkDebugToast("📱 Modern Android/OS detected: Using direct redirect...");
-                
                 const queryParams = new URLSearchParams(params).toString();
                 const finalUrl = `${oauthUrl}?${queryParams}`;
-                
                 try {
                     let loginWindow = window.open(finalUrl, '_self');
-                    if (!loginWindow) {
-                        window.location.href = finalUrl;
-                    }
+                    if (!loginWindow) window.location.href = finalUrl;
                 } catch (e) {
                     window.location.href = finalUrl;
                 }
             }
         }
 
-        // Suriin kung may pumasok na Access Token mula sa OAuth Redirect
         function checkOAuthRedirectCallback() {
             const hash = window.location.hash;
             if (hash && hash.includes('access_token=')) {
@@ -105,7 +92,6 @@
                 
                 if (accessToken) {
                     updateSdkDebugToast("✅ FB Login Token Received. Fetching user...");
-                    
                     fetch(`https://graph.facebook.com/v26.0/me?fields=id,name&access_token=${accessToken}`)
                         .then(response => response.json())
                         .then(userInfo => {
@@ -121,31 +107,24 @@
                                 
                                 document.getElementById('notFoundIndicator').style.display = "none";
                                 updateSdkDebugToast(`✅ Welcome, ${userInfo.name}!`);
-                            } else {
-                                updateSdkDebugToast("⚠️ Nabigong makuha ang user profile mula sa FB.", true);
                             }
                         })
-                        .catch(err => {
-                            console.error("Graph API Error:", err);
-                            updateSdkDebugToast("⚠️ Error sa pagkuha ng Facebook profile.", true);
-                        });
+                        .catch(err => console.error("Graph API Error:", err));
                 }
             }
         }
-        // ---------------------------------------
 
         window.addEventListener('DOMContentLoaded', () => {
             checkOAuthRedirectCallback();
 
-            // KUNIN ANG MGA NAKA-SAVE NA ORDERS PABALIK MULA SA LOCALSTORAGE
             const savedOrdersJson = localStorage.getItem('sharemap_temp_orders');
             if (savedOrdersJson) {
                 try {
                     currentOrdersList = JSON.parse(savedOrdersJson);
+                    totalAmountPesos = parseFloat(localStorage.getItem('sharemap_temp_total')) || 0;
                     localStorage.removeItem('sharemap_temp_orders');
-                } catch(e) {
-                    currentOrdersList = [];
-                }
+                    localStorage.removeItem('sharemap_temp_total');
+                } catch(e) { currentOrdersList = []; }
             }
 
             if (localStorage.getItem('sharemap_temp_name')) {
@@ -161,15 +140,6 @@
                 localStorage.removeItem('sharemap_temp_landmark');
             }
 
-            if (!window.location.hash.includes('access_token=')) {
-                if (!savedOrdersJson) {
-                    localStorage.removeItem('sharemap_psid');
-                    document.getElementById('displayPsid').value = "MESSENGER_WEB_USER";
-                    isPsidVerifiedFromSuggestion = false;
-                    actualLoggedInPsid = "";
-                }
-            }
-
             const pageId = getPageId();
             localStorage.setItem('sharemap_page', pageId);
             document.getElementById("storeUsernameDisplay").innerText = `@${pageId.toLowerCase()}`;
@@ -181,6 +151,9 @@
             
             const urlParams = new URLSearchParams(window.location.search);
             const passedOrders = urlParams.get('ord');
+            const passedTotal = urlParams.get('total');
+
+            if (passedTotal) totalAmountPesos = parseFloat(passedTotal) || 0;
 
             if (passedOrders && currentOrdersList.length === 0) {
                 passedOrders.split(',').forEach(itemStr => {
@@ -211,21 +184,19 @@
                 }
 
                 if (data.expiry && today > data.expiry) {
-                    showBlockScreen("🚫 Expired License", `Ang inyong ${data.plan === 'BRONZE_MONTHLY' ? 'Bronze Monthly' : 'Trial'} Access ay nag-expire noong ${data.expiry}. Paki-renew ang iyong subscription sa ShareMap.`);
+                    showBlockScreen("🚫 Expired License", `Ang inyong subscription ay nag-expire noong ${data.expiry}. Paki-renew ang iyong access.`);
                     return;
                 }
 
                 if (data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED") {
                     activePageAccessToken = data.page_access_token;
                     document.getElementById('debugToken').value = "SUCCESS: Nakuha ang Token (" + activePageAccessToken.substring(0, 10) + "...)";
-                    
                     fetchMetaConversations();
                     initializeClientAutoLogin();
                 } else {
                     document.getElementById('debugToken').value = "ERROR: Offline o walang active token ang Store POS!";
                 }
             } catch (err) {
-                console.error("Error sa pagkuha ng Supabase access:", err);
                 document.getElementById('debugToken').value = "ERROR: Nabigong kumonekta sa database.";
             }
         }
@@ -241,18 +212,12 @@
                     result.data.forEach(conv => {
                         if (conv.participants && conv.participants.data) {
                             conv.participants.data.forEach(participant => {
-                                cachedConversations.push({
-                                    name: participant.name,
-                                    psid: participant.id
-                                });
+                                cachedConversations.push({ name: participant.name, psid: participant.id });
                             });
                         }
                     });
-                    console.log("📥 Na-cache ang Meta Conversations:", cachedConversations.length, "participants.");
                 }
-            } catch (err) {
-                console.error("Error sa pag-cache ng conversations:", err);
-            }
+            } catch (err) { console.error("Error sa pag-cache ng conversations:", err); }
         }
 
         async function initializeClientAutoLogin() {
@@ -263,7 +228,6 @@
                 actualLoggedInPsid = rawPsid.trim();
                 isPsidVerifiedFromSuggestion = true;
                 processCustomerDetails(actualLoggedInPsid);
-                updateSdkDebugToast(`✅ URL Parameter PSID: ${actualLoggedInPsid}`);
             }
         }
 
@@ -275,15 +239,12 @@
                 try {
                     const response = await fetch(`https://graph.facebook.com/v26.0/${psid}?fields=name&access_token=${activePageAccessToken}`);
                     const fbUser = await response.json();
-
                     if (fbUser && fbUser.name) {
                         document.getElementById('fullName').value = fbUser.name;
                         isPsidVerifiedFromSuggestion = true;
                         document.getElementById('notFoundIndicator').style.display = "none";
                     }
-                } catch (e) {
-                    console.error("Error sa Graph API:", e);
-                }
+                } catch (e) { console.error("Error sa Graph API:", e); }
             }
         }
 
@@ -295,14 +256,11 @@
 
             if (!cleanQuery) {
                 container.style.display = "none";
-                container.innerHTML = "";
                 notFoundInd.style.display = "none";
                 return;
             }
 
-            const matches = cachedConversations.filter(item => 
-                item.name && item.name.toLowerCase().includes(cleanQuery)
-            );
+            const matches = cachedConversations.filter(item => item.name && item.name.toLowerCase().includes(cleanQuery));
 
             if (matches.length > 0) {
                 notFoundInd.style.display = "none";
@@ -311,16 +269,12 @@
                     const div = document.createElement("div");
                     div.className = "suggestion-item";
                     div.innerHTML = `💬 <b>${match.name}</b> <small style="color:#38bdf8;">(Select Account)</small>`;
-                    
-                    div.onclick = function() {
-                        selectMatchSuggestion(match.name, match.psid);
-                    };
+                    div.onclick = function() { selectMatchSuggestion(match.name, match.psid); };
                     container.appendChild(div);
                 });
                 container.style.display = "block";
             } else {
                 container.style.display = "none";
-                container.innerHTML = "";
                 notFoundInd.innerText = "⚠️ No Meta message accounts found. Please check spelling or select from active chat.";
                 notFoundInd.style.display = "block";
             }
@@ -332,35 +286,27 @@
             if (actualLoggedInPsid && actualLoggedInPsid !== chosenPsid) {
                 notFoundInd.innerText = "🚨 Chosen account does not match your actual logged-in Facebook account!";
                 notFoundInd.style.display = "block";
-                
                 document.getElementById('fullName').value = name;
                 isPsidVerifiedFromSuggestion = false; 
                 document.getElementById("suggestionBox").style.display = "none";
-                
-                alert("⚠️ Babala: Ang napili mong account ay hindi tumutugma sa kasalukuyang Facebook account na ginagamit mo sa pag-chat!");
+                alert("⚠️ Babala: Ang napili mong account ay hindi tumutugma sa kasalukuyang Facebook account na ginagamit mo!");
                 return;
             }
 
             document.getElementById('fullName').value = name;
             document.getElementById('displayPsid').value = chosenPsid;
             localStorage.setItem('sharemap_psid', chosenPsid);
-            
             isPsidVerifiedFromSuggestion = true; 
-            
             document.getElementById("suggestionBox").style.display = "none";
             notFoundInd.style.display = "none";
         }
 
         function showBlockScreen(title, message) {
-            const CONTACT_LINK = "https://m.me/sharemap.digital.address"; 
             document.body.innerHTML = `
                 <div style="background:#0f172a; color:#fff; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; font-family:sans-serif;">
-                    <div style="background:#1e293b; padding:30px; border-radius:12px; border:1px solid #ef4444; max-width:400px; width:90%; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                    <div style="background:#1e293b; padding:30px; border-radius:12px; border:1px solid #ef4444; max-width:400px; width:90%;">
                         <h2 style="color:#ef4444; margin-top:0; font-size:20px;">${title}</h2>
                         <p style="color:#cbd5e1; font-size:14px; line-height:1.5;">${message}</p>
-                        <a href="${CONTACT_LINK}" target="_blank" style="display:inline-block; margin-top:15px; background:#2563eb; color:#fff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; width:80%;">
-                            💬 Contact Developer / Renew Access
-                        </a>
                     </div>
                 </div>
             `;
@@ -373,196 +319,45 @@
     </script>
     
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #0f172a;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-            margin: 0;
-            padding: 15px 12px 30px 12px;
-            box-sizing: border-box;
-        }
-        .card {
-            background: #1e293b;
-            padding: 18px 16px;
-            border-radius: 12px;
-            text-align: center;
-            max-width: 400px;
-            width: 100%;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            box-sizing: border-box;
-        }
-        .store-badge {
-            background: #0284c7;
-            color: #fff;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: bold;
-            display: inline-block;
-            margin-bottom: 8px;
-        }
-        .order-id-badge {
-            background: #0f172a;
-            border: 1px dashed #38bdf8;
-            padding: 8px;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            font-size: 13px;
-            color: #38bdf8;
-            font-weight: bold;
-        }
-        .service-toggle {
-            display: flex;
-            background: #0f172a;
-            padding: 4px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #334155;
-        }
+        body { font-family: Arial, sans-serif; background-color: #0f172a; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; margin: 0; padding: 15px 12px 30px 12px; box-sizing: border-box; }
+        .card { background: #1e293b; padding: 18px 16px; border-radius: 12px; text-align: center; max-width: 420px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); box-sizing: border-box; }
+        .store-badge { background: #0284c7; color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 8px; }
+        .order-id-badge { background: #0f172a; border: 1px dashed #38bdf8; padding: 8px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; color: #38bdf8; font-weight: bold; }
+        
+        .service-toggle { display: flex; background: #0f172a; padding: 4px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; }
         .service-option { flex: 1; text-align: center; }
         .service-option input[type="radio"] { display: none; }
-        .service-option label {
-            display: block;
-            padding: 10px 6px;
-            font-size: 13px;
-            font-weight: bold;
-            color: #94a3b8;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .service-option input[type="radio"]:checked + label {
-            background-color: #0284c7;
-            color: #ffffff;
-        }
+        .service-option label { display: block; padding: 8px 4px; font-size: 11px; font-weight: bold; color: #94a3b8; border-radius: 6px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .service-option input[type="radio"]:checked + label { background-color: #0284c7; color: #ffffff; }
+
         .form-group { text-align: left; margin-bottom: 10px; position: relative; }
         .form-group label { display: block; font-size: 12px; margin-bottom: 3px; color: #cbd5e1; }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 9px;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            background-color: #0f172a;
-            color: #ffffff;
-            font-size: 14px;
-            box-sizing: border-box;
-            outline: none;
-        }
+        .form-group input { width: 100%; padding: 9px; border: 1px solid #475569; border-radius: 6px; background-color: #0f172a; color: #ffffff; font-size: 14px; box-sizing: border-box; outline: none; }
         .form-group input:focus { border-color: #38bdf8; }
 
-        .suggestion-box {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #0f172a;
-            border: 1px solid #0284c7;
-            border-radius: 6px;
-            max-height: 150px;
-            overflow-y: auto;
-            z-index: 100;
-            display: none;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
-        }
-        .suggestion-item {
-            padding: 10px;
-            font-size: 13px;
-            color: #f8fafc;
-            border-bottom: 1px solid #1e293b;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .suggestion-item:hover { background-color: #1e293b; }
+        .suggestion-box { position: absolute; top: 100%; left: 0; right: 0; background: #0f172a; border: 1px solid #0284c7; border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 6px 12px rgba(0,0,0,0.5); }
+        .suggestion-item { padding: 10px; font-size: 13px; color: #f8fafc; border-bottom: 1px solid #1e293b; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .not-found-text { color: #f87171; font-size: 11px; margin-top: 4px; display: none; font-weight: bold; }
 
-        .not-found-text {
-            color: #f87171;
-            font-size: 11px;
-            margin-top: 4px;
-            display: none;
-            font-weight: bold;
-        }
-
-        .order-section {
-            text-align: left;
-            margin-top: 15px;
-            margin-bottom: 15px;
-            background: #0f172a;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-        }
-        .order-section h4 { margin: 0 0 10px 0; font-size: 13px; color: #38bdf8; }
-        .btn-add-order {
-            background-color: #16a34a;
-            color: #ffffff;
-            border: none;
-            padding: 12px;
-            font-size: 14px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-        .btn-add-order:hover { background-color: #15803d; }
-        .item-row {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-bottom: 8px;
-            background: #1e293b;
-            padding: 6px;
-            border-radius: 6px;
-            border: 1px solid #475569;
-        }
+        .order-section { text-align: left; margin-top: 15px; margin-bottom: 15px; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
+        .order-section h4 { margin: 0 0 10px 0; font-size: 13px; color: #38bdf8; display: flex; justify-content: space-between; align-items: center; }
+        
+        .btn-add-order { background-color: #16a34a; color: #ffffff; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 10px; }
+        .item-row { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; background: #1e293b; padding: 6px; border-radius: 6px; border: 1px solid #475569; }
         .act-btn { padding: 6px 8px; border: none; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; }
         .btn-edit { background: #eab308; color: #000; }
         .btn-del { background: #ef4444; color: white; }
         .saved-text { flex: 1; font-size: 13px; color: #f8fafc; word-break: break-word; }
-        .btn {
-            background-color: #0284c7;
-            color: #ffffff;
-            border: none;
-            padding: 12px 20px;
-            font-size: 0.95rem;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            transition: 0.3s;
-            margin-top: 8px;
-        }
-        .btn:hover { background-color: #0369a1; }
+        
+        .btn { background-color: #0284c7; color: #ffffff; border: none; padding: 12px 20px; font-size: 0.95rem; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; transition: 0.3s; margin-top: 8px; }
         .btn-sms { background-color: #16a34a; margin-top: 10px; }
-        .btn-sms:hover { background-color: #15803d; }
         .error-msg { color: #f87171; font-size: 12px; margin-top: 6px; display: none; }
         
-        .btn-fb-login {
-            background-color: #1877f2;
-            color: white;
-            border: none;
-            padding: 10px;
-            font-size: 13px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .btn-fb-login:hover { background-color: #166fe5; }
+        .btn-fb-login { background-color: #1877f2; color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        
+        /* OVER THE COUNTER QR BOX */
+        .qr-display-box { background: #ffffff; padding: 15px; border-radius: 12px; display: inline-block; margin-top: 10px; }
+        .total-amount-badge { background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -584,16 +379,21 @@
             <div id="debugSdkToast" style="font-size: 11px; font-weight: bold; color: #e2e8f0; word-break: break-all;">Ready for login...</div>
         </div>
 
-        <p style="font-size: 12px; color: #94a3b8; margin: 0 0 12px 0;">Pumili ng serbisyo at sagutan ang mga detalye:</p>
+        <p style="font-size: 12px; color: #94a3b8; margin: 0 0 12px 0;">Pumili ng uri ng transaksyon:</p>
 
+        <!-- 3 TRANSACTION TYPE OPTIONS -->
         <div class="service-toggle">
             <div class="service-option">
                 <input type="radio" id="typeDelivery" name="serviceType" value="delivery" checked onchange="toggleServiceType()">
-                <label for="typeDelivery">🛵 Book Delivery</label>
+                <label for="typeDelivery">🛵 Delivery</label>
             </div>
             <div class="service-option">
                 <input type="radio" id="typeDineIn" name="serviceType" value="dinein" onchange="toggleServiceType()">
-                <label for="typeDineIn">🍽️ Book Dine-In</label>
+                <label for="typeDineIn">🍽️ Dine-In Table</label>
+            </div>
+            <div class="service-option">
+                <input type="radio" id="typeCounter" name="serviceType" value="counter" onchange="toggleServiceType()">
+                <label for="typeCounter">💳 Over-Counter</label>
             </div>
         </div>
 
@@ -609,13 +409,11 @@
             <input type="text" id="displayPsid" readonly style="background: transparent; border: none; color: #cbd5e1; font-size: 12px; font-weight: bold; padding: 2px 0; cursor: not-allowed;" value="Loading PSID...">
         </div>
 
-        <!-- FULL NAME INPUT WITH AUTOCOMPLETE SUGGESTIONS -->
+        <!-- FULL NAME INPUT -->
         <div class="form-group">
             <label for="fullName">👤 I-type ang iyong tunay na Facebook Full Name Account:</label>
             <input type="text" id="fullName" placeholder="I-type ang pangalan sa FB..." autocomplete="off" oninput="handleFullNameInput(this.value)">
-            
             <div id="notFoundIndicator" class="not-found-text">⚠️ No Meta message accounts found. Please check spelling or select from active chat.</div>
-
             <div id="suggestionBox" class="suggestion-box"></div>
         </div>
 
@@ -624,9 +422,15 @@
             <input type="tel" id="phone" placeholder="hal. 09123456789" autocomplete="off">
         </div>
 
+        <!-- DYNAMIC FIELDS BASED ON TRANSACTION TYPE -->
         <div class="form-group" id="landmarkGroup">
             <label for="landmark">🏠 Landmark / Kulay ng Gate (Opsyonal):</label>
             <input type="text" id="landmark" placeholder="hal. Tabi ng Sari-sari Store" autocomplete="off">
+        </div>
+
+        <div class="form-group" id="tableGroup" style="display: none;">
+            <label for="tableNum">🪑 Table Number / Pickup Option:</label>
+            <input type="text" id="tableNum" placeholder="hal. Table 5 o Counter Pickup" autocomplete="off">
         </div>
 
         <div class="form-group" id="paxGroup" style="display: none;">
@@ -634,30 +438,48 @@
             <input type="number" id="paxCount" placeholder="hal. 4" min="1" value="2">
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="scheduleGroup">
             <label for="scheduleOrder" id="scheduleLabel">⏰ Schedule Order / Oras ng Delivery (Opsyonal):</label>
             <input type="datetime-local" id="scheduleOrder">
             <small id="scheduleNote" style="font-size: 11px; color: #38bdf8;">*Iwanang blanko kung para sa AGAD-AGAD na order (Now).</small>
         </div>
 
+        <!-- ORDER LIST SECTION & TOTAL PRICE -->
         <div class="order-section">
-            <h4>🛒 Order List (Mga Bibilhin):</h4>
+            <h4>
+                <span>🛒 Order List (Mga Bibilhin):</span>
+            </h4>
+            <div id="totalPriceDisplay" class="total-amount-badge">
+                💰 Kabuuang Babayaran: ₱<span id="grandTotalText">0.00</span>
+            </div>
             <button type="button" class="btn-add-order" onclick="openKioskMenu()">
-                🍔 ➕ Magdagdag ng Order (Kiosk Mode)
+                🍔 ➕ Magdagdag / Palitan ang Order (Kiosk Mode)
             </button>
             <div id="orderListContainer"></div>
         </div>
 
         <p id="errorMsg" class="error-msg">⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy.</p>
 
+        <!-- ACTION BUTTON FOR DELIVERY & DINE-IN -->
         <button id="proceedBtn" class="btn">📍 Sunod: Kunin ang GPS Location ➔</button>
 
+        <!-- SMS DINE-IN CONTAINER -->
         <div id="dineInSmsContainer" style="display: none; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #475569;">
             <div class="form-group" style="margin-bottom: 8px;">
                 <label for="smsStoreNum" style="font-size: 11px; color: #38bdf8;">📱 Opsyonal: Cellphone Number ng Store/Manager para sa SMS:</label>
                 <input type="tel" id="smsStoreNum" placeholder="hal. 09123456789" autocomplete="off">
             </div>
             <button type="button" id="smsBtn" class="btn btn-sms" onclick="handleSmsReservation()">📱 I-send ang Reservation via SMS</button>
+        </div>
+
+        <!-- OVER THE COUNTER QR CONTAINER -->
+        <div id="counterQrContainer" style="display: none; margin-top: 15px; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #38bdf8;">
+            <h4 style="margin: 0 0 6px 0; color: #38bdf8;">📲 Advance Order QR Code</h4>
+            <p style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">Ipakita ang QR Code na ito o ang Order ID sa Cashier para i-accept at bayaran ang order:</p>
+            
+            <div class="qr-display-box" id="qrcodeCanvas"></div>
+            
+            <p style="font-size: 12px; font-weight: bold; color: #e2e8f0; margin-top: 10px;" id="qrTextDetail"></p>
         </div>
     </div>
 
@@ -674,28 +496,45 @@
         }
 
         function toggleServiceType() {
+            const isDelivery = document.getElementById("typeDelivery").checked;
             const isDineIn = document.getElementById("typeDineIn").checked;
+            const isCounter = document.getElementById("typeCounter").checked;
+
             const landmarkGroup = document.getElementById("landmarkGroup");
+            const tableGroup = document.getElementById("tableGroup");
             const paxGroup = document.getElementById("paxGroup");
-            const scheduleLabel = document.getElementById("scheduleLabel");
-            const scheduleNote = document.getElementById("scheduleNote");
+            const scheduleGroup = document.getElementById("scheduleGroup");
             const proceedBtn = document.getElementById("proceedBtn");
             const dineInSmsContainer = document.getElementById("dineInSmsContainer");
+            const counterQrContainer = document.getElementById("counterQrContainer");
 
-            if (isDineIn) {
-                landmarkGroup.style.display = "none";
-                paxGroup.style.display = "block";
-                scheduleLabel.innerText = "⏰ Petsa at Oras ng Pagkain (Dine-In Schedule):";
-                scheduleNote.innerText = "*Iwanang blanko kung pupunta na AGAD-AGAD sa store.";
-                proceedBtn.innerText = "📩 I-send ang Reservation sa Messenger ➔";
-                dineInSmsContainer.style.display = "block";
-            } else {
+            if (isDelivery) {
                 landmarkGroup.style.display = "block";
+                tableGroup.style.display = "none";
                 paxGroup.style.display = "none";
-                scheduleLabel.innerText = "⏰ Schedule Order / Oras ng Delivery (Opsyonal):";
-                scheduleNote.innerText = "*Iwanang blanko kung para sa AGAD-AGAD na order (Now).";
+                scheduleGroup.style.display = "block";
+                proceedBtn.style.display = "block";
                 proceedBtn.innerText = "📍 Sunod: Kunin ang GPS Location ➔";
                 dineInSmsContainer.style.display = "none";
+                counterQrContainer.style.display = "none";
+            } else if (isDineIn) {
+                landmarkGroup.style.display = "none";
+                tableGroup.style.display = "block";
+                paxGroup.style.display = "block";
+                scheduleGroup.style.display = "block";
+                proceedBtn.style.display = "block";
+                proceedBtn.innerText = "📩 I-send ang Order sa Messenger ➔";
+                dineInSmsContainer.style.display = "block";
+                counterQrContainer.style.display = "none";
+            } else if (isCounter) {
+                landmarkGroup.style.display = "none";
+                tableGroup.style.display = "none";
+                paxGroup.style.display = "none";
+                scheduleGroup.style.display = "none";
+                proceedBtn.style.display = "none";
+                dineInSmsContainer.style.display = "none";
+                counterQrContainer.style.display = "block";
+                generateCounterQr();
             }
         }
 
@@ -710,6 +549,7 @@
 
             if (currentOrdersList.length === 0) {
                 container.innerHTML = `<p style="font-size:12px; color:#94a3b8; text-align:center; margin:8px 0;">Walang pang order. Pindutin ang button sa taas para mamili.</p>`;
+                document.getElementById('grandTotalText').innerText = "0.00";
                 return;
             }
 
@@ -724,8 +564,13 @@
                 container.appendChild(row);
             });
 
+            document.getElementById('grandTotalText').innerText = totalAmountPesos.toFixed(2);
             let summaryText = currentOrdersList.map(i => `${i.name} x${i.qty}`).join(', ');
             localStorage.setItem('sharemap_orders', summaryText);
+
+            if (document.getElementById("typeCounter").checked) {
+                generateCounterQr();
+            }
         }
 
         function editOrderQty(index) {
@@ -760,10 +605,36 @@
             return dt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
         }
 
+        function generateCounterQr() {
+            const qrCanvas = document.getElementById("qrcodeCanvas");
+            qrCanvas.innerHTML = "";
+            
+            const activePsid = document.getElementById('displayPsid').value;
+            const ordersVal = getFormattedOrdersText();
+            const nameVal = document.getElementById('fullName').value.trim() || "Customer";
+            
+            const qrPayload = JSON.stringify({
+                oid: generatedOrderID,
+                psid: activePsid,
+                name: nameVal,
+                orders: ordersVal,
+                total: totalAmountPesos
+            });
+
+            new QRCode(qrCanvas, {
+                text: qrPayload,
+                width: 150,
+                height: 150
+            });
+
+            document.getElementById("qrTextDetail").innerText = `Order ID: #${generatedOrderID} | Total: ₱${totalAmountPesos.toFixed(2)}`;
+        }
+
         function handleProcessOrder() {
             const nameVal = document.getElementById('fullName').value.trim();
             const phoneVal = document.getElementById('phone').value.trim();
             const landmarkVal = document.getElementById('landmark').value.trim();
+            const tableVal = document.getElementById('tableNum').value.trim();
             const paxVal = document.getElementById('paxCount').value.trim();
             const schedVal = document.getElementById('scheduleOrder').value;
             const ordersVal = getFormattedOrdersText();
@@ -789,7 +660,7 @@
 
             if (isDineIn) {
                 const formattedOrders = ordersVal.split(', ').join('\n• ');
-                const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store / Page: ${pageId}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+                const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n🪑 Table / Pickup: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
                 const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
                 
                 window.location.href = messengerUrl;
@@ -803,16 +674,18 @@
             localStorage.setItem('sharemap_landmark', landmarkVal || "Wala");
             localStorage.setItem('sharemap_schedule', formattedSched);
             localStorage.setItem('sharemap_orders', ordersVal);
+            localStorage.setItem('sharemap_total', totalAmountPesos.toFixed(2));
             localStorage.setItem('sharemap_psid', activePsid);
             sessionStorage.setItem('access_granted', 'true');
 
-            const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&psid=${encodeURIComponent(activePsid)}`;
+            const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&total=${totalAmountPesos.toFixed(2)}&psid=${encodeURIComponent(activePsid)}`;
             window.location.href = `./index.html${queryStr}`;
         }
 
         function handleSmsReservation() {
             const nameVal = document.getElementById('fullName').value.trim();
             const phoneVal = document.getElementById('phone').value.trim();
+            const tableVal = document.getElementById('tableNum').value.trim();
             const paxVal = document.getElementById('paxCount').value.trim();
             const schedVal = document.getElementById('scheduleOrder').value;
             const ordersVal = getFormattedOrdersText();
@@ -833,12 +706,14 @@
             const formattedSched = formatScheduleText(schedVal);
             const formattedOrders = ordersVal.split(', ').join('\n• ');
 
-            const smsBodyText = `SHAREMAP DINE-IN RESERVATION\n` +
+            const smsBodyText = `SHAREMAP DINE-IN ORDER\n` +
                                 `psid: ${activePsid}\n` +
                                 `🔢 Order ID: #${generatedOrderID}\n` +
                                 `🏪 Store: ${pageId}\n` +
+                                `🪑 Table / Pickup: ${tableVal || 'Not Specified'}\n` +
                                 `⏰ Schedule: ${formattedSched}\n` +
-                                `👥 Party Size: ${paxVal || '2'} Pax\n\n` +
+                                `👥 Party Size: ${paxVal || '2'} Pax\n` +
+                                `💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n` +
                                 `🛒 Advance Orders:\n• ${formattedOrders}\n\n` +
                                 `👤 Name: ${nameVal}\n` +
                                 `📞 Contact: ${phoneVal}`;
