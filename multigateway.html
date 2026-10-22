@@ -666,10 +666,11 @@
             }
         }
 
-        // --- EXPLICIT HTML5 CANVAS RENDERER PARA MATINONG MA-DOWNLOAD ANG QR NA MAY TEXT ---
+        // --- EXPLICIT HTML5 CANVAS RENDERER PARA SA STORENAME, DATE/TIME, AT TAMANG FILENAME FORMAT ---
         function downloadQrCodeImageWithDetails() {
             const qrContainer = document.getElementById("qrcodeCanvas");
             const originalCanvas = qrContainer.querySelector("canvas");
+            const pageId = getPageId();
 
             if (!originalCanvas) {
                 alert("⚠️ Re-generating QR Code... Paki-subukan ulit.");
@@ -677,36 +678,49 @@
                 return;
             }
 
-            // Gagawa tayo ng panibagong Canvas na may Puti Background at Text sa Ilalim
             const exportCanvas = document.createElement("canvas");
             const ctx = exportCanvas.getContext("2d");
 
             const padding = 20;
-            const textSpace = 50;
+            const textSpace = 100; // Sapat na espasyo para sa Store Name, ID, Date/Time, at Total
             exportCanvas.width = originalCanvas.width + (padding * 2);
             exportCanvas.height = originalCanvas.height + (padding * 2) + textSpace;
 
-            // Fill solid white background
+            // Puti ang background
             ctx.fillStyle = "#FFFFFF";
             ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
-            // Iguguhit ang QR code mula sa orihinal na canvas sa gitna
+            // Iguguhit ang QR code sa gitna
             ctx.drawImage(originalCanvas, padding, padding);
 
-            // Isusulat ang Order ID at Total Amount sa ilalim
+            // Store Name & Order Details Text
             ctx.fillStyle = "#000000";
-            ctx.font = "bold 16px Arial";
+            ctx.font = "bold 15px Arial";
             ctx.textAlign = "center";
-            ctx.fillText(`Order ID: #${generatedOrderID}`, exportCanvas.width / 2, originalCanvas.height + padding + 24);
+            
+            let currentY = originalCanvas.height + padding + 22;
+            ctx.fillText(`Store: @${pageId.toLowerCase()}`, exportCanvas.width / 2, currentY);
+
+            currentY += 20;
+            ctx.font = "bold 16px Arial";
+            ctx.fillText(`Order ID: #${generatedOrderID}`, exportCanvas.width / 2, currentY);
+
+            currentY += 18;
+            ctx.font = "11px Arial";
+            ctx.fillStyle = "#475569";
+            const nowStr = new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+            ctx.fillText(`Generated: ${nowStr}`, exportCanvas.width / 2, currentY);
+
+            currentY += 22;
             ctx.font = "bold 14px Arial";
             ctx.fillStyle = "#16a34a";
-            ctx.fillText(`Total: ₱${totalAmountPesos.toFixed(2)}`, exportCanvas.width / 2, originalCanvas.height + padding + 44);
+            ctx.fillText(`Total: ₱${totalAmountPesos.toFixed(2)}`, exportCanvas.width / 2, currentY);
 
-            // Trigger Direct Download
+            // Direct Download gamit ang format: StorePageUsername_Order_ID.png
             const imageUri = exportCanvas.toDataURL("image/png");
             const link = document.createElement("a");
             link.href = imageUri;
-            link.download = `ShareMap_Order_${generatedOrderID}.png`;
+            link.download = `${pageId.toLowerCase()}_Order_${generatedOrderID}.png`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -721,7 +735,7 @@
             const activePsid = document.getElementById('displayPsid').value;
 
             if (!nameVal || !phoneVal) {
-                document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy.";
+                document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan ang Contact Number bago magpatuloy.";
                 document.getElementById('errorMsg').style.display = "block";
                 return;
             }
@@ -733,7 +747,7 @@
 
             document.getElementById('errorMsg').style.display = "none";
 
-            // 1. DOWNLOAD MUNA ANG PURE WHITE QR CODE IMAGE (MAY ID & TOTAL)
+            // 1. DOWNLOAD ANG QR CODE IMAGE NA MAY STORE NAME AT DATE/TIME
             downloadQrCodeImageWithDetails();
 
             // 2. SEND SA POS (SUPABASE DATABASE)
@@ -764,7 +778,7 @@
                 status: 'PENDING'
             });
 
-            // 3. SEND AT BUKSAN ANG MESSENGER
+            // 3. OPEN MESSENGER
             const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
             setTimeout(() => {
                 window.location.href = messengerUrl;
