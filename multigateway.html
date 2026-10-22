@@ -361,13 +361,24 @@
         .saved-text { flex: 1; font-size: 13px; color: #f8fafc; word-break: break-word; }
         
         .btn { background-color: #0284c7; color: #ffffff; border: none; padding: 12px 20px; font-size: 0.95rem; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; transition: 0.3s; margin-top: 8px; }
-        .btn-sms { background-color: #16a34a; margin-top: 10px; }
         .error-msg { color: #f87171; font-size: 12px; margin-top: 6px; display: none; }
         
         .btn-fb-login { background-color: #1877f2; color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
         
         .qr-display-box { background: #ffffff; padding: 15px; border-radius: 12px; display: inline-block; margin-top: 10px; }
         .total-amount-badge { background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }
+
+        .instruction-notice-box {
+            background-color: #0284c7;
+            color: #ffffff;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            text-align: left;
+            margin-bottom: 12px;
+            line-height: 1.4;
+            border-left: 4px solid #38bdf8;
+        }
     </style>
 </head>
 <body>
@@ -476,11 +487,16 @@
         <!-- OVER THE COUNTER QR CONTAINER -->
         <div id="counterQrContainer" style="display: none; margin-top: 15px; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #38bdf8;">
             <h4 style="margin: 0 0 6px 0; color: #38bdf8;">📲 Advance Order QR Code</h4>
-            <p style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">I-download ang QR o i-send sa POS at Messenger:</p>
             
+            <div class="instruction-notice-box">
+                💡 <b>Mabilis na Transaksyon sa Counter:</b><br>
+                1. Pindutin ang button sa ibaba para **ma-download** ang QR Code image.<br>
+                2. I-present ang na-download na **QR Code** sa Cashier o sabihin ang iyong **Order ID#** para agad nilang ma-accept sa POS!
+            </div>
+
             <div class="qr-display-box" id="qrcodeCanvas"></div>
             
-            <p style="font-size: 12px; font-weight: bold; color: #e2e8f0; margin-top: 10px;" id="qrTextDetail"></p>
+            <p style="font-size: 13px; font-weight: bold; color: #38bdf8; margin-top: 10px;" id="qrTextDetail"></p>
 
             <!-- ACTION BUTTON PARA SA OVER THE COUNTER (DOWNLOAD -> POS -> MESSENGER) -->
             <button type="button" class="btn" style="background-color: #16a34a; margin-top: 12px;" onclick="handleCounterCheckoutSequence()">
@@ -608,8 +624,8 @@
         }
 
         function generateCounterQr() {
-            const qrCanvas = document.getElementById("qrcodeCanvas");
-            qrCanvas.innerHTML = "";
+            const qrCanvasContainer = document.getElementById("qrcodeCanvas");
+            qrCanvasContainer.innerHTML = "";
             
             const activePsid = document.getElementById('displayPsid').value;
             const ordersVal = getFormattedOrdersText();
@@ -623,10 +639,11 @@
                 total: totalAmountPesos
             });
 
-            new QRCode(qrCanvas, {
+            new QRCode(qrCanvasContainer, {
                 text: qrPayload,
-                width: 150,
-                height: 150
+                width: 200,
+                height: 200,
+                correctLevel: QRCode.CorrectLevel.H
             });
 
             document.getElementById("qrTextDetail").innerText = `Order ID: #${generatedOrderID} | Total: ₱${totalAmountPesos.toFixed(2)}`;
@@ -647,6 +664,52 @@
             } catch (err) {
                 console.error("Database connection exception:", err);
             }
+        }
+
+        // --- EXPLICIT HTML5 CANVAS RENDERER PARA MATINONG MA-DOWNLOAD ANG QR NA MAY TEXT ---
+        function downloadQrCodeImageWithDetails() {
+            const qrContainer = document.getElementById("qrcodeCanvas");
+            const originalCanvas = qrContainer.querySelector("canvas");
+
+            if (!originalCanvas) {
+                alert("⚠️ Re-generating QR Code... Paki-subukan ulit.");
+                generateCounterQr();
+                return;
+            }
+
+            // Gagawa tayo ng panibagong Canvas na may Puti Background at Text sa Ilalim
+            const exportCanvas = document.createElement("canvas");
+            const ctx = exportCanvas.getContext("2d");
+
+            const padding = 20;
+            const textSpace = 50;
+            exportCanvas.width = originalCanvas.width + (padding * 2);
+            exportCanvas.height = originalCanvas.height + (padding * 2) + textSpace;
+
+            // Fill solid white background
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+            // Iguguhit ang QR code mula sa orihinal na canvas sa gitna
+            ctx.drawImage(originalCanvas, padding, padding);
+
+            // Isusulat ang Order ID at Total Amount sa ilalim
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(`Order ID: #${generatedOrderID}`, exportCanvas.width / 2, originalCanvas.height + padding + 24);
+            ctx.font = "bold 14px Arial";
+            ctx.fillStyle = "#16a34a";
+            ctx.fillText(`Total: ₱${totalAmountPesos.toFixed(2)}`, exportCanvas.width / 2, originalCanvas.height + padding + 44);
+
+            // Trigger Direct Download
+            const imageUri = exportCanvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = imageUri;
+            link.download = `ShareMap_Order_${generatedOrderID}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // --- SUNOD-SUNOD NA SEQUENCE PARA SA OVER-THE-COUNTER ---
@@ -670,23 +733,8 @@
 
             document.getElementById('errorMsg').style.display = "none";
 
-            // 1. DOWNLOAD MUNA ANG QR CODE IMAGE
-            const qrImg = document.querySelector("#qrcodeCanvas img");
-            if (qrImg) {
-                const canvas = document.createElement("canvas");
-                canvas.width = qrImg.naturalWidth || 150;
-                canvas.height = qrImg.naturalHeight || 150;
-                const ctx = canvas.getContext("2d");
-                ctx.drawImage(qrImg, 0, 0);
-                
-                const imageUri = canvas.toDataURL("image/png");
-                const downloadLink = document.createElement("a");
-                downloadLink.href = imageUri;
-                downloadLink.download = `ShareMap_Order_${generatedOrderID}.png`;
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-                document.body.removeChild(downloadLink);
-            }
+            // 1. DOWNLOAD MUNA ANG PURE WHITE QR CODE IMAGE (MAY ID & TOTAL)
+            downloadQrCodeImageWithDetails();
 
             // 2. SEND SA POS (SUPABASE DATABASE)
             const formattedOrders = ordersVal.split(', ').join('\n');
@@ -716,7 +764,7 @@
                 status: 'PENDING'
             });
 
-            // 3. SEND SA MESSENGER
+            // 3. SEND AT BUKSAN ANG MESSENGER
             const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
             setTimeout(() => {
                 window.location.href = messengerUrl;
@@ -751,7 +799,6 @@
             document.getElementById('errorMsg').style.display = "none";
             const formattedSched = formatScheduleText(schedVal);
 
-            // KUNG DINE-IN: I-SAVE SA POS DATABASE AT IPASA SA MESSENGER
             if (isDineIn) {
                 const formattedOrders = ordersVal.split(', ').join('\n• ');
                 const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n🪑 Table / Pickup: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
@@ -778,7 +825,6 @@
                 return;
             }
 
-            // KUNG DELIVERY: Papunta sa index.html para kunin ang GPS Location
             localStorage.setItem('sharemap_page', pageId);
             localStorage.setItem('sharemap_orderid', generatedOrderID);
             localStorage.setItem('sharemap_fullname', nameVal);
