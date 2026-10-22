@@ -46,14 +46,20 @@
     }
 
     .test-banner { background: #dcfce7; border: 1px dashed #16a34a; padding: 12px; border-radius: 8px; max-width: 600px; margin: 0 auto 20px auto; text-align: center; font-size: 13px; color: #166534; }
-    .sim-btn-group { display: flex; justify-content: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-    .sim-btn { background: #16a34a; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; }
+    .sim-btn-group { display: flex; justify-content: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .sim-btn { background: #16a34a; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; }
     .sim-btn-dinein { background: #d97706; }
+    .sim-btn-counter { background: #0284c7; }
     
     .nav-container { max-width: 1200px; margin: 0 auto 20px auto; display: flex; flex-direction: column; gap: 12px; }
     .nav-tabs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
     .tab-btn { padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; background: #cbd5e1; color: #334155; font-size: 13px; }
     .tab-btn.active { background: #0284c7; color: white; }
+
+    /* SUB-TABS STYLES */
+    .sub-tabs-container { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+    .sub-tab-btn { padding: 6px 12px; border: 1px solid #94a3b8; border-radius: 20px; font-size: 11px; font-weight: bold; cursor: pointer; background: #ffffff; color: #475569; display: none; }
+    .sub-tab-btn.active { background: #1e293b; color: #ffffff; border-color: #1e293b; }
     
     .search-box { display: flex; justify-content: center; }
     .search-input { width: 100%; max-width: 400px; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; box-sizing: border-box; }
@@ -70,8 +76,10 @@
     .status-badge.cancelled { background: #fecaca; color: #991b1b; }
     .payment-badge-paid { background: #dcfce7; color: #15803d; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
     .payment-badge-unpaid { background: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    
     .type-badge-delivery { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
     .type-badge-dinein { background: #ffedd5; color: #c2410c; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    .type-badge-counter { background: #f3e8ff; color: #7e22ce; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
     
     .order-raw-view { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; line-height: 1.4; margin-bottom: 12px; color: #1e293b; max-height: 250px; overflow-y: auto; }
     
@@ -103,6 +111,14 @@
   <div class="header">
     <h2>🛍️ ShareMap POS & Multi-Store Meta API Dashboard</h2>
     <p>Live Orders Queue para sa store: <b id="currentStoreDisplay">sharemapdammystore</b></p>
+    
+    <!-- AUDIO NOTIFICATION SWITCH -->
+    <div style="margin-top: 10px; font-size: 12px; background: #e2e8f0; display: inline-block; padding: 6px 12px; border-radius: 20px;">
+      🔊 Alerto ng Tunog (Sound Alert): 
+      <label style="cursor: pointer; font-weight: bold; color: #0369a1; margin-left: 5px;">
+        <input type="checkbox" id="soundToggle" checked onchange="toggleSound(this)"> On/Off
+      </label>
+    </div>
   </div>
 
   <!-- FACEBOOK LOGIN & GO CONTROLLER -->
@@ -125,6 +141,7 @@
     <div class="sim-btn-group">
       <button class="sim-btn" onclick="simulateOrder('TAKEOUT', 'UNPAID')">🛵 Simulate Takeout</button>
       <button class="sim-btn sim-btn-dinein" onclick="simulateOrder('DINE_IN', 'UNPAID')">🍽️ Simulate Dine-In</button>
+      <button class="sim-btn sim-btn-counter" onclick="simulateOrder('COUNTER', 'PAID')">💳 Simulate Counter</button>
     </div>
   </div>
 
@@ -135,7 +152,16 @@
       <button class="tab-btn" id="tabCancelled" onclick="switchTab('cancelled')">❌ Cancelled Room</button>
       <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">💾 Completed History</button>
     </div>
-    <div class="search-box">
+
+    <!-- DINAMIKONG SUB-TABS (Nagtatago kung walang laman) -->
+    <div class="sub-tabs-container" id="subTabsContainer">
+      <button class="sub-tab-btn active" id="subTabAll" onclick="switchSubTab('ALL')">✨ Lahat</button>
+      <button class="sub-tab-btn" id="subTabTakeout" onclick="switchSubTab('TAKEOUT')">🛵 Takeout</button>
+      <button class="sub-tab-btn" id="subTabDineIn" onclick="switchSubTab('DINE_IN')">🍽️ Dine-In</button>
+      <button class="sub-tab-btn" id="subTabCounter" onclick="switchSubTab('COUNTER')">💳 Over-Counter</button>
+    </div>
+
+    <div class="search-box" style="margin-top: 10px;">
       <input type="text" id="searchInput" class="search-input" placeholder="🔍 Hanapin ang Order ID o Pangalan ng Kustomer..." oninput="loadOrdersFromDevice()">
     </div>
   </div>
@@ -186,7 +212,7 @@
 
   <!-- Meta Facebook SDK -->
   <script>
-    const FACEBOOK_APP_ID = "2070260990400834"; // Facebook App ID
+    const FACEBOOK_APP_ID = "2070260990400834"; 
 
     window.fbAsyncInit = function() {
         FB.init({
@@ -218,6 +244,8 @@
     let currentStoreToken = "";
     let activePageId = "";
     let currentTab = 'waiting';
+    let currentSubTab = 'ALL';
+    let soundAlertEnabled = true;
     let selectedOrderIdForPayment = null;
     let currentCashInput = "250";
 
@@ -226,7 +254,29 @@
     const STORAGE_CANCELLED = `sharemap_pos_cancelled_${storePageId.toLowerCase()}`;
     const STORAGE_HISTORY = `sharemap_pos_history_${storePageId.toLowerCase()}`;
 
-    // --- FACEBOOK LOGIN & GO FUNCTIONALITY ---
+    function toggleSound(checkbox) {
+      soundAlertEnabled = checkbox.checked;
+    }
+
+    // Audio Tone Synthesizer para sa Bagong Order
+    function playNotificationSound() {
+      if (!soundAlertEnabled) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      } catch (e) { console.error("Audio error:", e); }
+    }
+
     function loginWithFacebook() {
       FB.login(function(response) {
           if (response.authResponse) {
@@ -236,10 +286,8 @@
                       activePageId = page.id; 
                       currentStoreToken = page.access_token;
                       
-                      // 1. I-update sa Supabase 'licenses' table ang parehas na Page Access Token at Page ID!
                       await updateTokenAndPageIdInSupabase(storePageId, currentStoreToken, activePageId);
 
-                      // 2. I-update ang UI
                       document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Connected to Page:</b> ${page.name} (ID: ${activePageId})<br><small style="color:#15803d;">Active Page Token & Page ID Auto-Saved to Supabase!</small>`;
                       document.getElementById("loginControlArea").innerHTML = `
                         <button class="btn-fb btn-logout" onclick="logoutFacebook()">🔒 Logout & Switch Page</button>
@@ -255,30 +303,19 @@
     async function updateTokenAndPageIdInSupabase(username, token, pageNumId) {
       try {
         const updatePayload = { page_access_token: token };
-        if (pageNumId) {
-          updatePayload.page_id = pageNumId;
-        }
+        if (pageNumId) updatePayload.page_id = pageNumId;
 
         const { error } = await supabaseClient
           .from('licenses')
           .update(updatePayload)
           .eq('username', username.toLowerCase());
 
-        if (error) {
-          console.error("Supabase license save error:", error);
-        } else {
-          console.log("✅ Page Token & Page ID saved successfully to Supabase for:", username);
-        }
-      } catch (err) {
-        console.error("Supabase exception:", err);
-      }
+        if (error) console.error("Supabase license save error:", error);
+      } catch (err) { console.error("Supabase exception:", err); }
     }
 
-    // 🔒 LOGOUT: I-update sa Supabase na OFFLINE / EXPIRED na ang token
     async function logoutFacebook() {
       const expiredTokenMark = "OFFLINE_TOKEN_EXPIRED";
-      
-      // I-update sa Supabase database para makita ng admin na naka-logout na
       await updateTokenAndPageIdInSupabase(storePageId, expiredTokenMark, null);
 
       currentStoreToken = "";
@@ -288,15 +325,21 @@
           <span>🔓 Login with Facebook & Activate POS</span>
         </button>
       `;
-      alert("🔒 Naka-logout na ang POS API session. Na-update na rin sa Supabase bilang OFFLINE.");
+      alert("🔒 Naka-logout na ang POS API session.");
     }
 
     function switchTab(tab) {
       currentTab = tab;
+      currentSubTab = 'ALL';
       document.getElementById('tabWaiting').className = tab === 'waiting' ? 'tab-btn active' : 'tab-btn';
       document.getElementById('tabPreparing').className = tab === 'preparing' ? 'tab-btn active' : 'tab-btn';
       document.getElementById('tabCancelled').className = tab === 'cancelled' ? 'tab-btn active' : 'tab-btn';
       document.getElementById('tabHistory').className = tab === 'history' ? 'tab-btn active' : 'tab-btn';
+      loadOrdersFromDevice();
+    }
+
+    function switchSubTab(subTab) {
+      currentSubTab = subTab;
       loadOrdersFromDevice();
     }
 
@@ -309,27 +352,21 @@
           .single();
 
         if (!error && data && data.page_access_token) {
-          if (data.page_access_token === "OFFLINE_TOKEN_EXPIRED" || !data.page_access_token) {
-            document.getElementById("tokenStatusDisplay").innerHTML = `🔴 Offline: Naka-logout o expired ang token sa database.`;
-            return;
-          }
+          if (data.page_access_token === "OFFLINE_TOKEN_EXPIRED" || !data.page_access_token) return;
 
           currentStoreToken = data.page_access_token;
-          if (data.page_id) {
-            activePageId = data.page_id;
-          }
+          if (data.page_id) activePageId = data.page_id;
 
           document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Page Token Loaded from Database</b> (Page ID: ${data.page_id || 'N/A'})`;
           document.getElementById("loginControlArea").innerHTML = `
             <button class="btn-fb btn-logout" onclick="logoutFacebook()">🔒 Logout & Switch Page</button>
           `;
         }
-      } catch (err) {
-        console.error("Token fetch error:", err);
-      }
+      } catch (err) { console.error("Token fetch error:", err); }
     }
 
     async function syncAndFetchNewOrders() {
+      let newOrderReceived = false;
       try {
         const { data: cloudOrders, error } = await supabaseClient
           .from('orders')
@@ -342,11 +379,17 @@
           cloudOrders.forEach(cloudOrder => {
             const exists = waitingOrders.some(item => item.order_id === cloudOrder.order_id);
             if (!exists) {
+              newOrderReceived = true;
               const isDineIn = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("DINE-IN"));
+              const isCounter = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("OVER-THE-COUNTER")) || cloudOrder.plus_code === "COUNTER";
               
+              let orderType = "TAKEOUT";
+              if (isDineIn) orderType = "DINE_IN";
+              else if (isCounter) orderType = "COUNTER";
+
               waitingOrders.unshift({ 
                 order_id: cloudOrder.order_id,
-                order_type: isDineIn ? "DINE_IN" : "TAKEOUT",
+                order_type: orderType,
                 store_page: cloudOrder.store_page,
                 branch: cloudOrder.branch || "Main Branch",
                 schedule: cloudOrder.schedule || "Now (Agad-agad)",
@@ -359,7 +402,7 @@
                 longitude: cloudOrder.longitude,
                 raw_chat_output: cloudOrder.raw_chat_output,
                 messenger_psid: cloudOrder.messenger_psid,
-                payment_status: 'UNPAID',
+                payment_status: isCounter ? 'PAID' : 'UNPAID',
                 status: 'PENDING',
                 received_at: new Date().toLocaleTimeString() 
               });
@@ -372,8 +415,10 @@
             await supabaseClient.from('orders').delete().eq('order_id', ord.order_id);
           }
         }
-      } catch (err) {
-        console.error("Sync exception:", err);
+      } catch (err) { console.error("Sync exception:", err); }
+
+      if (newOrderReceived) {
+        playNotificationSound();
       }
 
       loadOrdersFromDevice();
@@ -381,7 +426,8 @@
 
     function simulateOrder(type, paymentStatus) {
       let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
-      const orderId = (type === 'DINE_IN' ? 'AT' : 'AU') + Math.floor(10 + Math.random() * 90);
+      const prefix = type === 'DINE_IN' ? 'AT' : (type === 'COUNTER' ? 'AC' : 'AU');
+      const orderId = prefix + Math.floor(10 + Math.random() * 90);
       
       const sampleOrder = {
         order_id: orderId,
@@ -391,9 +437,9 @@
         schedule: "Oct 18, 2026, 11:15 AM",
         customer_name: "Juan Dela Cruz",
         customer_phone: "09124356789",
-        landmark: "Malapit sa Panaderia",
-        orders_list: "Chicken Joy Value Meal x1\nCoke Regular x1",
-        plus_code: "7Q53WJQ4+CG",
+        landmark: type === 'COUNTER' ? "Counter" : "Malapit sa Panaderia",
+        orders_list: "Halo-Halo Special x1\nCoke Regular x1",
+        plus_code: type === 'COUNTER' ? "COUNTER" : "7Q53WJQ4+CG",
         latitude: 13.93859,
         longitude: 121.60636,
         payment_status: paymentStatus,
@@ -402,12 +448,17 @@
         received_at: new Date().toLocaleTimeString()
       };
 
-      sampleOrder.raw_chat_output = `🏪 Store / Page: ${sampleOrder.store_page}\n🔢 Order ID: #${sampleOrder.order_id}\n💳 Payment: ${paymentStatus}\n⏰ Schedule: ${sampleOrder.schedule}\n\nClient Order List:\n${sampleOrder.orders_list}\n\nName: ${sampleOrder.customer_name}\nPhone: ${sampleOrder.customer_phone}`;
+      if (type === 'COUNTER') {
+        sampleOrder.raw_chat_output = `💳 OVER-THE-COUNTER ADVANCE ORDER\npsid: ${sampleOrder.messenger_psid}\n🔢 Order ID: #${sampleOrder.order_id}\n🏪 Store: ${sampleOrder.store_page}\n💰 Total: ₱85.00\n\n🛒 Orders:\nHalo-Halo Special x1\n\n👤 Name: ${sampleOrder.customer_name}\n📞 Contact: ${sampleOrder.customer_phone}`;
+      } else {
+        sampleOrder.raw_chat_output = `🏪 Store / Page: ${sampleOrder.store_page}\n🔢 Order ID: #${sampleOrder.order_id}\n💳 Payment: ${paymentStatus}\n⏰ Schedule: ${sampleOrder.schedule}\n\nClient Order List:\n${sampleOrder.orders_list}\n\nName: ${sampleOrder.customer_name}\nPhone: ${sampleOrder.customer_phone}`;
+      }
 
       waitingOrders.unshift(sampleOrder);
       localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
+      playNotificationSound();
       loadOrdersFromDevice();
-      alert(`✅ May pumasok na test ${type} order sa Waiting Room!`);
+      alert(`✅ May pumasok na test ${type} order!`);
     }
 
     function loadOrdersFromDevice() {
@@ -417,14 +468,42 @@
       const searchQuery = document.getElementById("searchInput").value.toLowerCase().trim();
 
       let ordersList = [];
-      if (currentTab === 'waiting') {
-        ordersList = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
-      } else if (currentTab === 'preparing') {
-        ordersList = JSON.parse(localStorage.getItem(STORAGE_PREPARING)) || [];
-      } else if (currentTab === 'cancelled') {
-        ordersList = JSON.parse(localStorage.getItem(STORAGE_CANCELLED)) || [];
-      } else {
-        ordersList = JSON.parse(localStorage.getItem(STORAGE_HISTORY)) || [];
+      if (currentTab === 'waiting') ordersList = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
+      else if (currentTab === 'preparing') ordersList = JSON.parse(localStorage.getItem(STORAGE_PREPARING)) || [];
+      else if (currentTab === 'cancelled') ordersList = JSON.parse(localStorage.getItem(STORAGE_CANCELLED)) || [];
+      else ordersList = JSON.parse(localStorage.getItem(STORAGE_HISTORY)) || [];
+
+      // Kalkulahin ang laman per kategorya para sa Sub-Tabs visibility
+      const countTakeout = ordersList.filter(o => o.order_type === 'TAKEOUT').length;
+      const countDineIn = ordersList.filter(o => o.order_type === 'DINE_IN').length;
+      const countCounter = ordersList.filter(o => o.order_type === 'COUNTER').length;
+
+      // I-update ang visibility at text ng Sub-Tabs
+      const btnAll = document.getElementById('subTabAll');
+      const btnTakeout = document.getElementById('subTabTakeout');
+      const btnDineIn = document.getElementById('subTabDineIn');
+      const btnCounter = document.getElementById('subTabCounter');
+
+      btnAll.style.display = ordersList.length > 0 ? 'inline-block' : 'none';
+      
+      btnTakeout.style.display = countTakeout > 0 ? 'inline-block' : 'none';
+      btnTakeout.innerText = `🛵 Takeout (${countTakeout})`;
+
+      btnDineIn.style.display = countDineIn > 0 ? 'inline-block' : 'none';
+      btnDineIn.innerText = `🍽️ Dine-In (${countDineIn})`;
+
+      btnCounter.style.display = countCounter > 0 ? 'inline-block' : 'none';
+      btnCounter.innerText = `💳 Over-Counter (${countCounter})`;
+
+      // I-apply ang active class sa sub-tabs
+      btnAll.className = currentSubTab === 'ALL' ? 'sub-tab-btn active' : 'sub-tab-btn';
+      btnTakeout.className = currentSubTab === 'TAKEOUT' ? 'sub-tab-btn active' : 'sub-tab-btn';
+      btnDineIn.className = currentSubTab === 'DINE_IN' ? 'sub-tab-btn active' : 'sub-tab-btn';
+      btnCounter.className = currentSubTab === 'COUNTER' ? 'sub-tab-btn active' : 'sub-tab-btn';
+
+      // Salain base sa napiling Sub-Tab
+      if (currentSubTab !== 'ALL') {
+        ordersList = ordersList.filter(item => item.order_type === currentSubTab);
       }
 
       if (searchQuery) {
@@ -435,7 +514,7 @@
       }
 
       if (ordersList.length === 0) {
-        container.innerHTML = `<p style='text-align:center; width:100%; color:#64748b;'>Walang makitang order sa kuwartong ito.</p>`;
+        container.innerHTML = `<p style='text-align:center; width:100%; color:#64748b;'>Walang makitang order sa kategoryang ito.</p>`;
         return;
       }
 
@@ -443,8 +522,10 @@
         const card = document.createElement("div");
         card.className = "order-card";
         
-        const isDineIn = order.order_type === "DINE_IN";
-        const typeBadgeHtml = isDineIn ? `<span class="type-badge-dinein">🍽️ DINE-IN</span>` : `<span class="type-badge-delivery">🛵 TAKEOUT</span>`;
+        let typeBadgeHtml = `<span class="type-badge-delivery">🛵 TAKEOUT</span>`;
+        if (order.order_type === "DINE_IN") typeBadgeHtml = `<span class="type-badge-dinein">🍽️ DINE-IN</span>`;
+        else if (order.order_type === "COUNTER") typeBadgeHtml = `<span class="type-badge-counter">💳 OVER-COUNTER</span>`;
+
         const paymentBadgeHtml = order.payment_status === 'PAID' ? `<span class="payment-badge-paid">💳 PAID</span>` : `<span class="payment-badge-unpaid">🔴 UNPAID</span>`;
 
         let statusClass = 'status-badge';
@@ -453,7 +534,6 @@
         else if (order.status === 'CANCELLED') statusClass = 'status-badge cancelled';
 
         const displayFormattedText = order.raw_chat_output || "";
-
         let actionButtonsHtml = "";
 
         if (currentTab === 'waiting') {
@@ -463,14 +543,14 @@
           `;
         } else if (currentTab === 'preparing') {
           actionButtonsHtml = `
-            <button class="btn btn-print" onclick="printDualTickets('${order.order_id}', '${order.schedule}', \`${order.orders_list}\`, '${order.customer_name}', '${order.customer_phone}', ${isDineIn}, \`${displayFormattedText}\`)">🖨️ Print Tickets</button>
+            <button class="btn btn-print" onclick="printDualTickets('${order.order_id}', '${order.schedule}', \`${order.orders_list}\`, '${order.customer_name}', '${order.customer_phone}', '${order.order_type}', \`${displayFormattedText}\`)">🖨️ Print Tickets</button>
             <button class="btn btn-copy" onclick="copyOrderDetails(\`${displayFormattedText}\`)">📋 Copy Receipt Details</button>
             <button class="btn btn-finish" onclick="completeOrder('${order.order_id}')">✅ Complete & Move to History</button>
             <button class="btn btn-cancel" onclick="cancelOrder('${order.order_id}')">❌ Cancel Order</button>
           `;
         } else {
           actionButtonsHtml = `
-            <button class="btn btn-print" onclick="printDualTickets('${order.order_id}', '${order.schedule}', \`${order.orders_list}\`, '${order.customer_name}', '${order.customer_phone}', ${isDineIn}, \`${displayFormattedText}\`)">🖨️ Print Tickets</button>
+            <button class="btn btn-print" onclick="printDualTickets('${order.order_id}', '${order.schedule}', \`${order.orders_list}\`, '${order.customer_name}', '${order.customer_phone}', '${order.order_type}', \`${displayFormattedText}\`)">🖨️ Print Tickets</button>
             <button class="btn btn-copy" onclick="copyOrderDetails(\`${displayFormattedText}\`)">📋 Copy Receipt Details</button>
           `;
         }
@@ -604,15 +684,15 @@
       }
     }
 
-    function printDualTickets(orderId, schedule, ordersList, clientName, clientPhone, isDineIn, officialReceiptText) {
+    function printDualTickets(orderId, schedule, ordersList, clientName, clientPhone, orderType, officialReceiptText) {
       const printArea = document.getElementById("printArea");
       printArea.style.display = "block";
       printArea.innerHTML = `
-        <div style="text-align: center; font-weight: bold; font-size: 18px;">${isDineIn ? 'DINE-IN KITCHEN TICKET' : 'TAKEOUT / DELIVERY KITCHEN TICKET'}</div>
-        <div style="text-align: center; font-size: 13px; margin-bottom: 12px;">ShareMap POS System - Page 1</div>
+        <div style="text-align: center; font-weight: bold; font-size: 18px;">${orderType === 'DINE_IN' ? 'DINE-IN KITCHEN TICKET' : (orderType === 'COUNTER' ? 'OVER-THE-COUNTER TICKET' : 'TAKEOUT KITCHEN TICKET')}</div>
+        <div style="text-align: center; font-size: 13px; margin-bottom: 12px;">ShareMap POS System</div>
         <hr style="border: 1px dashed #000; margin-bottom: 10px;">
         <p style="margin: 4px 0;"><b>Order ID:</b> #${orderId}</p>
-        <p style="margin: 4px 0;"><b>Type:</b> ${isDineIn ? 'DINE-IN' : 'TAKEOUT'}</p>
+        <p style="margin: 4px 0;"><b>Type:</b> ${orderType}</p>
         <p style="margin: 4px 0;"><b>Schedule:</b> ${schedule}</p>
         <p style="margin: 4px 0;"><b>Client:</b> ${clientName}</p>
         <p style="margin: 4px 0; margin-bottom: 12px;"><b>Contact:</b> ${clientPhone}</p>
@@ -624,7 +704,7 @@
         <div class="page-break"></div>
 
         <div style="text-align: center; font-weight: bold; font-size: 18px; margin-top: 20px;">OFFICIAL ORDER RECEIPT</div>
-        <div style="text-align: center; font-size: 13px; margin-bottom: 12px;">ShareMap POS System - Page 2</div>
+        <div style="text-align: center; font-size: 13px; margin-bottom: 12px;">ShareMap POS System</div>
         <hr style="border: 1px dashed #000; margin-bottom: 10px;">
         <pre style="font-family: monospace; font-size: 13px; white-space: pre-wrap;">${officialReceiptText}</pre>
         <hr style="border: 1px dashed #000; margin-top: 15px;">
@@ -645,9 +725,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-      } catch (err) {
-        console.error("API Exception:", err);
-      }
+      } catch (err) { console.error("API Exception:", err); }
     }
 
     function copyOrderDetails(text) {
