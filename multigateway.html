@@ -156,7 +156,6 @@
 
             if (passedTotal) totalAmountPesos = parseFloat(passedTotal) || 0;
 
-            // AWTO-CHECK NG TAB NA IPINASA MULA SA KIOSKMODE
             if (passedType === 'delivery') {
                 document.getElementById('typeDelivery').checked = true;
             } else if (passedType === 'dinein') {
@@ -474,23 +473,19 @@
         <!-- ACTION BUTTON FOR DELIVERY & DINE-IN -->
         <button id="proceedBtn" class="btn">📍 Sunod: Kunin ang GPS Location ➔</button>
 
-        <!-- SMS DINE-IN CONTAINER -->
-        <div id="dineInSmsContainer" style="display: none; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #475569;">
-            <div class="form-group" style="margin-bottom: 8px;">
-                <label for="smsStoreNum" style="font-size: 11px; color: #38bdf8;">📱 Opsyonal: Cellphone Number ng Store/Manager para sa SMS:</label>
-                <input type="tel" id="smsStoreNum" placeholder="hal. 09123456789" autocomplete="off">
-            </div>
-            <button type="button" id="smsBtn" class="btn btn-sms" onclick="handleSmsReservation()">📱 I-send ang Reservation via SMS</button>
-        </div>
-
         <!-- OVER THE COUNTER QR CONTAINER -->
         <div id="counterQrContainer" style="display: none; margin-top: 15px; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #38bdf8;">
             <h4 style="margin: 0 0 6px 0; color: #38bdf8;">📲 Advance Order QR Code</h4>
-            <p style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">Ipakita ang QR Code na ito o ang Order ID sa Cashier para i-accept at bayaran ang order:</p>
+            <p style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">I-download ang QR o i-send sa POS at Messenger:</p>
             
             <div class="qr-display-box" id="qrcodeCanvas"></div>
             
             <p style="font-size: 12px; font-weight: bold; color: #e2e8f0; margin-top: 10px;" id="qrTextDetail"></p>
+
+            <!-- ACTION BUTTON PARA SA OVER THE COUNTER (DOWNLOAD -> POS -> MESSENGER) -->
+            <button type="button" class="btn" style="background-color: #16a34a; margin-top: 12px;" onclick="handleCounterCheckoutSequence()">
+                📥 Download QR & Send to POS/Messenger ➔
+            </button>
         </div>
     </div>
 
@@ -516,7 +511,6 @@
             const paxGroup = document.getElementById("paxGroup");
             const scheduleGroup = document.getElementById("scheduleGroup");
             const proceedBtn = document.getElementById("proceedBtn");
-            const dineInSmsContainer = document.getElementById("dineInSmsContainer");
             const counterQrContainer = document.getElementById("counterQrContainer");
 
             if (isDelivery) {
@@ -526,7 +520,6 @@
                 scheduleGroup.style.display = "block";
                 proceedBtn.style.display = "block";
                 proceedBtn.innerText = "📍 Sunod: Kunin ang GPS Location ➔";
-                dineInSmsContainer.style.display = "none";
                 counterQrContainer.style.display = "none";
             } else if (isDineIn) {
                 landmarkGroup.style.display = "none";
@@ -534,8 +527,7 @@
                 paxGroup.style.display = "block";
                 scheduleGroup.style.display = "block";
                 proceedBtn.style.display = "block";
-                proceedBtn.innerText = "📩 I-send ang Order sa Messenger ➔";
-                dineInSmsContainer.style.display = "block";
+                proceedBtn.innerText = "📩 I-send ang Dine-In Order sa POS & Messenger ➔";
                 counterQrContainer.style.display = "none";
             } else if (isCounter) {
                 landmarkGroup.style.display = "none";
@@ -543,7 +535,6 @@
                 paxGroup.style.display = "none";
                 scheduleGroup.style.display = "none";
                 proceedBtn.style.display = "none";
-                dineInSmsContainer.style.display = "none";
                 counterQrContainer.style.display = "block";
                 generateCounterQr();
             }
@@ -641,7 +632,98 @@
             document.getElementById("qrTextDetail").innerText = `Order ID: #${generatedOrderID} | Total: ₱${totalAmountPesos.toFixed(2)}`;
         }
 
-        function handleProcessOrder() {
+        // --- SUPABASE DATABASE SYNC FUNCTION PARA SA DINE-IN AT COUNTER ---
+        async function saveOrderToSupabasePOS(orderData) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('orders')
+                    .insert([orderData]);
+
+                if (error) {
+                    console.error("Supabase Save Error:", error);
+                } else {
+                    console.log("✅ Successfully saved order to POS database!");
+                }
+            } catch (err) {
+                console.error("Database connection exception:", err);
+            }
+        }
+
+        // --- SUNOD-SUNOD NA SEQUENCE PARA SA OVER-THE-COUNTER ---
+        async function handleCounterCheckoutSequence() {
+            const nameVal = document.getElementById('fullName').value.trim();
+            const phoneVal = document.getElementById('phone').value.trim();
+            const ordersVal = getFormattedOrdersText();
+            const pageId = getPageId();
+            const activePsid = document.getElementById('displayPsid').value;
+
+            if (!nameVal || !phoneVal) {
+                document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy.";
+                document.getElementById('errorMsg').style.display = "block";
+                return;
+            }
+
+            if (!isPsidVerifiedFromSuggestion || activePsid === "MESSENGER_WEB_USER") {
+                alert("⚠️ Facebook account not match! Paki-click ang 'Continue with Facebook' button sa itaas para makuha ang iyong tunay na FB Account.");
+                return;
+            }
+
+            document.getElementById('errorMsg').style.display = "none";
+
+            // 1. DOWNLOAD MUNA ANG QR CODE IMAGE
+            const qrImg = document.querySelector("#qrcodeCanvas img");
+            if (qrImg) {
+                const canvas = document.createElement("canvas");
+                canvas.width = qrImg.naturalWidth || 150;
+                canvas.height = qrImg.naturalHeight || 150;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(qrImg, 0, 0);
+                
+                const imageUri = canvas.toDataURL("image/png");
+                const downloadLink = document.createElement("a");
+                downloadLink.href = imageUri;
+                downloadLink.download = `ShareMap_Order_${generatedOrderID}.png`;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            }
+
+            // 2. SEND SA POS (SUPABASE DATABASE)
+            const formattedOrders = ordersVal.split(', ').join('\n');
+            const shareText = `💳 OVER-THE-COUNTER ADVANCE ORDER\n` +
+                              `psid: ${activePsid}\n` +
+                              `🔢 Order ID: #${generatedOrderID}\n` +
+                              `🏪 Store: ${pageId}\n` +
+                              `💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n` +
+                              `🛒 Orders:\n${formattedOrders}\n\n` +
+                              `👤 Name: ${nameVal}\n` +
+                              `📞 Contact: ${phoneVal}`;
+
+            await saveOrderToSupabasePOS({
+                order_id: generatedOrderID,
+                store_page: pageId.toLowerCase(),
+                branch: "Counter Pickup",
+                schedule: "Over-the-Counter",
+                customer_name: nameVal,
+                customer_phone: phoneVal,
+                landmark: "Counter",
+                orders_list: formattedOrders,
+                plus_code: "COUNTER",
+                latitude: 0,
+                longitude: 0,
+                raw_chat_output: shareText,
+                messenger_psid: activePsid,
+                status: 'PENDING'
+            });
+
+            // 3. SEND SA MESSENGER
+            const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
+            setTimeout(() => {
+                window.location.href = messengerUrl;
+            }, 1000);
+        }
+
+        async function handleProcessOrder() {
             const nameVal = document.getElementById('fullName').value.trim();
             const phoneVal = document.getElementById('phone').value.trim();
             const landmarkVal = document.getElementById('landmark').value.trim();
@@ -669,15 +751,34 @@
             document.getElementById('errorMsg').style.display = "none";
             const formattedSched = formatScheduleText(schedVal);
 
+            // KUNG DINE-IN: I-SAVE SA POS DATABASE AT IPASA SA MESSENGER
             if (isDineIn) {
                 const formattedOrders = ordersVal.split(', ').join('\n• ');
                 const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n🪑 Table / Pickup: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+
+                await saveOrderToSupabasePOS({
+                    order_id: generatedOrderID,
+                    store_page: pageId.toLowerCase(),
+                    branch: tableVal || "Dine-In Table",
+                    schedule: formattedSched,
+                    customer_name: nameVal,
+                    customer_phone: phoneVal,
+                    landmark: tableVal || "Dine-In",
+                    orders_list: ordersVal,
+                    plus_code: "DINE-IN",
+                    latitude: 0,
+                    longitude: 0,
+                    raw_chat_output: shareText,
+                    messenger_psid: activePsid,
+                    status: 'PENDING'
+                });
+
                 const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
-                
                 window.location.href = messengerUrl;
                 return;
             }
 
+            // KUNG DELIVERY: Papunta sa index.html para kunin ang GPS Location
             localStorage.setItem('sharemap_page', pageId);
             localStorage.setItem('sharemap_orderid', generatedOrderID);
             localStorage.setItem('sharemap_fullname', nameVal);
@@ -691,50 +792,6 @@
 
             const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&total=${totalAmountPesos.toFixed(2)}&psid=${encodeURIComponent(activePsid)}`;
             window.location.href = `./index.html${queryStr}`;
-        }
-
-        function handleSmsReservation() {
-            const nameVal = document.getElementById('fullName').value.trim();
-            const phoneVal = document.getElementById('phone').value.trim();
-            const tableVal = document.getElementById('tableNum').value.trim();
-            const paxVal = document.getElementById('paxCount').value.trim();
-            const schedVal = document.getElementById('scheduleOrder').value;
-            const ordersVal = getFormattedOrdersText();
-            const targetPhone = document.getElementById('smsStoreNum').value.trim();
-            const pageId = getPageId();
-            const activePsid = document.getElementById('displayPsid').value;
-
-            if (!nameVal || !phoneVal) {
-                document.getElementById('errorMsg').style.display = "block";
-                return;
-            }
-            if (!targetPhone) {
-                alert("Paki-lagay ang cellphone number ng Branch Store/Manager para sa SMS!");
-                return;
-            }
-            document.getElementById('errorMsg').style.display = "none";
-
-            const formattedSched = formatScheduleText(schedVal);
-            const formattedOrders = ordersVal.split(', ').join('\n• ');
-
-            const smsBodyText = `SHAREMAP DINE-IN ORDER\n` +
-                                `psid: ${activePsid}\n` +
-                                `🔢 Order ID: #${generatedOrderID}\n` +
-                                `🏪 Store: ${pageId}\n` +
-                                `🪑 Table / Pickup: ${tableVal || 'Not Specified'}\n` +
-                                `⏰ Schedule: ${formattedSched}\n` +
-                                `👥 Party Size: ${paxVal || '2'} Pax\n` +
-                                `💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n` +
-                                `🛒 Advance Orders:\n• ${formattedOrders}\n\n` +
-                                `👤 Name: ${nameVal}\n` +
-                                `📞 Contact: ${phoneVal}`;
-
-            const encodedText = encodeURIComponent(smsBodyText);
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const delimiter = isIOS ? '&' : '?';
-            const smsUri = `sms:${targetPhone}${delimiter}body=${encodedText}`;
-
-            window.location.href = smsUri;
         }
 
         document.getElementById('proceedBtn').onclick = () => {
