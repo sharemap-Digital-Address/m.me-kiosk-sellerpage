@@ -141,7 +141,7 @@
     <div class="sim-btn-group">
       <button class="sim-btn" onclick="simulateOrder('TAKEOUT', 'UNPAID')">🛵 Simulate Takeout</button>
       <button class="sim-btn sim-btn-dinein" onclick="simulateOrder('DINE_IN', 'UNPAID')">🍽️ Simulate Dine-In</button>
-      <button class="sim-btn sim-btn-counter" onclick="simulateOrder('COUNTER', 'PAID')">💳 Simulate Counter</button>
+      <button class="sim-btn sim-btn-counter" onclick="simulateOrder('COUNTER', 'UNPAID')">💳 Simulate Counter</button>
     </div>
   </div>
 
@@ -402,7 +402,7 @@
                 longitude: cloudOrder.longitude,
                 raw_chat_output: cloudOrder.raw_chat_output,
                 messenger_psid: cloudOrder.messenger_psid,
-                payment_status: isCounter ? 'PAID' : 'UNPAID',
+                payment_status: 'UNPAID', // Lahat ay nakadefault sa UNPAID bago i-process ng cashier
                 status: 'PENDING',
                 received_at: new Date().toLocaleTimeString() 
               });
@@ -673,13 +673,13 @@
         completedItem.status = 'COMPLETED';
         completedItem.completed_at = new Date().toLocaleString();
         
+        // WALANG LIMIT SA HISTORY - Naka-save na lahat para sa susunod na Analytics/Inventory
         historyOrders.unshift(completedItem);
-        if (historyOrders.length > 200) historyOrders.pop();
 
         localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders));
         localStorage.setItem(STORAGE_HISTORY, JSON.stringify(historyOrders));
         
-        alert(`✅ Tapos na ang transaksyon para sa Order #${orderId}!`);
+        alert(`✅ Tapos na ang transaksyon para sa Order #${orderId}! Nailipat na sa History.`);
         loadOrdersFromDevice();
       }
     }
