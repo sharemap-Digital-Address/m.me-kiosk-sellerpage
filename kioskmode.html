@@ -12,7 +12,6 @@
         .store-header { text-align: center; margin-bottom: 15px; }
         .store-header h2 { margin: 0; color: #38bdf8; font-size: 22px; }
 
-        /* TABS & COLLAPSIBLE SEARCH BAR ROW */
         .navigation-row {
             display: flex; align-items: center; gap: 8px; margin-bottom: 15px; position: relative; height: 38px;
         }
@@ -26,7 +25,6 @@
         }
         .cat-tab.active { background: #0284c7; color: #ffffff; border-color: #38bdf8; }
 
-        /* COLLAPSIBLE SEARCH BAR STYLES */
         .search-trigger-btn {
             background: #1e293b; color: #38bdf8; border: 1px solid #334155; width: 38px; height: 38px; min-width: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: 0.2s;
         }
@@ -90,13 +88,8 @@
 
     <!-- TABS AND COLLAPSIBLE SEARCH BAR -->
     <div class="navigation-row">
-        <!-- Search Trigger Icon Button -->
         <button class="search-trigger-btn" id="searchTriggerBtn" onclick="openSearchBar()" title="Search Menu">🔍</button>
-
-        <!-- Category Tabs -->
         <div class="category-tabs" id="categoryTabsContainer"></div>
-
-        <!-- Collapsible Search Field (Hidden initially) -->
         <div class="collapsible-search-box" id="searchBox">
             <span style="font-size:14px; color:#38bdf8;">🔍</span>
             <input type="text" id="searchInput" placeholder="Maghanap ng pagkain o inumin..." oninput="filterBySearch()">
@@ -110,8 +103,8 @@
 </div>
 
 <div class="cart-bar" id="cartBar" onclick="checkoutToGateway()" style="display:none;">
-    <span id="cartSummaryText">🛒 0 Items Selected</span>
-    <span>I-save at Bumalik sa Order ➔</span>
+    <span id="cartSummaryText">🛒 0 Items | Total: ₱0.00</span>
+    <span>Place Order ➔</span>
 </div>
 
 <!-- MODAL 1: FULLSCREEN ITEM DETAILS & RATINGS -->
@@ -150,9 +143,7 @@
         <button class="close-modal" onclick="closeMixModal()">Isara ✕</button>
         <h3 style="color:#38bdf8; margin-top:0;">🔄 Piliin ang Ka-Match Combo</h3>
         <p id="mixModalSub" style="font-size: 12px; color:#94a3b8; margin-bottom: 12px;"></p>
-        
         <div id="mixTargetsContainer" style="max-height: 250px; overflow-y: auto; margin-bottom: 12px;"></div>
-
         <button style="background:#16a34a; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer;" onclick="closeMixModal()">Tapusin ang Combo</button>
     </div>
 </div>
@@ -215,26 +206,19 @@
         loadKioskMenu();
     };
 
-    /* COLLAPSIBLE SEARCH BAR LOGIC */
     function openSearchBar() {
         document.getElementById('searchTriggerBtn').style.display = 'none';
         document.getElementById('categoryTabsContainer').style.display = 'none';
-        
         const searchBox = document.getElementById('searchBox');
         searchBox.style.display = 'flex';
-        const input = document.getElementById('searchInput');
-        input.focus();
+        document.getElementById('searchInput').focus();
     }
 
     function closeSearchBar() {
-        const input = document.getElementById('searchInput');
-        input.value = "";
-        
+        document.getElementById('searchInput').value = "";
         document.getElementById('searchBox').style.display = 'none';
         document.getElementById('searchTriggerBtn').style.display = 'flex';
         document.getElementById('categoryTabsContainer').style.display = 'flex';
-
-        // Re-render items batay sa huling napiling active category
         filterAndRenderGrid(activeCategory);
     }
 
@@ -627,13 +611,57 @@
         updateCartBar();
     }
 
+    /* PRESO COMPUTATION LOGIC */
+    function getItemUnitPrice(itemKey) {
+        if (itemKey.includes(" + ") && itemKey.includes("(Mix&Match)")) {
+            let parts = itemKey.replace(" (Mix&Match)", "").split(" + ");
+            let mainName = parts[0].trim();
+            let matchFullName = parts[1].trim();
+
+            let mainObj = allFetchedItems.find(i => i.name === mainName);
+            let matchObj = allFetchedItems.find(i => matchFullName.startsWith(i.name));
+
+            if (mainObj && matchObj) {
+                let discount = parseFloat(mainObj.mixMatchDiscount || 0);
+                return (parseFloat(mainObj.price || 0) + parseFloat(matchObj.price || 0)) - discount;
+            }
+        }
+
+        if (itemKey.includes(" (") && itemKey.endsWith(")")) {
+            let mainName = itemKey.split(" (")[0].trim();
+            let varName = itemKey.split(" (")[1].replace(")", "").trim();
+            let mainObj = allFetchedItems.find(i => i.name === mainName);
+            if (mainObj) {
+                let variantsArr = parseVariants(mainObj.size);
+                let foundVar = variantsArr.find(v => v.name === varName);
+                if (foundVar && foundVar.price) return parseFloat(foundVar.price);
+                return parseFloat(mainObj.price || 0);
+            }
+        }
+
+        let mainObj = allFetchedItems.find(i => i.name === itemKey);
+        if (mainObj) {
+            return parseFloat(mainObj.price || 0);
+        }
+        return 0;
+    }
+
     function updateCartBar() {
         let totalCount = 0;
-        for (let key in selectedCart) totalCount += selectedCart[key];
+        let totalPrice = 0;
+
+        for (let key in selectedCart) {
+            let qty = selectedCart[key];
+            if (qty > 0) {
+                totalCount += qty;
+                totalPrice += (getItemUnitPrice(key) * qty);
+            }
+        }
+
         const bar = document.getElementById('cartBar');
         if (totalCount > 0) {
             bar.style.display = 'flex';
-            document.getElementById('cartSummaryText').innerText = `🛒 ${totalCount} Item(s) in Cart`;
+            document.getElementById('cartSummaryText').innerText = `🛒 ${totalCount} Items | Total: ₱${totalPrice.toFixed(2)}`;
         } else {
             bar.style.display = 'none';
         }
@@ -645,11 +673,19 @@
 
     function checkoutToGateway() {
         let orderArray = [];
+        let grandTotal = 0;
+
         for (let name in selectedCart) {
-            if (selectedCart[name] > 0) orderArray.push(`${name} x${selectedCart[name]}`);
+            if (selectedCart[name] > 0) {
+                let unitPrice = getItemUnitPrice(name);
+                let itemTotal = unitPrice * selectedCart[name];
+                grandTotal += itemTotal;
+                orderArray.push(`${name} x${selectedCart[name]}`);
+            }
         }
+
         let orderString = orderArray.join(', ');
-        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&psid=${encodeURIComponent(currentPsid)}`;
+        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&total=${grandTotal.toFixed(2)}&psid=${encodeURIComponent(currentPsid)}`;
     }
 </script>
 </body>
