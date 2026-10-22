@@ -152,8 +152,18 @@
             const urlParams = new URLSearchParams(window.location.search);
             const passedOrders = urlParams.get('ord');
             const passedTotal = urlParams.get('total');
+            const passedType = urlParams.get('type');
 
             if (passedTotal) totalAmountPesos = parseFloat(passedTotal) || 0;
+
+            // AWTO-CHECK NG TAB NA IPINASA MULA SA KIOSKMODE
+            if (passedType === 'delivery') {
+                document.getElementById('typeDelivery').checked = true;
+            } else if (passedType === 'dinein') {
+                document.getElementById('typeDineIn').checked = true;
+            } else if (passedType === 'counter') {
+                document.getElementById('typeCounter').checked = true;
+            }
 
             if (passedOrders && currentOrdersList.length === 0) {
                 passedOrders.split(',').forEach(itemStr => {
@@ -165,6 +175,8 @@
                     }
                 });
             }
+            
+            toggleServiceType();
             renderOrderUI();
         });
 
@@ -355,7 +367,6 @@
         
         .btn-fb-login { background-color: #1877f2; color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
         
-        /* OVER THE COUNTER QR BOX */
         .qr-display-box { background: #ffffff; padding: 15px; border-radius: 12px; display: inline-block; margin-top: 10px; }
         .total-amount-badge { background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }
     </style>
