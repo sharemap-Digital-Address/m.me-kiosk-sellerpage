@@ -32,6 +32,7 @@
         .menu-details { padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
         .menu-title { font-weight: bold; font-size: 13px; margin-bottom: 2px; }
         .menu-desc { font-size: 10px; color: #94a3b8; margin-bottom: 6px; line-height: 1.3; }
+        .type-badge { font-size: 9px; padding: 2px 5px; border-radius: 4px; background: #d97706; color: #fff; display: inline-block; margin-bottom: 4px; font-weight: bold; }
         .size-badge { font-size: 9px; padding: 2px 5px; border-radius: 4px; background: #8b5cf6; color: #fff; display: inline-block; margin-bottom: 4px; font-weight: bold; }
         .rating-badge { font-size: 10px; color: #f59e0b; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
         
@@ -46,16 +47,23 @@
         .cart-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); max-width: 450px; width: 90%; background: #16a34a; color: white; padding: 14px 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); font-weight: bold; cursor: pointer; z-index: 1000; }
         .cart-bar:hover { background: #15803d; }
 
-        /* MODALS */
+        /* MODALS & CAROUSEL SLIDER DESIGN */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 15px; box-sizing: border-box; }
         .modal-box { background: #1e293b; border-radius: 16px; padding: 20px; max-width: 420px; width: 100%; border: 1px solid #475569; max-height: 90vh; overflow-y: auto; box-sizing: border-box; text-align: left; }
-        .modal-box img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 12px; }
-        .close-modal { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; float: right; font-size: 12px; }
+        .close-modal { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; float: right; font-size: 12px; z-index: 10; position: relative; }
+
+        /* CAROUSEL SLIDER STYLES */
+        .carousel-wrapper { position: relative; width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 12px; background: #000; }
+        .carousel-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .carousel-track::-webkit-scrollbar { display: none; }
+        .carousel-slide { min-width: 100%; width: 100%; scroll-snap-align: start; flex-shrink: 0; height: 230px; display: flex; justify-content: center; align-items: center; background: #0f172a; }
+        .carousel-slide img { width: 100%; height: 100%; object-fit: cover; }
+        .carousel-slide iframe { width: 100%; height: 100%; border: none; }
+        .carousel-hint { text-align: center; font-size: 10px; color: #38bdf8; margin-top: -6px; margin-bottom: 8px; font-weight: bold; }
 
         .variant-select-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 8px; cursor: pointer; }
         .variant-select-item:hover { border-color: #38bdf8; background: #1e293b; }
 
-        /* TRANSACTION SELECTION CARD STYLES */
         .txn-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; }
         .txn-card:hover { border-color: #38bdf8; background: #1e293b; transform: translateY(-2px); }
         .txn-icon { font-size: 28px; background: #1e293b; border-radius: 10px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -128,13 +136,24 @@
     </div>
 </div>
 
-<!-- MODAL 1: FULLSCREEN ITEM DETAILS & RATINGS -->
+<!-- MODAL 1: FULLSCREEN ITEM DETAILS WITH IMAGE & VIDEO REELS CAROUSEL -->
 <div id="itemModal" class="modal-overlay">
     <div class="modal-box">
         <button class="close-modal" onclick="closeItemModal()">Isara ✕</button>
         <h3 id="mTitle" style="color:#38bdf8; margin-top:0; margin-bottom:5px;"></h3>
-        <span id="mSize" class="size-badge"></span>
-        <img id="mImg" src="" alt="Item Image">
+        <div style="margin-bottom:6px;">
+            <span id="mType" class="type-badge"></span>
+            <span id="mSize" class="size-badge"></span>
+        </div>
+
+        <!-- MEDIA CAROUSEL SLIDER -->
+        <div class="carousel-wrapper">
+            <div class="carousel-track" id="modalCarouselTrack">
+                <!-- Slide 1 & 2 dynamically loaded -->
+            </div>
+        </div>
+        <div class="carousel-hint" id="carouselHintText">👉 I-swipe ang larawan papuntang kanan para sa Video Reel Preview!</div>
+
         <div id="mPrice" style="font-size:16px; font-weight:bold; color:#38bdf8; margin-bottom:8px;"></div>
         <div id="mRating" class="rating-badge" style="font-size: 13px; margin-bottom: 10px;"></div>
         <p id="mDesc" style="font-size:12px; color:#cbd5e1; line-height: 1.5; margin-bottom: 15px;"></p>
@@ -201,11 +220,12 @@
     let activeCategory = "ALL";
     let activeModalItem = null;
 
+    // SAMPLE MENU WITH PRODUCT TYPES AND YOUTUBE SHORT REELS LINK
     const DEFAULT_KIOSK_MENU = [
-        { name: "Chicken Joy Value Meal", category: "Meals", size: '[{"name":"1-Pc Meal","price":"99","status":"Available"},{"name":"2-Pc Meal","price":"175","status":"Available"}]', price: "99", discount: "0", mixMatchType: "Category", mixMatchTarget: "Drinks & Beverages", mixMatchDiscount: "15", description: "Crispy fried chicken with rice & gravy.", specialDesc: "Try our best crispy chicken skin paired with steaming hot rice and signature gravy!", rating: 4.8, ratingCount: 120, image: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=300", status: "Available" },
-        { name: "Coke", category: "Drinks & Beverages", size: '[{"name":"Regular","price":"35","status":"Available"},{"name":"Large","price":"50","status":"Available"}]', price: "35", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Iced cold Coca-Cola soda.", specialDesc: "Refreshingly cold drink to quench your thirst!", rating: 4.9, ratingCount: 240, image: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=300", status: "Available" },
-        { name: "Burger Cheezy", category: "Best Sellers", size: "N/A", price: "120", discount: "10", mixMatchType: "Category", mixMatchTarget: "Drinks & Beverages", mixMatchDiscount: "20", description: "Juicy beef patty with extra melted cheese", specialDesc: "Try our best juicy beef burger packed with double melted cheese!", rating: 4.9, ratingCount: 310, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", status: "Available" },
-        { name: "Halo-Halo Special", category: "Desserts", size: "N/A", price: "85", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Loaded with leche flan, ube, and ice cream", specialDesc: "Our award-winning summer dessert loaded with homemade leche flan and rich ube!", rating: 5.0, ratingCount: 512, image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", status: "Available" }
+        { productType: "Food", name: "Burger Cheezy", category: "Best Sellers", size: "N/A", price: "120", discount: "10", mixMatchType: "Category", mixMatchTarget: "Drinks & Beverages", mixMatchDiscount: "20", description: "Juicy beef patty with extra melted cheese", specialDesc: "Try our best juicy beef burger packed with double melted cheese!", rating: 4.9, ratingCount: 310, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", youtubeLink: "https://www.youtube.com/shorts/3Z7L2I140iE", status: "Available" },
+        { productType: "Food", name: "Halo-Halo Special", category: "Desserts", size: "N/A", price: "85", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Loaded with leche flan, ube, and ice cream", specialDesc: "Our award-winning summer dessert loaded with homemade leche flan and rich ube!", rating: 5.0, ratingCount: 512, image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", youtubeLink: "https://www.youtube.com/shorts/s8379B89x74", status: "Available" },
+        { productType: "Utensils", name: "Stainless Steel Cutlery Set", category: "Kitchen Utensils", size: '[{"name":"4-Piece Set","price":"199","status":"Available"},{"name":"6-Piece Set","price":"280","status":"Available"}]', price: "199", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Premium stainless spoon, fork, knife, and straw set.", specialDesc: "Durable and eco-friendly stainless cutlery set for outdoor dining!", rating: 4.8, ratingCount: 85, image: "https://images.unsplash.com/photo-1615865417236-d67f572a746f?w=300", youtubeLink: "https://www.youtube.com/shorts/512938183x1", status: "Available" },
+        { productType: "Gadgets", name: "Wireless Bluetooth Earbuds", category: "Audio Gadgets", size: "N/A", price: "450", discount: "50", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Deep bass bluetooth earbuds with noise cancellation.", specialDesc: "Long battery life wireless earbuds with HD crystal clear audio!", rating: 4.7, ratingCount: 140, image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300", youtubeLink: "https://www.youtube.com/shorts/92019381831", status: "Available" }
     ];
 
     window.onload = function() {
@@ -254,7 +274,8 @@
             let nameMatch = (item.name || "").toLowerCase().includes(query);
             let descMatch = (item.description || "").toLowerCase().includes(query);
             let catMatch = (item.category || "").toLowerCase().includes(query);
-            return nameMatch || descMatch || catMatch;
+            let typeMatch = (item.productType || "").toLowerCase().includes(query);
+            return nameMatch || descMatch || catMatch || typeMatch;
         });
 
         renderGrid(searchResults);
@@ -389,6 +410,7 @@
                 <div class="menu-details">
                     <div>
                         <div class="menu-title" onclick='openItemModal(${JSON.stringify(item)})' style="cursor:pointer;">${itemName}</div>
+                        ${item.productType ? `<span class="type-badge">${item.productType}</span>` : ''}
                         ${hasVariants ? `<span class="size-badge">${variantsArr.length} Variants</span>` : ''}
                         <div class="rating-badge">⭐ ${parseFloat(item.rating || 4.8).toFixed(1)} <span style="color:#94a3b8; font-weight:normal;">(${item.ratingCount || 50})</span></div>
                         <div style="font-size: 13px; font-weight: bold; color: #38bdf8; margin-bottom: 4px;">₱${itemPrice}${hasVariants ? '+' : ''}</div>
@@ -514,12 +536,51 @@
 
     function closeVariantRemoveModal() { document.getElementById("variantRemoveModal").style.display = "none"; }
 
+    // YOUTUBE VIDEO ID EXTRACTOR LOGIC
+    function extractYoutubeVideoId(url) {
+        if (!url) return null;
+        const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+        const match = url.match(regex);
+        return (match && match[1]) ? match[1] : null;
+    }
+
+    // OPEN ITEM MODAL WITH CAROUSEL SLIDER FOR PHOTO AND YOUTUBE REELS
     function openItemModal(item) {
         activeModalItem = item;
         document.getElementById('mTitle').innerText = item.name;
+        document.getElementById('mType').innerText = item.productType || 'Food';
         document.getElementById('mSize').innerText = item.size && item.size !== "N/A" ? `Has Variants` : '';
         document.getElementById('mSize').style.display = item.size && item.size !== "N/A" ? 'inline-block' : 'none';
-        document.getElementById('mImg').src = item.image || 'https://via.placeholder.com/300';
+
+        // CAROUSEL BUILDER
+        const track = document.getElementById('modalCarouselTrack');
+        track.innerHTML = "";
+
+        // Slide 1: Static Image
+        const slide1 = document.createElement('div');
+        slide1.className = "carousel-slide";
+        slide1.innerHTML = `<img src="${item.image || 'https://via.placeholder.com/300'}" alt="${item.name}">`;
+        track.appendChild(slide1);
+
+        // Slide 2: YouTube Video Reels (Kung may Video Link)
+        const ytId = extractYoutubeVideoId(item.youtubeLink);
+        if (ytId) {
+            const slide2 = document.createElement('div');
+            slide2.className = "carousel-slide";
+            slide2.innerHTML = `
+                <iframe 
+                    src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&loop=1&playlist=${ytId}&controls=0&modestbranding=1" 
+                    title="Product Reel Ads" 
+                    allow="autoplay; encrypted-media" 
+                    allowfullscreen>
+                </iframe>
+            `;
+            track.appendChild(slide2);
+            document.getElementById('carouselHintText').style.display = 'block';
+        } else {
+            document.getElementById('carouselHintText').style.display = 'none';
+        }
+
         document.getElementById('mPrice').innerText = `₱${item.price}`;
         document.getElementById('mRating').innerHTML = `⭐ ${parseFloat(item.rating || 4.8).toFixed(1)} / 10.0 <span style="color:#38bdf8; margin-left:8px;">(${Math.round(((item.rating || 4.8)/10)*100)}% Satisfied)</span>`;
         
@@ -632,7 +693,6 @@
         updateCartBar();
     }
 
-    /* PRESO COMPUTATION LOGIC */
     function getItemUnitPrice(itemKey) {
         if (itemKey.includes(" + ") && itemKey.includes("(Mix&Match)")) {
             let parts = itemKey.replace(" (Mix&Match)", "").split(" + ");
@@ -692,7 +752,6 @@
         return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     }
 
-    /* DIALOG MODAL PARA SA TRANSACTION TYPE SELECTION */
     function openCheckoutTypeModal() {
         document.getElementById('checkoutTypeModal').style.display = 'flex';
     }
@@ -715,7 +774,6 @@
         }
 
         let orderString = orderArray.join(', ');
-        // Ipapasa ang target type (delivery, dinein, counter) sa multigateway.html
         window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&total=${grandTotal.toFixed(2)}&type=${encodeURIComponent(typeStr)}&psid=${encodeURIComponent(currentPsid)}`;
     }
 </script>
