@@ -20,6 +20,7 @@
         .item-row { background: #334155; padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .cat-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #0284c7; color: #fff; margin-left: 4px; font-weight: bold; }
+        .type-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #d97706; color: #fff; margin-left: 4px; font-weight: bold; }
         .size-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #8b5cf6; color: #fff; margin-left: 4px; font-weight: bold; }
         .avail { background: #166534; color: #dcfce7; }
         .not-avail { background: #991b1b; color: #fee2e2; }
@@ -44,7 +45,6 @@
         input:checked + .slider { background-color: #16a34a; }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        /* ADVANCED VARIANT CHIPS DESIGN */
         .variant-chips-container { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; margin-bottom: 12px; }
         .variant-chip-card { background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .variant-chip-card select { width: auto; margin: 0; padding: 4px; font-size: 11px; background: #1e293b; }
@@ -135,7 +135,21 @@
                     <button onclick="hideMenuForm()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">❌ Isara</button>
                 </div>
                 
-                <label style="font-size: 12px; font-weight: bold; margin-top: 10px; display: block;">Item Tab Category:</label>
+                <!-- NEW FIELD 1: PRODUCT TYPE -->
+                <label style="font-size: 12px; font-weight: bold; margin-top: 10px; display: block; color:#38bdf8;">📦 Overall Product Type:</label>
+                <input type="text" id="prodType" placeholder="hal. Food / Utensils / Clothes / Gadgets / Beauty / Services" list="typeSuggestions">
+                <datalist id="typeSuggestions">
+                    <option value="Food">
+                    <option value="Utensils">
+                    <option value="Clothes">
+                    <option value="Gadgets">
+                    <option value="Beauty">
+                    <option value="Services">
+                    <option value="Electronics">
+                </datalist>
+
+                <!-- FIELD 2: ITEM TAB CATEGORY -->
+                <label style="font-size: 12px; font-weight: bold; display: block;">🏷️ Item Tab Category:</label>
                 <input type="text" id="prodCategory" placeholder="hal. Meals / Desserts / Drinks" list="catSuggestions">
                 <datalist id="catSuggestions">
                     <option value="Mix & Match">
@@ -203,7 +217,7 @@
                 <textarea id="prodDesc" rows="2" placeholder="halimbawa: May leche flan at ice cream"></textarea>
 
                 <label style="font-size: 12px; font-weight: bold;">Special Description / Tagline (Fullscreen Modal Promo):</label>
-                <textarea id="prodSpecialDesc" rows="2" placeholder="hal. Try our best crispy chicken skin paired with hot rice! (Kung blangko, gagamitin ang Description)"></textarea>
+                <textarea id="prodSpecialDesc" rows="2" placeholder="hal. Try our best crispy chicken skin paired with hot rice!"></textarea>
 
                 <label style="font-size: 12px; font-weight: bold;">Main Availability Status:</label>
                 <select id="prodAvailability">
@@ -216,7 +230,11 @@
                 <input type="number" id="prodQuantity" placeholder="hal. 50, 20 (Iwanang blangko kung laging available)">
 
                 <label style="font-size: 12px; font-weight: bold;">Image Link URL (Google Drive / ImgBB):</label>
-                <input type="url" id="prodImage" placeholder="I-paste ang Google Drive Share Link dito">
+                <input type="url" id="prodImage" placeholder="I-paste ang Google Drive Share Link ng larawan dito">
+
+                <!-- NEW FIELD 3: YOUTUBE SHORT REELS LINK -->
+                <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">🎬 YouTube Short / Video Reel Link (Opsyonal):</label>
+                <input type="url" id="prodYoutubeLink" placeholder="hal. https://www.youtube.com/shorts/abc123XYZ">
 
                 <button class="btn-green" onclick="addMenuItemToSheet()" style="margin-bottom:0;">💾 I-save ang Item sa Google Sheet</button>
             </div>
@@ -249,13 +267,13 @@
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = JSON.parse(e.postData.contents);
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["Category", "Name", "Size", "Price", "Discount", "MixMatch_Type", "MixMatch_Target", "MixMatch_Discount", "Description", "SpecialDesc", "Status", "Quantity", "Image"]);
+    sheet.appendRow(["ProductType", "Category", "Name", "Size", "Price", "Discount", "MixMatch_Type", "MixMatch_Target", "MixMatch_Discount", "Description", "SpecialDesc", "Status", "Quantity", "Image", "YoutubeLink"]);
   }
   if (data.action === "ADD_ITEM") {
     sheet.appendRow([
-      data.category, data.name, data.size, data.price, data.discount,
+      data.productType, data.category, data.name, data.size, data.price, data.discount,
       data.mixMatchType, data.mixMatchTarget, data.mixMatchDiscount,
-      data.description, data.specialDesc, data.status, data.quantity, data.image
+      data.description, data.specialDesc, data.status, data.quantity, data.image, data.youtubeLink
     ]);
     return ContentService.createTextOutput(JSON.stringify({status: "SUCCESS"})).setMimeType(ContentService.MimeType.JSON);
   }
@@ -267,19 +285,21 @@ function doGet(e) {
   var items = [];
   for (var i = 1; i < rows.length; i++) {
     items.push({
-      category: rows[i][0],
-      name: rows[i][1],
-      size: rows[i][2],
-      price: rows[i][3],
-      discount: rows[i][4],
-      mixMatchType: rows[i][5],
-      mixMatchTarget: rows[i][6],
-      mixMatchDiscount: rows[i][7],
-      description: rows[i][8],
-      specialDesc: rows[i][9],
-      status: rows[i][10],
-      quantity: rows[i][11],
-      image: rows[i][12]
+      productType: rows[i][0],
+      category: rows[i][1],
+      name: rows[i][2],
+      size: rows[i][3],
+      price: rows[i][4],
+      discount: rows[i][5],
+      mixMatchType: rows[i][6],
+      mixMatchTarget: rows[i][7],
+      mixMatchDiscount: rows[i][8],
+      description: rows[i][9],
+      specialDesc: rows[i][10],
+      status: rows[i][11],
+      quantity: rows[i][12],
+      image: rows[i][13],
+      youtubeLink: rows[i][14]
     });
   }
   return ContentService.createTextOutput(JSON.stringify(items)).setMimeType(ContentService.MimeType.JSON);
@@ -299,20 +319,20 @@ function doGet(e) {
     let activeWebhookUrl = "";
     let activeStorePassword = "";
     let loadedMenuItems = [];
-    let currentVariantsList = []; // Objects: { name, price, status }
+    let currentVariantsList = [];
 
     const CLEAN_APPS_SCRIPT_CODE = 
 "function doPost(e) {\n" +
 "  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();\n" +
 "  var data = JSON.parse(e.postData.contents);\n" +
 "  if (sheet.getLastRow() === 0) {\n" +
-"    sheet.appendRow([\"Category\", \"Name\", \"Size\", \"Price\", \"Discount\", \"MixMatch_Type\", \"MixMatch_Target\", \"MixMatch_Discount\", \"Description\", \"SpecialDesc\", \"Status\", \"Quantity\", \"Image\"]);\n" +
+"    sheet.appendRow([\"ProductType\", \"Category\", \"Name\", \"Size\", \"Price\", \"Discount\", \"MixMatch_Type\", \"MixMatch_Target\", \"MixMatch_Discount\", \"Description\", \"SpecialDesc\", \"Status\", \"Quantity\", \"Image\", \"YoutubeLink\"]);\n" +
 "  }\n" +
 "  if (data.action === \"ADD_ITEM\") {\n" +
 "    sheet.appendRow([\n" +
-"      data.category, data.name, data.size, data.price, data.discount,\n" +
+"      data.productType, data.category, data.name, data.size, data.price, data.discount,\n" +
 "      data.mixMatchType, data.mixMatchTarget, data.mixMatchDiscount,\n" +
-"      data.description, data.specialDesc, data.status, data.quantity, data.image\n" +
+"      data.description, data.specialDesc, data.status, data.quantity, data.image, data.youtubeLink\n" +
 "    ]);\n" +
 "    return ContentService.createTextOutput(JSON.stringify({status: \"SUCCESS\"})).setMimeType(ContentService.MimeType.JSON);\n" +
 "  }\n" +
@@ -323,19 +343,21 @@ function doGet(e) {
 "  var items = [];\n" +
 "  for (var i = 1; i < rows.length; i++) {\n" +
 "    items.push({\n" +
-"      category: rows[i][0],\n" +
-"      name: rows[i][1],\n" +
-"      size: rows[i][2],\n" +
-"      price: rows[i][3],\n" +
-"      discount: rows[i][4],\n" +
-"      mixMatchType: rows[i][5],\n" +
-"      mixMatchTarget: rows[i][6],\n" +
-"      mixMatchDiscount: rows[i][7],\n" +
-"      description: rows[i][8],\n" +
-"      specialDesc: rows[i][9],\n" +
-"      status: rows[i][10],\n" +
-"      quantity: rows[i][11],\n" +
-"      image: rows[i][12]\n" +
+"      productType: rows[i][0],\n" +
+"      category: rows[i][1],\n" +
+"      name: rows[i][2],\n" +
+"      size: rows[i][3],\n" +
+"      price: rows[i][4],\n" +
+"      discount: rows[i][5],\n" +
+"      mixMatchType: rows[i][6],\n" +
+"      mixMatchTarget: rows[i][7],\n" +
+"      mixMatchDiscount: rows[i][8],\n" +
+"      description: rows[i][9],\n" +
+"      specialDesc: rows[i][10],\n" +
+"      status: rows[i][11],\n" +
+"      quantity: rows[i][12],\n" +
+"      image: rows[i][13],\n" +
+"      youtubeLink: rows[i][14]\n" +
 "    });\n" +
 "  }\n" +
 "  return ContentService.createTextOutput(JSON.stringify(items)).setMimeType(ContentService.MimeType.JSON);\n" +
@@ -361,7 +383,6 @@ function doGet(e) {
         return rawUrl;
     }
 
-    /* ADVANCED VARIANT CARDS LOGIC */
     function addVariantCard() {
         const nameVal = document.getElementById("varNameInput").value.trim();
         let priceVal = document.getElementById("varPriceInput").value.trim();
@@ -370,25 +391,14 @@ function doGet(e) {
         if(!nameVal) { alert("Pakipasok ang pangalan ng Variant!"); return; }
         if(!priceVal) priceVal = basePrice || "0";
 
-        currentVariantsList.push({
-            name: nameVal,
-            price: priceVal,
-            status: "Available"
-        });
-
+        currentVariantsList.push({ name: nameVal, price: priceVal, status: "Available" });
         renderVariantCards();
         document.getElementById("varNameInput").value = "";
         document.getElementById("varPriceInput").value = "";
     }
 
-    function removeVariantCard(index) {
-        currentVariantsList.splice(index, 1);
-        renderVariantCards();
-    }
-
-    function updateVariantCard(index, field, val) {
-        currentVariantsList[index][field] = val;
-    }
+    function removeVariantCard(index) { currentVariantsList.splice(index, 1); renderVariantCards(); }
+    function updateVariantCard(index, field, val) { currentVariantsList[index][field] = val; }
 
     function renderVariantCards() {
         const container = document.getElementById("variantChipsContainer");
@@ -531,9 +541,7 @@ function doGet(e) {
             catInput.value = "Mix & Match";
             updateMixMatchSelectionList();
         } else {
-            if (catInput.value === "Mix & Match") {
-                catInput.value = "";
-            }
+            if (catInput.value === "Mix & Match") catInput.value = "";
         }
     }
 
@@ -627,6 +635,7 @@ function doGet(e) {
     function hideMenuForm() { document.getElementById('menuFormCard').style.display = 'none'; resetMenuFormFields(); }
 
     function resetMenuFormFields() {
+        document.getElementById('prodType').value = "";
         document.getElementById('prodName').value = "";
         document.getElementById('prodCategory').value = "";
         document.getElementById('varNameInput').value = "";
@@ -636,6 +645,7 @@ function doGet(e) {
         document.getElementById('prodPrice').value = "";
         document.getElementById('prodDiscount').value = "";
         document.getElementById('prodImage').value = "";
+        document.getElementById('prodYoutubeLink').value = "";
         document.getElementById('prodDesc').value = "";
         document.getElementById('prodSpecialDesc').value = "";
         document.getElementById('prodQuantity').value = "";
@@ -645,20 +655,22 @@ function doGet(e) {
 
     async function addMenuItemToSheet() {
         if (!activeWebhookUrl) { alert("I-save muna ang Google Sheet Webhook URL!"); return; }
+        const productType = document.getElementById("prodType").value.trim() || "General";
         const name = document.getElementById("prodName").value.trim();
         const price = document.getElementById("prodPrice").value.trim() || "0";
         const category = document.getElementById("prodCategory").value.trim() || "General";
         const rawImageInput = document.getElementById("prodImage").value.trim();
+        const youtubeLink = document.getElementById("prodYoutubeLink").value.trim();
 
         if (!name) { alert("Lagyan ng Product Name!"); return; }
         const finalImageUrl = convertGoogleDriveLink(rawImageInput);
 
-        // I-save ang Variants bilang JSON String kung may laman, kung wala ay "N/A"
         const variantsString = currentVariantsList.length > 0 ? JSON.stringify(currentVariantsList) : "N/A";
         const mixTargets = getSelectedMixMatchTargets();
 
         const payload = {
             action: "ADD_ITEM",
+            productType: productType,
             category: category,
             name: name,
             size: variantsString,
@@ -671,7 +683,8 @@ function doGet(e) {
             specialDesc: document.getElementById("prodSpecialDesc").value.trim() || "",
             status: document.getElementById("prodAvailability").value,
             quantity: document.getElementById("prodQuantity").value.trim() || "Unlimited",
-            image: finalImageUrl || ""
+            image: finalImageUrl || "",
+            youtubeLink: youtubeLink || ""
         };
 
         try {
@@ -708,6 +721,7 @@ function doGet(e) {
                         <img src="${item.image || 'https://via.placeholder.com/50'}" style="width:50px; height:50px; object-fit:cover; border-radius:6px; margin-right:10px;">
                         <div>
                             <b>${item.name}</b> ${hasSize ? `<span class="size-badge">Multi-Variants</span>` : ''} - ₱${item.price}
+                            <span class="type-badge">${item.productType || 'Food'}</span>
                             <span class="cat-badge">${item.category || 'General'}</span>
                             <span class="status-badge ${isAvail ? 'avail':'not-avail'}">${item.status}</span><br>
                             <small style="color:#cbd5e1;">${item.description || ''}</small>
