@@ -220,12 +220,9 @@
     let activeCategory = "ALL";
     let activeModalItem = null;
 
-    // SAMPLE MENU WITH PRODUCT TYPES AND YOUTUBE SHORT REELS LINK
     const DEFAULT_KIOSK_MENU = [
-        { productType: "Food", name: "Burger Cheezy", category: "Best Sellers", size: "N/A", price: "120", discount: "10", mixMatchType: "Category", mixMatchTarget: "Drinks & Beverages", mixMatchDiscount: "20", description: "Juicy beef patty with extra melted cheese", specialDesc: "Try our best juicy beef burger packed with double melted cheese!", rating: 4.9, ratingCount: 310, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", youtubeLink: "https://www.youtube.com/shorts/3Z7L2I140iE", status: "Available" },
-        { productType: "Food", name: "Halo-Halo Special", category: "Desserts", size: "N/A", price: "85", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Loaded with leche flan, ube, and ice cream", specialDesc: "Our award-winning summer dessert loaded with homemade leche flan and rich ube!", rating: 5.0, ratingCount: 512, image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", youtubeLink: "https://www.youtube.com/shorts/s8379B89x74", status: "Available" },
-        { productType: "Utensils", name: "Stainless Steel Cutlery Set", category: "Kitchen Utensils", size: '[{"name":"4-Piece Set","price":"199","status":"Available"},{"name":"6-Piece Set","price":"280","status":"Available"}]', price: "199", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Premium stainless spoon, fork, knife, and straw set.", specialDesc: "Durable and eco-friendly stainless cutlery set for outdoor dining!", rating: 4.8, ratingCount: 85, image: "https://images.unsplash.com/photo-1615865417236-d67f572a746f?w=300", youtubeLink: "https://www.youtube.com/shorts/512938183x1", status: "Available" },
-        { productType: "Gadgets", name: "Wireless Bluetooth Earbuds", category: "Audio Gadgets", size: "N/A", price: "450", discount: "50", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Deep bass bluetooth earbuds with noise cancellation.", specialDesc: "Long battery life wireless earbuds with HD crystal clear audio!", rating: 4.7, ratingCount: 140, image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300", youtubeLink: "https://www.youtube.com/shorts/92019381831", status: "Available" }
+        { productType: "Food", name: "Burger Cheezy", category: "Best Sellers", size: "N/A", price: "120", discount: "10", mixMatchType: "Category", mixMatchTarget: "Drinks & Beverages", mixMatchDiscount: "20", description: "Juicy beef patty with extra melted cheese", specialDesc: "Try our best juicy beef burger packed with double melted cheese!", rating: 4.9, ratingCount: 310, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", youtubeLink: "https://www.youtube.com/shorts/3Z7L2I140iE", status: "Available", quantity: "Unlimited" },
+        { productType: "Food", name: "Halo-Halo Special", category: "Desserts", size: "N/A", price: "85", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Loaded with leche flan, ube, and ice cream", specialDesc: "Our award-winning summer dessert loaded with homemade leche flan and rich ube!", rating: 5.0, ratingCount: 512, image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", youtubeLink: "https://www.youtube.com/shorts/s8379B89x74", status: "Available", quantity: "Unlimited" }
     ];
 
     window.onload = function() {
@@ -368,7 +365,7 @@
             let parsed = JSON.parse(sizeData);
             if (Array.isArray(parsed)) return parsed;
         } catch (e) {
-            return sizeData.split(',').map(s => ({ name: s.trim(), price: "0", status: "Available" }));
+            return sizeData.split(',').map(s => ({ name: s.trim(), price: "0", status: "Available", qty: "" }));
         }
         return [];
     }
@@ -394,7 +391,7 @@
 
         items.forEach(item => {
             let statusStr = item.status ? item.status.toLowerCase() : "";
-            let isAvail = statusStr.includes("available") || statusStr.includes("in stock") || !item.status;
+            let isAvail = (statusStr.includes("available") || statusStr.includes("in stock") || !item.status) && (item.quantity !== "0" && item.quantity !== 0);
             
             let itemName = item.name;
             let variantsArr = parseVariants(item.size);
@@ -444,6 +441,14 @@
         if (variantsArr.length > 0) {
             openVariantAddModal(itemObj, variantsArr);
         } else {
+            // Check inventory quantity kung limited
+            if (itemObj.quantity && itemObj.quantity !== "Unlimited" && !isNaN(itemObj.quantity)) {
+                let currentOrdered = getProductTotalCartQty(itemName);
+                if (currentOrdered >= parseInt(itemObj.quantity)) {
+                    alert(`Paumanhin, naabot na ang limitadong stock (${itemObj.quantity}) para sa item na ito.`);
+                    return;
+                }
+            }
             updateQty(itemName, 1);
         }
     }
@@ -466,20 +471,22 @@
         container.innerHTML = "";
 
         variantsArr.forEach(v => {
-            let isAvail = v.status !== "Out of Stock";
+            let variantStock = (v.qty !== "" && !isNaN(v.qty)) ? parseInt(v.qty) : 9999;
             let displayKey = `${itemObj.name} (${v.name})`;
-            let currentQty = selectedCart[displayKey] || 0;
+            let currentQtyInCart = selectedCart[displayKey] || 0;
+            
+            let isAvail = v.status !== "Out of Stock" && (v.qty === "" || currentQtyInCart < variantStock);
 
             let div = document.createElement("div");
             div.className = "variant-select-item";
             div.innerHTML = `
                 <div>
-                    <b>${v.name}</b><br>
+                    <b>${v.name}</b> ${v.qty !== "" ? `<small style="color:#94a3b8;">(Stock: ${v.qty})</small>` : ''}<br>
                     <span style="font-size:12px; color:#38bdf8; font-weight:bold;">₱${v.price}</span>
                     <span style="font-size:10px; margin-left:6px; color:${isAvail?'#16a34a':'#ef4444'};">(${v.status})</span>
                 </div>
                 <div>
-                    ${isAvail ? `<button type="button" class="btn-green" style="padding:6px 14px; font-size:12px; margin:0; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="selectVariantToAdd('${escapeQuotes(displayKey)}')">➕ Add (${currentQty})</button>` : '<span style="font-size:11px; color:#ef4444;">Unavailable</span>'}
+                    ${isAvail ? `<button type="button" class="btn-green" style="padding:6px 14px; font-size:12px; margin:0; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="selectVariantToAdd('${escapeQuotes(displayKey)}', ${variantStock})">➕ Add (${currentQtyInCart})</button>` : '<span style="font-size:11px; color:#ef4444;">Ubos na / Out of Stock</span>'}
                 </div>
             `;
             container.appendChild(div);
@@ -488,7 +495,12 @@
         document.getElementById("variantAddModal").style.display = "flex";
     }
 
-    function selectVariantToAdd(displayKey) {
+    function selectVariantToAdd(displayKey, maxStock) {
+        let currentQty = selectedCart[displayKey] || 0;
+        if (currentQty >= maxStock) {
+            alert("Naabot na ang maximum limit ng stock para sa variant na ito.");
+            return;
+        }
         updateQty(displayKey, 1);
         closeVariantAddModal();
         filterAndRenderGrid(activeCategory);
@@ -536,7 +548,6 @@
 
     function closeVariantRemoveModal() { document.getElementById("variantRemoveModal").style.display = "none"; }
 
-    // YOUTUBE VIDEO ID EXTRACTOR LOGIC
     function extractYoutubeVideoId(url) {
         if (!url) return null;
         const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
@@ -544,7 +555,6 @@
         return (match && match[1]) ? match[1] : null;
     }
 
-    // OPEN ITEM MODAL WITH CAROUSEL SLIDER FOR PHOTO AND YOUTUBE REELS
     function openItemModal(item) {
         activeModalItem = item;
         document.getElementById('mTitle').innerText = item.name;
@@ -552,17 +562,16 @@
         document.getElementById('mSize').innerText = item.size && item.size !== "N/A" ? `Has Variants` : '';
         document.getElementById('mSize').style.display = item.size && item.size !== "N/A" ? 'inline-block' : 'none';
 
-        // CAROUSEL BUILDER
         const track = document.getElementById('modalCarouselTrack');
         track.innerHTML = "";
 
-        // Slide 1: Static Image
+        // Slide 1: Static Image (Gagamitin ang Variant Image kung meron o ang Main Item Image)
         const slide1 = document.createElement('div');
         slide1.className = "carousel-slide";
         slide1.innerHTML = `<img src="${item.image || 'https://via.placeholder.com/300'}" alt="${item.name}">`;
         track.appendChild(slide1);
 
-        // Slide 2: YouTube Video Reels (Kung may Video Link)
+        // Slide 2: YouTube Video Reels
         const ytId = extractYoutubeVideoId(item.youtubeLink);
         if (ytId) {
             const slide2 = document.createElement('div');
