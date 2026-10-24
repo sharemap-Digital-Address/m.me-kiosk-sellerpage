@@ -28,7 +28,13 @@
 
         .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .menu-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; position: relative; }
-        .menu-card img { width: 100%; height: 110px; object-fit: cover; background: #334155; cursor: pointer; }
+        
+        /* OUT OF STOCK IMAGE CONTAINER STYLING & WATERMARK */
+        .img-container { position: relative; width: 100%; height: 110px; background: #334155; cursor: pointer; }
+        .img-container img { width: 100%; height: 100%; object-fit: cover; }
+        .img-container.out-of-stock img { filter: grayscale(100%); opacity: 0.4; }
+        .out-of-stock-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-12deg); background: rgba(239, 68, 68, 0.9); color: white; padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; border: 1px solid #f87171; text-transform: uppercase; letter-spacing: 1px; pointer-events: none; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+
         .menu-details { padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
         .menu-title { font-weight: bold; font-size: 13px; margin-bottom: 2px; }
         .menu-desc { font-size: 10px; color: #94a3b8; margin-bottom: 6px; line-height: 1.3; }
@@ -242,6 +248,9 @@
 
         document.getElementById('storeTitle').innerText = "🏪 @" + storePage + " - Kiosk Menu";
         loadKioskMenu();
+
+        // Auto-sync / Poll fresh menu data from Google Sheets every 15 seconds para laging updated ang stock state
+        setInterval(loadKioskMenuSilent, 15000);
     };
 
     function openSearchBar() {
@@ -279,6 +288,14 @@
     }
 
     async function loadKioskMenu() {
+        await fetchAndProcessMenu(false);
+    }
+
+    async function loadKioskMenuSilent() {
+        await fetchAndProcessMenu(true);
+    }
+
+    async function fetchAndProcessMenu(isSilent) {
         try {
             const { data: licenseData, error: licenseError } = await supabaseClient
                 .from('licenses')
@@ -287,9 +304,11 @@
                 .single();
 
             if (licenseError || !licenseData || !licenseData.menu_sheet_url) {
-                allFetchedItems = DEFAULT_KIOSK_MENU;
-                buildCategoryTabs();
-                filterAndRenderGrid("ALL");
+                if (!isSilent) {
+                    allFetchedItems = DEFAULT_KIOSK_MENU;
+                    buildCategoryTabs();
+                    filterAndRenderGrid("ALL");
+                }
                 return;
             }
 
@@ -298,7 +317,7 @@
             const sheetItems = await res.json();
 
             if (!sheetItems || sheetItems.length === 0) {
-                allFetchedItems = DEFAULT_KIOSK_MENU;
+                if (!isSilent) allFetchedItems = DEFAULT_KIOSK_MENU;
             } else {
                 allFetchedItems = sheetItems.map(i => ({
                     ...i,
@@ -310,11 +329,13 @@
 
         } catch (err) {
             console.error("Error sa pag-load ng Google Sheet menu:", err);
-            allFetchedItems = DEFAULT_KIOSK_MENU;
+            if (!isSilent) allFetchedItems = DEFAULT_KIOSK_MENU;
         }
 
-        buildCategoryTabs();
-        filterAndRenderGrid("ALL");
+        if (!isSilent) {
+            buildCategoryTabs();
+        }
+        filterAndRenderGrid(activeCategory);
     }
 
     function buildCategoryTabs() {
@@ -391,8 +412,11 @@
 
         items.forEach(item => {
             let statusStr = item.status ? item.status.toLowerCase() : "";
-            let isAvail = (statusStr.includes("available") || statusStr.includes("in stock") || !item.status) && (item.quantity !== "0" && item.quantity !== 0);
+            let qtyVal = item.quantity !== undefined ? item.quantity : "Unlimited";
+            let isQtyZero = (qtyVal !== "Unlimited" && qtyVal !== "" && !isNaN(qtyVal) && parseInt(qtyVal) <= 0);
             
+            let isAvail = (statusStr.includes("available") || statusStr.includes("in stock") || !item.status) && !isQtyZero;
+
             let itemName = item.name;
             let variantsArr = parseVariants(item.size);
             let hasVariants = variantsArr.length > 0;
@@ -403,7 +427,10 @@
             let card = document.createElement('div');
             card.className = "menu-card";
             card.innerHTML = `
-                <img src="${item.image || 'https://via.placeholder.com/150'}" alt="${itemName}" onclick='openItemModal(${JSON.stringify(item)})'>
+                <div class="img-container ${!isAvail ? 'out-of-stock' : ''}" onclick='openItemModal(${JSON.stringify(item)})'>
+                    <img src="${item.image || 'https://via.placeholder.com/150'}" alt="${itemName}">
+                    ${!isAvail ? `<div class="out-of-stock-watermark">Out of Stock</div>` : ''}
+                </div>
                 <div class="menu-details">
                     <div>
                         <div class="menu-title" onclick='openItemModal(${JSON.stringify(item)})' style="cursor:pointer;">${itemName}</div>
@@ -441,14 +468,6 @@
         if (variantsArr.length > 0) {
             openVariantAddModal(itemObj, variantsArr);
         } else {
-            // Check inventory quantity kung limited
-            if (itemObj.quantity && itemObj.quantity !== "Unlimited" && !isNaN(itemObj.quantity)) {
-                let currentOrdered = getProductTotalCartQty(itemName);
-                if (currentOrdered >= parseInt(itemObj.quantity)) {
-                    alert(`Paumanhin, naabot na ang limitadong stock (${itemObj.quantity}) para sa item na ito.`);
-                    return;
-                }
-            }
             updateQty(itemName, 1);
         }
     }
@@ -471,11 +490,13 @@
         container.innerHTML = "";
 
         variantsArr.forEach(v => {
-            let variantStock = (v.qty !== "" && !isNaN(v.qty)) ? parseInt(v.qty) : 9999;
+            let variantStatus = v.status ? v.status.toLowerCase() : "";
+            let variantQty = v.qty !== undefined && v.qty !== "" ? parseInt(v.qty) : 9999;
+            let isVarZero = (v.qty !== "" && !isNaN(v.qty) && variantQty <= 0);
+            let isVarAvail = variantStatus !== "out of stock" && !isVarZero;
+
             let displayKey = `${itemObj.name} (${v.name})`;
             let currentQtyInCart = selectedCart[displayKey] || 0;
-            
-            let isAvail = v.status !== "Out of Stock" && (v.qty === "" || currentQtyInCart < variantStock);
 
             let div = document.createElement("div");
             div.className = "variant-select-item";
@@ -483,10 +504,10 @@
                 <div>
                     <b>${v.name}</b> ${v.qty !== "" ? `<small style="color:#94a3b8;">(Stock: ${v.qty})</small>` : ''}<br>
                     <span style="font-size:12px; color:#38bdf8; font-weight:bold;">₱${v.price}</span>
-                    <span style="font-size:10px; margin-left:6px; color:${isAvail?'#16a34a':'#ef4444'};">(${v.status})</span>
+                    <span style="font-size:10px; margin-left:6px; color:${isVarAvail?'#16a34a':'#ef4444'};">(${isVarAvail ? v.status || 'Available' : 'Out of Stock'})</span>
                 </div>
                 <div>
-                    ${isAvail ? `<button type="button" class="btn-green" style="padding:6px 14px; font-size:12px; margin:0; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="selectVariantToAdd('${escapeQuotes(displayKey)}', ${variantStock})">➕ Add (${currentQtyInCart})</button>` : '<span style="font-size:11px; color:#ef4444;">Ubos na / Out of Stock</span>'}
+                    ${isVarAvail ? `<button type="button" class="btn-green" style="padding:6px 14px; font-size:12px; margin:0; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="selectVariantToAdd('${escapeQuotes(displayKey)}')">➕ Add (${currentQtyInCart})</button>` : '<span style="font-size:11px; color:#ef4444;">Ubos na / Out of Stock</span>'}
                 </div>
             `;
             container.appendChild(div);
@@ -495,12 +516,7 @@
         document.getElementById("variantAddModal").style.display = "flex";
     }
 
-    function selectVariantToAdd(displayKey, maxStock) {
-        let currentQty = selectedCart[displayKey] || 0;
-        if (currentQty >= maxStock) {
-            alert("Naabot na ang maximum limit ng stock para sa variant na ito.");
-            return;
-        }
+    function selectVariantToAdd(displayKey) {
         updateQty(displayKey, 1);
         closeVariantAddModal();
         filterAndRenderGrid(activeCategory);
@@ -565,13 +581,11 @@
         const track = document.getElementById('modalCarouselTrack');
         track.innerHTML = "";
 
-        // Slide 1: Static Image (Gagamitin ang Variant Image kung meron o ang Main Item Image)
         const slide1 = document.createElement('div');
         slide1.className = "carousel-slide";
         slide1.innerHTML = `<img src="${item.image || 'https://via.placeholder.com/300'}" alt="${item.name}">`;
         track.appendChild(slide1);
 
-        // Slide 2: YouTube Video Reels
         const ytId = extractYoutubeVideoId(item.youtubeLink);
         if (ytId) {
             const slide2 = document.createElement('div');
