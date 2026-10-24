@@ -21,10 +21,10 @@
         }
         .container { max-width: 480px; margin: 0 auto; }
         
-        /* STORE BRANDING HEADER (<circleImage> @Storename) */
+        /* STORE BRANDING HEADER (<circleImage> / 🏪 + @Storename) */
         .store-header { text-align: center; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .store-logo-circle { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.4); background: #334155; }
-        .store-header h2 { margin: 0; color: #38bdf8; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .store-header h2 { margin: 0; color: #38bdf8; font-size: 20px; font-weight: bold; }
 
         .navigation-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; position: relative; height: 38px; }
         .category-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex-grow: 1; align-items: center; transition: all 0.3s ease; }
@@ -43,6 +43,7 @@
         .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .menu-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; position: relative; }
         
+        /* OUT OF STOCK IMAGE CONTAINER STYLING & WATERMARK */
         .img-container { position: relative; width: 100%; height: 110px; background: #334155; cursor: pointer; }
         .img-container img { width: 100%; height: 100%; object-fit: cover; }
         .img-container.out-of-stock img { filter: grayscale(100%); opacity: 0.4; }
@@ -66,9 +67,28 @@
         .cart-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); max-width: 450px; width: 90%; background: #16a34a; color: white; padding: 14px 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); font-weight: bold; cursor: pointer; z-index: 1000; }
         .cart-bar:hover { background: #15803d; }
 
+        /* MODALS & CAROUSEL SLIDER DESIGN */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 15px; box-sizing: border-box; }
         .modal-box { background: #1e293b; border-radius: 16px; padding: 20px; max-width: 420px; width: 100%; border: 1px solid #475569; max-height: 90vh; overflow-y: auto; box-sizing: border-box; text-align: left; }
         .close-modal { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; float: right; font-size: 12px; z-index: 10; position: relative; }
+
+        /* CAROUSEL SLIDER STYLES */
+        .carousel-wrapper { position: relative; width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 12px; background: #000; }
+        .carousel-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .carousel-track::-webkit-scrollbar { display: none; }
+        .carousel-slide { min-width: 100%; width: 100%; scroll-snap-align: start; flex-shrink: 0; height: 230px; display: flex; justify-content: center; align-items: center; background: #0f172a; }
+        .carousel-slide img { width: 100%; height: 100%; object-fit: cover; }
+        .carousel-slide iframe { width: 100%; height: 100%; border: none; }
+        .carousel-hint { text-align: center; font-size: 10px; color: #38bdf8; margin-top: -6px; margin-bottom: 8px; font-weight: bold; }
+
+        .variant-select-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 8px; cursor: pointer; }
+        .variant-select-item:hover { border-color: #38bdf8; background: #1e293b; }
+
+        .txn-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; }
+        .txn-card:hover { border-color: #38bdf8; background: #1e293b; transform: translateY(-2px); }
+        .txn-icon { font-size: 28px; background: #1e293b; border-radius: 10px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .txn-title { font-weight: bold; font-size: 14px; color: #38bdf8; margin-bottom: 3px; }
+        .txn-desc { font-size: 11px; color: #94a3b8; line-height: 1.3; }
     </style>
 </head>
 <body>
@@ -77,10 +97,10 @@
     <div class="store-header">
         <img id="storeLogoImg" src="" alt="Store Logo" class="store-logo-circle" style="display:none;">
         <h2 id="storeTitle">🏪 Loading Kiosk Menu...</h2>
-        <p style="font-size:12px; color:#94a3b8; margin-top:2px;">Pumili ng category o mag-search para mag-order:</p>
+        <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Pumili ng category o mag-search para mag-order:</p>
     </div>
 
-    <!-- TABS AND SEARCH -->
+    <!-- TABS AND COLLAPSIBLE SEARCH BAR -->
     <div class="navigation-row">
         <button class="search-trigger-btn" id="searchTriggerBtn" onclick="openSearchBar()" title="Search Menu">🔍</button>
         <div class="category-tabs" id="categoryTabsContainer"></div>
@@ -101,22 +121,111 @@
     <span>Place Order ➔</span>
 </div>
 
-<!-- MODAL: CHECKOUT TYPE SELECTION -->
+<!-- MODAL 0: TRANSACTION TYPE SELECTION DIALOG CARD -->
 <div id="checkoutTypeModal" class="modal-overlay">
     <div class="modal-box">
         <button class="close-modal" onclick="closeCheckoutTypeModal()">Isara ✕</button>
         <h3 style="color:#38bdf8; margin-top:0; margin-bottom:6px;">Pumili ng Uri ng Order</h3>
         <p style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Saan mo nais iproseso ang iyong pinamiling order?</p>
 
-        <div class="txn-card" onclick="proceedToGatewayWithType('delivery')" style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155; margin-bottom:8px; cursor:pointer;">
-            <div style="font-weight:bold; color:#38bdf8;">🛵 Book Delivery / Rider COD</div>
+        <!-- CARD A: BOOK DELIVERY -->
+        <div class="txn-card" onclick="proceedToGatewayWithType('delivery')">
+            <div class="txn-icon">🛵</div>
+            <div>
+                <div class="txn-title">Book Delivery / Rider COD</div>
+                <div class="txn-desc">Padala sa bahay o pwesto. Magse-set ng GPS location at landmark.</div>
+            </div>
         </div>
-        <div class="txn-card" onclick="proceedToGatewayWithType('dinein')" style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155; margin-bottom:8px; cursor:pointer;">
-            <div style="font-weight:bold; color:#38bdf8;">🍽️ Dine-In / Table Order</div>
+
+        <!-- CARD B: DINE-IN TABLE -->
+        <div class="txn-card" onclick="proceedToGatewayWithType('dinein')">
+            <div class="txn-icon">🍽️</div>
+            <div>
+                <div class="txn-title">Dine-In / Table Order</div>
+                <div class="txn-desc">Kakain sa store. Maglalagay ng Table Number o Pickup preference.</div>
+            </div>
         </div>
-        <div class="txn-card" onclick="proceedToGatewayWithType('counter')" style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155; cursor:pointer;">
-            <div style="font-weight:bold; color:#38bdf8;">💳 Over-The-Counter Pickup</div>
+
+        <!-- CARD C: OVER THE COUNTER -->
+        <div class="txn-card" onclick="proceedToGatewayWithType('counter')">
+            <div class="txn-icon">💳</div>
+            <div>
+                <div class="txn-title">Over-The-Counter Pickup</div>
+                <div class="txn-desc">Ipapakita ang Order QR Code sa Cashier para bayaran at i-accept.</div>
+            </div>
         </div>
+    </div>
+</div>
+
+<!-- MODAL 1: FULLSCREEN ITEM DETAILS WITH IMAGE & VIDEO REELS CAROUSEL -->
+<div id="itemModal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="close-modal" onclick="closeItemModal()">Isara ✕</button>
+        <h3 id="mTitle" style="color:#38bdf8; margin-top:0; margin-bottom:5px;"></h3>
+        <div style="margin-bottom:6px;">
+            <span id="mType" class="type-badge"></span>
+            <span id="mSize" class="size-badge"></span>
+        </div>
+
+        <!-- MEDIA CAROUSEL SLIDER -->
+        <div class="carousel-wrapper">
+            <div class="carousel-track" id="modalCarouselTrack">
+                <!-- Slide 1 & 2 dynamically loaded -->
+            </div>
+        </div>
+        <div class="carousel-hint" id="carouselHintText">👉 I-swipe ang larawan papuntang kanan para sa Video Reel Preview!</div>
+
+        <div id="mPrice" style="font-size:16px; font-weight:bold; color:#38bdf8; margin-bottom:8px;"></div>
+        <div id="mRating" class="rating-badge" style="font-size: 13px; margin-bottom: 10px;"></div>
+        <p id="mDesc" style="font-size:12px; color:#cbd5e1; line-height: 1.5; margin-bottom: 15px;"></p>
+        
+        <div style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155; text-align:center;">
+            <p style="font-size: 12px; margin:0 0 8px 0; color:#38bdf8; font-weight:bold;">⭐ Mag-rate (1 hanggang 10):</p>
+            <div style="display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;">
+                <button onclick="submitRating(1)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">1</button>
+                <button onclick="submitRating(2)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">2</button>
+                <button onclick="submitRating(3)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">3</button>
+                <button onclick="submitRating(4)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">4</button>
+                <button onclick="submitRating(5)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">5</button>
+                <button onclick="submitRating(6)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">6</button>
+                <button onclick="submitRating(7)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">7</button>
+                <button onclick="submitRating(8)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">8</button>
+                <button onclick="submitRating(9)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">9</button>
+                <button onclick="submitRating(10)" style="width:30px; height:30px; background:#16a34a; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">10</button>
+            </div>
+            <p id="rateFeedback" style="font-size: 11px; color: #16a34a; margin: 5px 0 0 0; display:none;">Salamat sa iyong rating!</p>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: MIX & MATCH COMBO SELECTOR -->
+<div id="mixModal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="close-modal" onclick="closeMixModal()">Isara ✕</button>
+        <h3 style="color:#38bdf8; margin-top:0;">🔄 Piliin ang Ka-Match Combo</h3>
+        <p id="mixModalSub" style="font-size: 12px; color:#94a3b8; margin-bottom: 12px;"></p>
+        <div id="mixTargetsContainer" style="max-height: 250px; overflow-y: auto; margin-bottom: 12px;"></div>
+        <button style="background:#16a34a; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer;" onclick="closeMixModal()">Tapusin ang Combo</button>
+    </div>
+</div>
+
+<!-- MODAL 3: ADD VARIANT SELECTOR DIALOG CARD -->
+<div id="variantAddModal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="close-modal" onclick="closeVariantAddModal()">Isara ✕</button>
+        <h3 id="varAddTitle" style="color:#38bdf8; margin-top:0; margin-bottom:6px;">Pumili ng Variant</h3>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">I-tap ang variant na nais idagdag sa cart:</p>
+        <div id="variantAddListContainer" style="max-height: 280px; overflow-y: auto;"></div>
+    </div>
+</div>
+
+<!-- MODAL 4: REMOVE VARIANT ORDER DIALOG CARD -->
+<div id="variantRemoveModal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="close-modal" onclick="closeVariantRemoveModal()">Isara ✕</button>
+        <h3 id="varRemoveTitle" style="color:#ef4444; margin-top:0; margin-bottom:6px;">Bawasan ang Order</h3>
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">Pumili ng nakaraang order variant na babawasan:</p>
+        <div id="variantRemoveListContainer" style="max-height: 280px; overflow-y: auto;"></div>
     </div>
 </div>
 
@@ -130,22 +239,36 @@
     let selectedCart = {}; 
     let allFetchedItems = [];
     let activeCategory = "ALL";
+    let activeModalItem = null;
+
+    const DEFAULT_KIOSK_MENU = [
+        { productType: "Food", name: "Burger Cheezy", category: "Best Sellers", size: "N/A", price: "120", discount: "10", mixMatchType: "Category", mixMatchTarget: "Drinks & Beverages", mixMatchDiscount: "20", description: "Juicy beef patty with extra melted cheese", specialDesc: "Try our best juicy beef burger packed with double melted cheese!", rating: 4.9, ratingCount: 310, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", youtubeLink: "https://www.youtube.com/shorts/3Z7L2I140iE", status: "Available", quantity: "Unlimited" },
+        { productType: "Food", name: "Halo-Halo Special", category: "Desserts", size: "N/A", price: "85", discount: "0", mixMatchType: "N/A", mixMatchTarget: "N/A", mixMatchDiscount: "0", description: "Loaded with leche flan, ube, and ice cream", specialDesc: "Our award-winning summer dessert loaded with homemade leche flan and rich ube!", rating: 5.0, ratingCount: 512, image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", youtubeLink: "https://www.youtube.com/shorts/s8379B89x74", status: "Available", quantity: "Unlimited" }
+    ];
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         storePage = urlParams.get('page') || localStorage.getItem('sharemap_page');
+        
         currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+        if (urlParams.get('psid') && urlParams.get('psid') !== "USER_ACTUAL_PSID_DITO") {
+            localStorage.setItem('sharemap_psid', currentPsid);
+        }
 
         if(!storePage) {
             document.getElementById('storeTitle').innerText = "⚠️ Invalid Store Gateway Link";
+            document.getElementById('kioskMenuGrid').innerHTML = "";
             return;
         }
 
-        document.getElementById('storeTitle').innerText = "@" + storePage;
+        document.getElementById('storeTitle').innerText = "@" + storePage + " - Kiosk Menu";
         loadStoreThemeAndMenu();
+
+        // Auto-sync / Poll fresh menu data from Google Sheets every 15 seconds
         setInterval(loadKioskMenuSilent, 15000);
     };
 
+    // LOAD THEME, LOGO, AND MENU FROM SUPABASE & SHEETS
     async function loadStoreThemeAndMenu() {
         try {
             const { data, error } = await supabaseClient
@@ -155,20 +278,27 @@
                 .single();
 
             if (!error && data) {
-                // Apply Custom Theme & Circle Logo
+                // Apply Custom Theme Settings & Logo
                 if (data.kiosk_theme_config) {
                     let theme = typeof data.kiosk_theme_config === "string" ? JSON.parse(data.kiosk_theme_config) : data.kiosk_theme_config;
                     
-                    if (theme.storeLogo) {
-                        const logoEl = document.getElementById('storeLogoImg');
+                    // 1. Circle Store Logo or Default Reset
+                    const logoEl = document.getElementById('storeLogoImg');
+                    if (theme.storeLogo && theme.storeLogo.trim() !== "") {
                         logoEl.src = theme.storeLogo;
                         logoEl.style.display = 'block';
+                    } else {
+                        logoEl.style.display = 'none';
                     }
+
+                    // 2. Custom Color Theme Picker (Primary Accent)
                     if (theme.primary) {
                         document.documentElement.style.setProperty('--primary', theme.primary);
                     }
+
+                    // 3. Custom Image Theme / Background Style
                     if (theme.bgType === "color" && theme.bgColor) {
-                        document.body.style.backgroundColor = theme.bgColor;
+                        document.body.style.background = theme.bgColor;
                     } else if (theme.bgType === "gradient") {
                         document.body.style.background = `linear-gradient(135deg, ${theme.bgColor || '#0f172a'} 0%, #0284c7 100%)`;
                         document.body.style.backgroundAttachment = "fixed";
@@ -177,17 +307,22 @@
                         document.body.style.backgroundSize = "cover";
                         document.body.style.backgroundPosition = "center";
                         document.body.style.backgroundAttachment = "fixed";
+                    } else {
+                        // Default Fallback (#0f172a)
+                        document.body.style.background = "#0f172a";
                     }
                 }
 
-                // Load Menu Items
+                // Load Menu Items from Google Sheet URL
                 if (data.menu_sheet_url) {
                     const res = await fetch(data.menu_sheet_url + "?action=GET_ITEMS");
                     const sheetItems = await res.json();
                     allFetchedItems = sheetItems || [];
                 }
             }
-        } catch (err) { console.error("Error loading theme/menu:", err); }
+        } catch (err) {
+            console.error("Error sa pag-load ng theme/menu:", err);
+        }
 
         buildCategoryTabs();
         filterAndRenderGrid("ALL");
@@ -205,14 +340,54 @@
         } catch (e) {}
     }
 
+    function openSearchBar() {
+        document.getElementById('searchTriggerBtn').style.display = 'none';
+        document.getElementById('categoryTabsContainer').style.display = 'none';
+        const searchBox = document.getElementById('searchBox');
+        searchBox.style.display = 'flex';
+        document.getElementById('searchInput').focus();
+    }
+
+    function closeSearchBar() {
+        document.getElementById('searchInput').value = "";
+        document.getElementById('searchBox').style.display = 'none';
+        document.getElementById('searchTriggerBtn').style.display = 'flex';
+        document.getElementById('categoryTabsContainer').style.display = 'flex';
+        filterAndRenderGrid(activeCategory);
+    }
+
+    function filterBySearch() {
+        const query = document.getElementById('searchInput').value.trim().toLowerCase();
+        if(!query) {
+            filterAndRenderGrid(activeCategory);
+            return;
+        }
+
+        let searchResults = allFetchedItems.filter(item => {
+            let nameMatch = (item.name || "").toLowerCase().includes(query);
+            let descMatch = (item.description || "").toLowerCase().includes(query);
+            let catMatch = (item.category || "").toLowerCase().includes(query);
+            let typeMatch = (item.productType || "").toLowerCase().includes(query);
+            return nameMatch || descMatch || catMatch || typeMatch;
+        });
+
+        renderGrid(searchResults);
+    }
+
     function buildCategoryTabs() {
         const tabsContainer = document.getElementById('categoryTabsContainer');
         tabsContainer.innerHTML = "";
+
         let categories = ["ALL"];
         allFetchedItems.forEach(item => {
             let cat = item.category ? item.category.trim() : "General";
             if (!categories.includes(cat)) categories.push(cat);
         });
+
+        let hasMixMatchItems = allFetchedItems.some(i => i.mixMatchType && i.mixMatchType !== "N/A");
+        if (hasMixMatchItems && !categories.includes("🔄 Mix & Match")) {
+            categories.push("🔄 Mix & Match");
+        }
 
         categories.forEach(cat => {
             let tab = document.createElement('button');
@@ -230,17 +405,44 @@
 
     function filterAndRenderGrid(category) {
         let itemsToDisplay = allFetchedItems;
-        if (category !== "ALL") {
-            itemsToDisplay = allFetchedItems.filter(item => (item.category || "General").trim() === category);
+        if (category === "🔄 Mix & Match") {
+            itemsToDisplay = allFetchedItems.filter(item => item.mixMatchType && item.mixMatchType !== "N/A");
+        } else if (category !== "ALL") {
+            itemsToDisplay = allFetchedItems.filter(item => {
+                let itemCat = item.category ? item.category.trim() : "General";
+                return itemCat === category;
+            });
         }
         renderGrid(itemsToDisplay);
+    }
+
+    function parseVariants(sizeData) {
+        if (!sizeData || sizeData === "N/A") return [];
+        try {
+            let parsed = JSON.parse(sizeData);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            return sizeData.split(',').map(s => ({ name: s.trim(), price: "0", status: "Available", qty: "" }));
+        }
+        return [];
+    }
+
+    function getProductTotalCartQty(itemName) {
+        let count = 0;
+        for (let key in selectedCart) {
+            if (key === itemName || key.startsWith(`${itemName} (`)) {
+                count += selectedCart[key];
+            }
+        }
+        return count;
     }
 
     function renderGrid(items) {
         const grid = document.getElementById('kioskMenuGrid');
         grid.innerHTML = "";
+
         if (items.length === 0) {
-            grid.innerHTML = `<p style="text-align:center; grid-column: 1 / -1; color:#94a3b8;">Walang item sa kategoryang ito.</p>`;
+            grid.innerHTML = `<p style="text-align:center; grid-column: 1 / -1; color:#94a3b8;">Walang item sa kategoryang ito o sa iyong hinahanap.</p>`;
             return;
         }
 
@@ -248,28 +450,43 @@
             let statusStr = item.status ? item.status.toLowerCase() : "";
             let qtyVal = item.quantity !== undefined ? item.quantity : "Unlimited";
             let isQtyZero = (qtyVal !== "Unlimited" && qtyVal !== "" && !isNaN(qtyVal) && parseInt(qtyVal) <= 0);
+            
             let isAvail = (statusStr.includes("available") || statusStr.includes("in stock") || !item.status) && !isQtyZero;
+
+            let itemName = item.name;
+            let variantsArr = parseVariants(item.size);
+            let hasVariants = variantsArr.length > 0;
+            let itemPrice = item.price || "0";
+            let totalQty = getProductTotalCartQty(itemName);
+            let hasMixMatch = item.mixMatchType && item.mixMatchType !== "N/A";
 
             let card = document.createElement('div');
             card.className = "menu-card";
             card.innerHTML = `
-                <div class="img-container ${!isAvail ? 'out-of-stock' : ''}">
-                    <img src="${item.image || 'https://via.placeholder.com/150'}" alt="${item.name}">
+                <div class="img-container ${!isAvail ? 'out-of-stock' : ''}" onclick='openItemModal(${JSON.stringify(item)})'>
+                    <img src="${item.image || 'https://via.placeholder.com/150'}" alt="${itemName}">
                     ${!isAvail ? `<div class="out-of-stock-watermark">Out of Stock</div>` : ''}
                 </div>
                 <div class="menu-details">
                     <div>
-                        <div class="menu-title">${item.name}</div>
-                        <div style="font-size: 13px; font-weight: bold; color: #38bdf8; margin-bottom: 4px;">₱${item.price}</div>
+                        <div class="menu-title" onclick='openItemModal(${JSON.stringify(item)})' style="cursor:pointer;">${itemName}</div>
+                        ${item.productType ? `<span class="type-badge">${item.productType}</span>` : ''}
+                        ${hasVariants ? `<span class="size-badge">${variantsArr.length} Variants</span>` : ''}
+                        <div class="rating-badge">⭐ ${parseFloat(item.rating || 4.8).toFixed(1)} <span style="color:#94a3b8; font-weight:normal;">(${item.ratingCount || 50})</span></div>
+                        <div style="font-size: 13px; font-weight: bold; color: var(--primary); margin-bottom: 4px;">₱${itemPrice}${hasVariants ? '+' : ''}</div>
                         <div class="menu-desc">${item.description || ''}</div>
                     </div>
                     <div>
                         ${isAvail ? `
-                            <div class="qty-control">
-                                <button type="button" class="qty-btn" onclick="updateQty('${escapeQuotes(item.name)}', -1)">-</button>
-                                <span class="qty-val" id="qty-val-${CSS.escape(item.name)}">${selectedCart[item.name] || 0}</span>
-                                <button type="button" class="qty-btn" onclick="updateQty('${escapeQuotes(item.name)}', 1)">+</button>
-                            </div>
+                            ${hasMixMatch ? `
+                                <button type="button" class="mix-btn" onclick='openMixMatchModal(${JSON.stringify(item)})'>🔄 Piliin ang Ka-Match</button>
+                            ` : `
+                                <div class="qty-control">
+                                    <button type="button" class="qty-btn" onclick="handleMinusClick('${escapeQuotes(itemName)}')">-</button>
+                                    <span class="qty-val" id="qty-val-${CSS.escape(itemName)}">${totalQty}</span>
+                                    <button type="button" class="qty-btn" onclick="handlePlusClick('${escapeQuotes(itemName)}')">+</button>
+                                </div>
+                            `}
                         ` : '<div style="color:#ef4444; font-size:11px; font-weight:bold; text-align:center; padding:4px;">Out of Stock</div>'}
                     </div>
                 </div>
@@ -279,28 +496,308 @@
         updateCartBar();
     }
 
+    function handlePlusClick(itemName) {
+        let itemObj = allFetchedItems.find(i => i.name === itemName);
+        if (!itemObj) return;
+
+        let variantsArr = parseVariants(itemObj.size);
+        if (variantsArr.length > 0) {
+            openVariantAddModal(itemObj, variantsArr);
+        } else {
+            updateQty(itemName, 1);
+        }
+    }
+
+    function handleMinusClick(itemName) {
+        let itemObj = allFetchedItems.find(i => i.name === itemName);
+        if (!itemObj) return;
+
+        let variantsArr = parseVariants(itemObj.size);
+        if (variantsArr.length > 0) {
+            openVariantRemoveModal(itemName);
+        } else {
+            updateQty(itemName, -1);
+        }
+    }
+
+    function openVariantAddModal(itemObj, variantsArr) {
+        document.getElementById("varAddTitle").innerText = `➕ ${itemObj.name}`;
+        const container = document.getElementById("variantAddListContainer");
+        container.innerHTML = "";
+
+        variantsArr.forEach(v => {
+            let variantStatus = v.status ? v.status.toLowerCase() : "";
+            let variantQty = v.qty !== undefined && v.qty !== "" ? parseInt(v.qty) : 9999;
+            let isVarZero = (v.qty !== "" && !isNaN(v.qty) && variantQty <= 0);
+            let isVarAvail = variantStatus !== "out of stock" && !isVarZero;
+
+            let displayKey = `${itemObj.name} (${v.name})`;
+            let currentQtyInCart = selectedCart[displayKey] || 0;
+
+            let div = document.createElement("div");
+            div.className = "variant-select-item";
+            div.innerHTML = `
+                <div>
+                    <b>${v.name}</b> ${v.qty !== "" ? `<small style="color:#94a3b8;">(Stock: ${v.qty})</small>` : ''}<br>
+                    <span style="font-size:12px; color:var(--primary); font-weight:bold;">₱${v.price}</span>
+                    <span style="font-size:10px; margin-left:6px; color:${isVarAvail?'#16a34a':'#ef4444'};">(${isVarAvail ? v.status || 'Available' : 'Out of Stock'})</span>
+                </div>
+                <div>
+                    ${isVarAvail ? `<button type="button" class="btn-green" style="padding:6px 14px; font-size:12px; margin:0; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="selectVariantToAdd('${escapeQuotes(displayKey)}')">➕ Add (${currentQtyInCart})</button>` : '<span style="font-size:11px; color:#ef4444;">Ubos na / Out of Stock</span>'}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        document.getElementById("variantAddModal").style.display = "flex";
+    }
+
+    function selectVariantToAdd(displayKey) {
+        updateQty(displayKey, 1);
+        closeVariantAddModal();
+        filterAndRenderGrid(activeCategory);
+    }
+
+    function closeVariantAddModal() { document.getElementById("variantAddModal").style.display = "none"; }
+
+    function openVariantRemoveModal(itemName) {
+        document.getElementById("varRemoveTitle").innerText = `➖ ${itemName}`;
+        const container = document.getElementById("variantRemoveListContainer");
+        container.innerHTML = "";
+
+        let orderedVariants = [];
+        for (let key in selectedCart) {
+            if (key.startsWith(`${itemName} (`)) {
+                orderedVariants.push({ key: key, qty: selectedCart[key] });
+            }
+        }
+
+        if (orderedVariants.length === 0) {
+            container.innerHTML = `<p style="color:#94a3b8; font-size:12px; text-align:center;">Wala ka pang na-order na variant para sa produktong ito.</p>`;
+        } else {
+            orderedVariants.forEach(ov => {
+                let div = document.createElement("div");
+                div.className = "variant-select-item";
+                div.innerHTML = `
+                    <div>
+                        <b>${ov.key}</b><br>
+                        <span style="font-size:12px; color:var(--primary);">Kasalukuyang Qty: <b>${ov.qty}</b></span>
+                    </div>
+                    <button type="button" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="selectVariantToRemove('${escapeQuotes(ov.key)}')">➖ Bawasan</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        document.getElementById("variantRemoveModal").style.display = "flex";
+    }
+
+    function selectVariantToRemove(displayKey) {
+        updateQty(displayKey, -1);
+        closeVariantRemoveModal();
+        filterAndRenderGrid(activeCategory);
+    }
+
+    function closeVariantRemoveModal() { document.getElementById("variantRemoveModal").style.display = "none"; }
+
+    function extractYoutubeVideoId(url) {
+        if (!url) return null;
+        const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+        const match = url.match(regex);
+        return (match && match[1]) ? match[1] : null;
+    }
+
+    function openItemModal(item) {
+        activeModalItem = item;
+        document.getElementById('mTitle').innerText = item.name;
+        document.getElementById('mType').innerText = item.productType || 'Food';
+        document.getElementById('mSize').innerText = item.size && item.size !== "N/A" ? `Has Variants` : '';
+        document.getElementById('mSize').style.display = item.size && item.size !== "N/A" ? 'inline-block' : 'none';
+
+        const track = document.getElementById('modalCarouselTrack');
+        track.innerHTML = "";
+
+        const slide1 = document.createElement('div');
+        slide1.className = "carousel-slide";
+        slide1.innerHTML = `<img src="${item.image || 'https://via.placeholder.com/300'}" alt="${item.name}">`;
+        track.appendChild(slide1);
+
+        const ytId = extractYoutubeVideoId(item.youtubeLink);
+        if (ytId) {
+            const slide2 = document.createElement('div');
+            slide2.className = "carousel-slide";
+            slide2.innerHTML = `
+                <iframe 
+                    src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&loop=1&playlist=${ytId}&controls=0&modestbranding=1" 
+                    title="Product Reel Ads" 
+                    allow="autoplay; encrypted-media" 
+                    allowfullscreen>
+                </iframe>
+            `;
+            track.appendChild(slide2);
+            document.getElementById('carouselHintText').style.display = 'block';
+        } else {
+            document.getElementById('carouselHintText').style.display = 'none';
+        }
+
+        document.getElementById('mPrice').innerText = `₱${item.price}`;
+        document.getElementById('mRating').innerHTML = `⭐ ${parseFloat(item.rating || 4.8).toFixed(1)} / 10.0 <span style="color:var(--primary); margin-left:8px;">(${Math.round(((item.rating || 4.8)/10)*100)}% Satisfied)</span>`;
+        
+        let displayDesc = item.specialDesc && item.specialDesc.trim() !== "" ? item.specialDesc : (item.description || "Try our best product!");
+        document.getElementById('mDesc').innerText = displayDesc;
+        
+        document.getElementById('rateFeedback').style.display = 'none';
+        document.getElementById('itemModal').style.display = 'flex';
+    }
+
+    function closeItemModal() { document.getElementById('itemModal').style.display = 'none'; }
+
+    function submitRating(val) {
+        if (!activeModalItem) return;
+        let currentRating = parseFloat(activeModalItem.rating || 4.8);
+        let currentCount = parseInt(activeModalItem.ratingCount || 50);
+        let ratingIncrement = val * 0.1;
+        
+        let newRating = Math.min(10.0, parseFloat(((currentRating * currentCount + ratingIncrement) / (currentCount + 1)).toFixed(1)));
+        
+        activeModalItem.rating = newRating;
+        activeModalItem.ratingCount = currentCount + 1;
+
+        let found = allFetchedItems.find(i => i.name === activeModalItem.name);
+        if (found) {
+            found.rating = newRating;
+            found.ratingCount = activeModalItem.ratingCount;
+        }
+
+        document.getElementById('mRating').innerHTML = `⭐ ${newRating.toFixed(1)} / 10.0 <span style="color:var(--primary); margin-left:8px;">(${Math.round((newRating/10)*100)}% Satisfied)</span>`;
+        document.getElementById('rateFeedback').innerText = `✅ Salamat! Nagbigay ka ng rating na ${val}/10.`;
+        document.getElementById('rateFeedback').style.display = 'block';
+
+        setTimeout(() => {
+            closeItemModal();
+            filterAndRenderGrid(activeCategory);
+        }, 1200);
+    }
+
+    function openMixMatchModal(mainItem) {
+        document.getElementById('mixModalSub').innerText = `Combo para sa "${mainItem.name}" (May bawas na ₱${mainItem.mixMatchDiscount || 0} kapag pinili ang ka-match!)`;
+        const container = document.getElementById('mixTargetsContainer');
+        container.innerHTML = "";
+
+        let targetItems = allFetchedItems.filter(i => {
+            if (mainItem.mixMatchType === "Category") {
+                return (i.category || "").trim().toLowerCase() === (mainItem.mixMatchTarget || "").trim().toLowerCase();
+            } else {
+                return (i.name || "").trim().toLowerCase() === (mainItem.mixMatchTarget || "").trim().toLowerCase();
+            }
+        });
+
+        if (targetItems.length === 0) {
+            container.innerHTML = `<p style="color:#ef4444; text-align:center; font-size:12px;">Walang nakitang ka-match item para sa kategoryang ito.</p>`;
+        } else {
+            targetItems.forEach(matchItem => {
+                let comboKey = `${mainItem.name} + ${matchItem.name} (Mix&Match)`;
+                let qty = selectedCart[comboKey] || 0;
+                let finalComboPrice = (parseFloat(mainItem.price) + parseFloat(matchItem.price) - parseFloat(mainItem.mixMatchDiscount || 0));
+
+                let row = document.createElement('div');
+                row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #334155;";
+                row.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <img src="${matchItem.image || ''}" style="width:40px; height:40px; object-fit:cover; border-radius:6px;">
+                        <div>
+                            <div style="font-size:12px; font-weight:bold;">${matchItem.name}</div>
+                            <div style="font-size:11px; color:var(--primary);">Combo Price: ₱${finalComboPrice} <small style="color:#ef4444; text-decoration:line-through;">₱${parseInt(mainItem.price)+parseInt(matchItem.price)}</small></div>
+                        </div>
+                    </div>
+                    <div class="qty-control" style="margin-top:0;">
+                        <button type="button" class="qty-btn" onclick="updateMixQty('${escapeQuotes(comboKey)}', -1)">-</button>
+                        <span class="qty-val" id="mix-qty-${CSS.escape(comboKey)}">${qty}</span>
+                        <button type="button" class="qty-btn" onclick="updateMixQty('${escapeQuotes(comboKey)}', 1)">+</button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        document.getElementById('mixModal').style.display = 'flex';
+    }
+
+    function closeMixModal() {
+        document.getElementById('mixModal').style.display = 'none';
+        updateCartBar();
+    }
+
+    function updateMixQty(comboKey, delta) {
+        if (!selectedCart[comboKey]) selectedCart[comboKey] = 0;
+        selectedCart[comboKey] += delta;
+        if (selectedCart[comboKey] < 0) selectedCart[comboKey] = 0;
+        if (selectedCart[comboKey] === 0) delete selectedCart[comboKey];
+
+        let valEl = document.getElementById(`mix-qty-${CSS.escape(comboKey)}`);
+        if (valEl) valEl.innerText = selectedCart[comboKey] || 0;
+        updateCartBar();
+    }
+
     function updateQty(itemKey, delta) {
         if (!selectedCart[itemKey]) selectedCart[itemKey] = 0;
         selectedCart[itemKey] += delta;
         if (selectedCart[itemKey] < 0) selectedCart[itemKey] = 0;
         if (selectedCart[itemKey] === 0) delete selectedCart[itemKey];
 
-        let valEl = document.getElementById(`qty-val-${CSS.escape(itemKey)}`);
-        if (valEl) valEl.innerText = selectedCart[itemKey] || 0;
+        let mainName = itemKey.split(' (')[0];
+        let totalValEl = document.getElementById(`qty-val-${CSS.escape(mainName)}`);
+        if (totalValEl) totalValEl.innerText = getProductTotalCartQty(mainName);
+
         updateCartBar();
     }
 
+    function getItemUnitPrice(itemKey) {
+        if (itemKey.includes(" + ") && itemKey.includes("(Mix&Match)")) {
+            let parts = itemKey.replace(" (Mix&Match)", "").split(" + ");
+            let mainName = parts[0].trim();
+            let matchFullName = parts[1].trim();
+
+            let mainObj = allFetchedItems.find(i => i.name === mainName);
+            let matchObj = allFetchedItems.find(i => matchFullName.startsWith(i.name));
+
+            if (mainObj && matchObj) {
+                let discount = parseFloat(mainObj.mixMatchDiscount || 0);
+                return (parseFloat(mainObj.price || 0) + parseFloat(matchObj.price || 0)) - discount;
+            }
+        }
+
+        if (itemKey.includes(" (") && itemKey.endsWith(")")) {
+            let mainName = itemKey.split(" (")[0].trim();
+            let varName = itemKey.split(" (")[1].replace(")", "").trim();
+            let mainObj = allFetchedItems.find(i => i.name === mainName);
+            if (mainObj) {
+                let variantsArr = parseVariants(mainObj.size);
+                let foundVar = variantsArr.find(v => v.name === varName);
+                if (foundVar && foundVar.price) return parseFloat(foundVar.price);
+                return parseFloat(mainObj.price || 0);
+            }
+        }
+
+        let mainObj = allFetchedItems.find(i => i.name === itemKey);
+        if (mainObj) {
+            return parseFloat(mainObj.price || 0);
+        }
+        return 0;
+    }
+
     function updateCartBar() {
-        let totalCount = 0, totalPrice = 0;
+        let totalCount = 0;
+        let totalPrice = 0;
+
         for (let key in selectedCart) {
             let qty = selectedCart[key];
             if (qty > 0) {
                 totalCount += qty;
-                let found = allFetchedItems.find(i => i.name === key);
-                let price = found ? parseFloat(found.price || 0) : 0;
-                totalPrice += (price * qty);
+                totalPrice += (getItemUnitPrice(key) * qty);
             }
         }
+
         const bar = document.getElementById('cartBar');
         if (totalCount > 0) {
             bar.style.display = 'flex';
@@ -310,20 +807,33 @@
         }
     }
 
-    function escapeQuotes(str) { return str.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
-    function openCheckoutTypeModal() { document.getElementById('checkoutTypeModal').style.display = 'flex'; }
-    function closeCheckoutTypeModal() { document.getElementById('checkoutTypeModal').style.display = 'none'; }
+    function escapeQuotes(str) {
+        return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function openCheckoutTypeModal() {
+        document.getElementById('checkoutTypeModal').style.display = 'flex';
+    }
+
+    function closeCheckoutTypeModal() {
+        document.getElementById('checkoutTypeModal').style.display = 'none';
+    }
+
     function proceedToGatewayWithType(typeStr) {
-        let orderArray = [], grandTotal = 0;
+        let orderArray = [];
+        let grandTotal = 0;
+
         for (let name in selectedCart) {
             if (selectedCart[name] > 0) {
-                let found = allFetchedItems.find(i => i.name === name);
-                let price = found ? parseFloat(found.price || 0) : 0;
-                grandTotal += (price * selectedCart[name]);
+                let unitPrice = getItemUnitPrice(name);
+                let itemTotal = unitPrice * selectedCart[name];
+                grandTotal += itemTotal;
                 orderArray.push(`${name} x${selectedCart[name]}`);
             }
         }
-        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderArray.join(', '))}&total=${grandTotal.toFixed(2)}&type=${encodeURIComponent(typeStr)}&psid=${encodeURIComponent(currentPsid)}`;
+
+        let orderString = orderArray.join(', ');
+        window.location.href = `./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&total=${grandTotal.toFixed(2)}&type=${encodeURIComponent(typeStr)}&psid=${encodeURIComponent(currentPsid)}`;
     }
 </script>
 </body>
