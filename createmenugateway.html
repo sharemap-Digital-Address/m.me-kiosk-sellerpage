@@ -45,12 +45,12 @@
         input:checked + .slider { background-color: #16a34a; }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        .variant-chips-container { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; margin-bottom: 12px; }
-        .variant-chip-card { background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .variant-chip-card select { width: auto; margin: 0; padding: 4px; font-size: 11px; background: #1e293b; }
-        .variant-chip-card input { width: 70px; margin: 0; padding: 4px; font-size: 12px; text-align: center; }
-        .variant-name-label { font-weight: bold; font-size: 13px; color: #38bdf8; flex-grow: 1; }
-        .btn-remove-var { background: #ef4444; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        /* ADVANCED VARIANT CHIPS DESIGN */
+        .variant-chips-container { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; margin-bottom: 12px; }
+        .variant-chip-card { background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .variant-row-flex { display: flex; gap: 6px; align-items: center; }
+        .variant-chip-card select, .variant-chip-card input { margin: 0; font-size: 12px; }
+        .btn-remove-var { background: #ef4444; color: white; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 12px; font-weight: bold; width: auto; }
 
         .mix-checkbox-list { max-height: 160px; overflow-y: auto; background: #0f172a; border: 1px solid #334155; padding: 8px; border-radius: 6px; margin-top: 6px; margin-bottom: 12px; }
         .mix-checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 0; color: #cbd5e1; }
@@ -135,56 +135,60 @@
                     <button onclick="hideMenuForm()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">❌ Isara</button>
                 </div>
                 
-                <!-- NEW FIELD 1: PRODUCT TYPE -->
                 <label style="font-size: 12px; font-weight: bold; margin-top: 10px; display: block; color:#38bdf8;">📦 Overall Product Type:</label>
-                <input type="text" id="prodType" placeholder="hal. Food / Utensils / Clothes / Gadgets / Beauty / Services" list="typeSuggestions">
+                <input type="text" id="prodType" placeholder="hal. Food / Utensils / Clothes / Gadgets" list="typeSuggestions">
                 <datalist id="typeSuggestions">
-                    <option value="Food">
-                    <option value="Utensils">
-                    <option value="Clothes">
-                    <option value="Gadgets">
-                    <option value="Beauty">
-                    <option value="Services">
-                    <option value="Electronics">
+                    <option value="Food"><option value="Utensils"><option value="Clothes"><option value="Gadgets"><option value="Beauty"><option value="Services">
                 </datalist>
 
-                <!-- FIELD 2: ITEM TAB CATEGORY -->
                 <label style="font-size: 12px; font-weight: bold; display: block;">🏷️ Item Tab Category:</label>
                 <input type="text" id="prodCategory" placeholder="hal. Meals / Desserts / Drinks" list="catSuggestions">
                 <datalist id="catSuggestions">
-                    <option value="Mix & Match">
-                    <option value="Best Sellers">
-                    <option value="Main Meals">
-                    <option value="Snacks & Sides">
-                    <option value="Drinks & Beverages">
-                    <option value="Desserts">
+                    <option value="Mix & Match"><option value="Best Sellers"><option value="Main Meals"><option value="Snacks & Sides"><option value="Drinks & Beverages"><option value="Desserts">
                 </datalist>
 
                 <label style="font-size: 12px; font-weight: bold;">Product Name:</label>
                 <input type="text" id="prodName" placeholder="halimbawa: Halo-Halo Special">
 
-                <div style="display: flex; gap: 10px;">
-                    <div style="flex: 1;">
-                        <label style="font-size: 12px; font-weight: bold;">Base / Default Price (₱):</label>
-                        <input type="number" id="prodPrice" placeholder="99">
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="font-size: 12px; font-weight: bold;">Promo Discount (₱):</label>
-                        <input type="number" id="prodDiscount" placeholder="0">
-                    </div>
+                <!-- ENABLE/DISABLE SWITCH FOR VARIANTS -->
+                <div class="switch-container" style="margin-top: 10px;">
+                    <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🔄 Gamitin ang Variants (Multi-Size / Options)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="enableVariantsToggle" onchange="toggleVariantMode()">
+                        <span class="slider"></span>
+                    </label>
                 </div>
 
-                <!-- ADVANCED VARIANT CREATOR -->
-                <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid #334155; margin-bottom:12px;">
-                    <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">➕ Gumawa ng Variant (Opsyonal):</label>
-                    <p style="font-size:11px; color:#94a3b8; margin:2px 0 8px 0;">Kung may variant, i-type ang pangalan at presyo sa ibaba:</p>
-                    
-                    <div style="display: flex; gap: 6px;">
-                        <input type="text" id="varNameInput" placeholder="hal. Large / 16oz" style="margin-bottom:0; flex:2;">
-                        <input type="number" id="varPriceInput" placeholder="₱ Presyo" style="margin-bottom:0; flex:1;">
-                        <button type="button" class="btn-blue" onclick="addVariantCard()" style="width: auto; padding: 8px 12px; margin-bottom:0; font-size:12px; white-space:nowrap;">➕ Add</button>
+                <!-- SOLO ITEM PRICING & AVAILABILITY (Hinatag na mai-hide kapag naka-enable ang variants) -->
+                <div id="soloItemPricingBox">
+                    <div style="display: flex; gap: 10px;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 12px; font-weight: bold;">Base / Default Price (₱):</label>
+                            <input type="number" id="prodPrice" placeholder="99">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 12px; font-weight: bold;">Promo Discount (₱):</label>
+                            <input type="number" id="prodDiscount" placeholder="0">
+                        </div>
                     </div>
 
+                    <label style="font-size: 12px; font-weight: bold;">Main Availability Status:</label>
+                    <select id="prodAvailability">
+                        <option value="Available">Available</option>
+                        <option value="In Stock">In Stock</option>
+                        <option value="Out of Stock">Out of Stock</option>
+                    </select>
+
+                    <label style="font-size: 12px; font-weight: bold;">Quantity Availability / Storage Count (Opsyonal):</label>
+                    <input type="number" id="prodQuantity" placeholder="hal. 50, 20 (Iwanang blangko kung laging available)">
+                </div>
+
+                <!-- ADVANCED VARIANT BUILDER BOX (Lilitaw kapag naka-ON ang Switch) -->
+                <div id="variantBuilderBox" style="display: none; background:#0f172a; padding:12px; border-radius:8px; border:1px dashed #38bdf8; margin-bottom:12px;">
+                    <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">✨ Multi-Variant Manager:</label>
+                    <p style="font-size:11px; color:#94a3b8; margin:2px 0 8px 0;">Magdagdag ng bawat variant na may sariling presyo, stock, at larawan:</p>
+                    
+                    <button type="button" class="btn-blue" onclick="addVariantCard()" style="font-size:12px; padding:8px; margin-bottom:10px;">➕ Magdagdag ng Bagong Variant Row</button>
                     <div class="variant-chips-container" id="variantChipsContainer"></div>
                 </div>
 
@@ -219,20 +223,9 @@
                 <label style="font-size: 12px; font-weight: bold;">Special Description / Tagline (Fullscreen Modal Promo):</label>
                 <textarea id="prodSpecialDesc" rows="2" placeholder="hal. Try our best crispy chicken skin paired with hot rice!"></textarea>
 
-                <label style="font-size: 12px; font-weight: bold;">Main Availability Status:</label>
-                <select id="prodAvailability">
-                    <option value="Available">Available</option>
-                    <option value="In Stock">In Stock</option>
-                    <option value="Out of Stock">Out of Stock</option>
-                </select>
+                <label style="font-size: 12px; font-weight: bold;">Main Image Link URL (Google Drive / ImgBB):</label>
+                <input type="url" id="prodImage" placeholder="I-paste ang Google Drive Share Link ng pangunahing larawan dito">
 
-                <label style="font-size: 12px; font-weight: bold;">Quantity Availability / Storage Count (Opsyonal):</label>
-                <input type="number" id="prodQuantity" placeholder="hal. 50, 20 (Iwanang blangko kung laging available)">
-
-                <label style="font-size: 12px; font-weight: bold;">Image Link URL (Google Drive / ImgBB):</label>
-                <input type="url" id="prodImage" placeholder="I-paste ang Google Drive Share Link ng larawan dito">
-
-                <!-- NEW FIELD 3: YOUTUBE SHORT REELS LINK -->
                 <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">🎬 YouTube Short / Video Reel Link (Opsyonal):</label>
                 <input type="url" id="prodYoutubeLink" placeholder="hal. https://www.youtube.com/shorts/abc123XYZ">
 
@@ -319,7 +312,7 @@ function doGet(e) {
     let activeWebhookUrl = "";
     let activeStorePassword = "";
     let loadedMenuItems = [];
-    let currentVariantsList = [];
+    let currentVariantsList = []; // Objects: { qty, status, name, price, discount, image }
 
     const CLEAN_APPS_SCRIPT_CODE = 
 "function doPost(e) {\n" +
@@ -383,22 +376,38 @@ function doGet(e) {
         return rawUrl;
     }
 
-    function addVariantCard() {
-        const nameVal = document.getElementById("varNameInput").value.trim();
-        let priceVal = document.getElementById("varPriceInput").value.trim();
-        const basePrice = document.getElementById("prodPrice").value.trim();
-
-        if(!nameVal) { alert("Pakipasok ang pangalan ng Variant!"); return; }
-        if(!priceVal) priceVal = basePrice || "0";
-
-        currentVariantsList.push({ name: nameVal, price: priceVal, status: "Available" });
-        renderVariantCards();
-        document.getElementById("varNameInput").value = "";
-        document.getElementById("varPriceInput").value = "";
+    // TOGGLE VARIANT MODE (HIDE/SHOW SOLO FORM VS VARIANT BUILDER)
+    function toggleVariantMode() {
+        const isEnabled = document.getElementById("enableVariantsToggle").checked;
+        document.getElementById("soloItemPricingBox").style.display = isEnabled ? "none" : "block";
+        document.getElementById("variantBuilderBox").style.display = isEnabled ? "block" : "none";
     }
 
-    function removeVariantCard(index) { currentVariantsList.splice(index, 1); renderVariantCards(); }
-    function updateVariantCard(index, field, val) { currentVariantsList[index][field] = val; }
+    // ADVANCED VARIANT CARDS LOGIC WITH FULL FIELDS
+    function addVariantCard() {
+        currentVariantsList.push({
+            qty: "",
+            status: "Available",
+            name: "",
+            price: "",
+            discount: "0",
+            image: ""
+        });
+        renderVariantCards();
+    }
+
+    function removeVariantCard(index) {
+        currentVariantsList.splice(index, 1);
+        renderVariantCards();
+    }
+
+    function updateVariantField(index, field, val) {
+        if (field === 'image') {
+            currentVariantsList[index][field] = convertGoogleDriveLink(val);
+        } else {
+            currentVariantsList[index][field] = val;
+        }
+    }
 
     function renderVariantCards() {
         const container = document.getElementById("variantChipsContainer");
@@ -407,15 +416,42 @@ function doGet(e) {
             const card = document.createElement("div");
             card.className = "variant-chip-card";
             card.innerHTML = `
-                <select onchange="updateVariantCard(${idx}, 'status', this.value)">
-                    <option value="Available" ${v.status === 'Available' ? 'selected':''}>Available</option>
-                    <option value="In Stock" ${v.status === 'In Stock' ? 'selected':''}>In Stock</option>
-                    <option value="Out of Stock" ${v.status === 'Out of Stock' ? 'selected':''}>Out of Stock</option>
-                </select>
-                <div class="variant-name-label">${v.name}</div>
-                <span style="font-size:11px; color:#cbd5e1;">₱</span>
-                <input type="number" value="${v.price}" onchange="updateVariantCard(${idx}, 'price', this.value)">
-                <button type="button" class="btn-remove-var" onclick="removeVariantCard(${idx})">✕</button>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:12px; color:#38bdf8; font-weight:bold;">Variant #${idx + 1}</span>
+                    <button type="button" class="btn-remove-var" onclick="removeVariantCard(${idx})">Alisin ✕</button>
+                </div>
+                <div class="variant-row-flex">
+                    <div style="flex:1;">
+                        <label style="font-size:10px; color:#94a3b8;">Qty Available:</label>
+                        <input type="number" placeholder="Qty" value="${v.qty || ''}" onchange="updateVariantField(${idx}, 'qty', this.value)">
+                    </div>
+                    <div style="flex:1.5;">
+                        <label style="font-size:10px; color:#94a3b8;">Status:</label>
+                        <select onchange="updateVariantField(${idx}, 'status', this.value)">
+                            <option value="Available" ${v.status === 'Available' ? 'selected':''}>Available</option>
+                            <option value="In Stock" ${v.status === 'In Stock' ? 'selected':''}>In Stock</option>
+                            <option value="Out of Stock" ${v.status === 'Out of Stock' ? 'selected':''}>Out of Stock</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="variant-row-flex">
+                    <div style="flex:2;">
+                        <label style="font-size:10px; color:#94a3b8;">Variant Name:</label>
+                        <input type="text" placeholder="hal. Large / 16oz" value="${v.name || ''}" onchange="updateVariantField(${idx}, 'name', this.value)">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:10px; color:#94a3b8;">Price (₱):</label>
+                        <input type="number" placeholder="₱" value="${v.price || ''}" onchange="updateVariantField(${idx}, 'price', this.value)">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:10px; color:#94a3b8;">Discount (₱):</label>
+                        <input type="number" placeholder="Disc" value="${v.discount || '0'}" onchange="updateVariantField(${idx}, 'discount', this.value)">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:10px; color:#94a3b8;">Variant Image Link (Google Drive / ImgBB):</label>
+                    <input type="url" placeholder="I-paste ang link dito (Auto-convert)" value="${v.image || ''}" onchange="updateVariantField(${idx}, 'image', this.value)">
+                </div>
             `;
             container.appendChild(card);
         });
@@ -638,17 +674,18 @@ function doGet(e) {
         document.getElementById('prodType').value = "";
         document.getElementById('prodName').value = "";
         document.getElementById('prodCategory').value = "";
-        document.getElementById('varNameInput').value = "";
-        document.getElementById('varPriceInput').value = "";
+        document.getElementById('enableVariantsToggle').checked = false;
+        toggleVariantMode();
         currentVariantsList = [];
         renderVariantCards();
         document.getElementById('prodPrice').value = "";
         document.getElementById('prodDiscount').value = "";
+        document.getElementById('prodAvailability').value = "Available";
+        document.getElementById('prodQuantity').value = "";
         document.getElementById('prodImage').value = "";
         document.getElementById('prodYoutubeLink').value = "";
         document.getElementById('prodDesc').value = "";
         document.getElementById('prodSpecialDesc').value = "";
-        document.getElementById('prodQuantity').value = "";
         document.getElementById('mixMatchToggle').checked = false;
         toggleMixMatchFields();
     }
@@ -657,15 +694,47 @@ function doGet(e) {
         if (!activeWebhookUrl) { alert("I-save muna ang Google Sheet Webhook URL!"); return; }
         const productType = document.getElementById("prodType").value.trim() || "General";
         const name = document.getElementById("prodName").value.trim();
-        const price = document.getElementById("prodPrice").value.trim() || "0";
         const category = document.getElementById("prodCategory").value.trim() || "General";
         const rawImageInput = document.getElementById("prodImage").value.trim();
         const youtubeLink = document.getElementById("prodYoutubeLink").value.trim();
+        const useVariants = document.getElementById("enableVariantsToggle").checked;
 
         if (!name) { alert("Lagyan ng Product Name!"); return; }
         const finalImageUrl = convertGoogleDriveLink(rawImageInput);
 
-        const variantsString = currentVariantsList.length > 0 ? JSON.stringify(currentVariantsList) : "N/A";
+        let price = "0";
+        let discount = "0";
+        let status = "Available";
+        let quantity = "Unlimited";
+        let variantsString = "N/A";
+
+        if (useVariants) {
+            if (currentVariantsList.length === 0) {
+                alert("Naka-enable ang Variants pero wala kang inilagay na Variant row!");
+                return;
+            }
+            // Salain at linisin ang mga variant field na may laman lang
+            let cleanedVariants = currentVariantsList.map(v => ({
+                qty: v.qty ? v.qty.trim() : "",
+                status: v.status || "Available",
+                name: v.name ? v.name.trim() : "Standard",
+                price: v.price ? v.price.trim() : "0",
+                discount: v.discount ? v.discount.trim() : "0",
+                image: v.image ? v.image.trim() : ""
+            })).filter(v => v.name !== "");
+
+            variantsString = JSON.stringify(cleanedVariants);
+            price = cleanedVariants[0].price; // Base reference price
+            discount = cleanedVariants[0].discount;
+            status = cleanedVariants[0].status;
+            quantity = cleanedVariants[0].qty || "Unlimited";
+        } else {
+            price = document.getElementById("prodPrice").value.trim() || "0";
+            discount = document.getElementById("prodDiscount").value.trim() || "0";
+            status = document.getElementById("prodAvailability").value;
+            quantity = document.getElementById("prodQuantity").value.trim() || "Unlimited";
+        }
+
         const mixTargets = getSelectedMixMatchTargets();
 
         const payload = {
@@ -675,14 +744,14 @@ function doGet(e) {
             name: name,
             size: variantsString,
             price: price,
-            discount: document.getElementById("prodDiscount").value.trim() || "0",
+            discount: discount,
             mixMatchType: document.getElementById("mixMatchToggle").checked ? document.getElementById("mixMatchType").value : "N/A",
             mixMatchTarget: document.getElementById("mixMatchToggle").checked ? mixTargets : "N/A",
             mixMatchDiscount: document.getElementById("mixMatchToggle").checked ? document.getElementById("mixMatchDiscount").value.trim() || "0" : "0",
             description: document.getElementById("prodDesc").value.trim() || "",
             specialDesc: document.getElementById("prodSpecialDesc").value.trim() || "",
-            status: document.getElementById("prodAvailability").value,
-            quantity: document.getElementById("prodQuantity").value.trim() || "Unlimited",
+            status: status,
+            quantity: quantity,
             image: finalImageUrl || "",
             youtubeLink: youtubeLink || ""
         };
