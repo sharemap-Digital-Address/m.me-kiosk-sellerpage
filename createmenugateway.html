@@ -6,7 +6,7 @@
     <title>ShareMap - Kiosk Menu Manager & Theme Customizer</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #2563eb; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
+        :root { --primary: #0284c7; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         .container { max-width: 500px; margin: 0 auto; }
         h2 { text-align: center; color: #38bdf8; margin-top: 0; }
@@ -32,11 +32,6 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
         .modal-content { background: #1e293b; border-radius: 12px; padding: 20px; max-width: 500px; width: 100%; border: 1px solid #475569; max-height: 90vh; overflow-y: auto; box-sizing: border-box; }
         
-        .code-box-wrapper { position: relative; margin-top: 10px; margin-bottom: 15px; }
-        .code-box { background: #090d16; border: 1px solid #0284c7; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; color: #38bdf8; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 200px; cursor: pointer; }
-        
-        .copy-btn-main { background: #16a34a; color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; font-size: 14px; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
-
         .switch-container { display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #475569; margin-bottom: 12px; }
         .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -51,9 +46,6 @@
         .variant-chip-card select, .variant-chip-card input { margin: 0; font-size: 12px; }
         .btn-remove-var { background: #ef4444; color: white; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 12px; font-weight: bold; width: auto; }
 
-        .mix-checkbox-list { max-height: 160px; overflow-y: auto; background: #0f172a; border: 1px solid #334155; padding: 8px; border-radius: 6px; margin-top: 6px; margin-bottom: 12px; }
-        .mix-checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 0; color: #cbd5e1; }
-        .mix-checkbox-item input { width: auto; margin: 0; }
         .color-picker-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
         .color-picker-row input[type="color"] { width: 50px; height: 38px; padding: 2px; margin: 0; cursor: pointer; border-radius: 6px; }
     </style>
@@ -86,49 +78,34 @@
             <button onclick="logoutStore()" style="width: auto; padding: 5px 10px; background: #dc2626; font-size: 11px; margin:0;">Log Out / Switch Store</button>
         </div>
 
-        <!-- FIRST TIME SETUP CARD -->
-        <div id="firstTimeSetupCard" class="card" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color:#38bdf8;">📌 Setup Your Menu Storage</h3>
-                <button onclick="cancelReconfig()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">⬅️ Bumalik</button>
-            </div>
-            <label style="font-size: 12px; font-weight: bold; color: #38bdf8;">1. I-paste ang Link ng Blank Google Sheet Mo:</label>
-            <input type="text" id="blankSheetLinkInput" placeholder="https://docs.google.com/spreadsheets/d/...">
-            <button class="btn-blue" onclick="processCopyAndOpenSheet('blankSheetLinkInput')">🚀 Copy Code & Open Google Sheet</button>
-        </div>
-
-        <div id="urlInputReminderCard" class="card" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: #38bdf8;">⚙️ Huling Hakbang</h3>
-                <button onclick="cancelReconfig()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">⬅️ Bumalik</button>
-            </div>
-            <label style="font-size: 12px; font-weight: bold;">2. I-paste ang Web App URL (/exec):</label>
-            <input type="text" id="sheetWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
-            <button class="btn-green" onclick="saveSheetUrlToSupabase()">💾 Save Google Sheet Link</button>
-        </div>
-
-        <!-- NEW: STORE THEME & BRANDING SETTINGS CARD -->
+        <!-- STORE THEME & BRANDING SETTINGS CARD -->
         <div class="card" style="border: 1px solid #8b5cf6;">
-            <h3 style="margin-top:0; color:#c084fc;">🎨 Kiosk Theme & Store Logo Customizer</h3>
-            <p style="font-size:11px; color:#94a3b8; margin-top:-4px; margin-bottom:12px;">I-set ang bilog na logo at kulay ng inyong Kiosk Store:</p>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin-top:0; color:#c084fc;">🎨 Kiosk Theme & Store Logo Customizer</h3>
+                <button onclick="resetThemeToDefault()" style="width:auto; padding:4px 8px; font-size:10px; background:#64748b; margin:0;">🔄 Reset Default</button>
+            </div>
+            <p style="font-size:11px; color:#94a3b8; margin-top:-4px; margin-bottom:12px;">I-set ang logo at kulay ng inyong Kiosk Store:</p>
 
-            <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">Store Circle Logo Link (Google Drive / ImgBB):</label>
-            <input type="url" id="themeStoreLogo" placeholder="I-paste ang link ng bilog na logo ng store">
+            <!-- STORE LOGO SETTINGS -->
+            <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">Store Circle Logo Image Link:</label>
+            <input type="url" id="themeStoreLogo" placeholder="I-paste ang Google Drive / ImgBB image link (Iwanang blangko para sa Default Store Icon 🏪)">
 
-            <label style="font-size: 12px; font-weight: bold;">Primary Accent Color (Buttons & Tabs):</label>
+            <label style="font-size: 12px; font-weight: bold;">Primary Accent Color (Buttons & Active Tabs):</label>
             <div class="color-picker-row">
                 <input type="color" id="themePrimaryColor" value="#0284c7" onchange="document.getElementById('themePrimaryHex').value = this.value">
                 <input type="text" id="themePrimaryHex" value="#0284c7" style="margin:0;" onchange="document.getElementById('themePrimaryColor').value = this.value">
             </div>
 
+            <!-- BACKGROUND STYLES INCLUDING DEFAULT -->
             <label style="font-size: 12px; font-weight: bold;">Background Theme Style:</label>
             <select id="themeBgType" onchange="toggleThemeTypeFields()">
+                <option value="default">Default System Theme (Dark Slate #0f172a)</option>
                 <option value="color">Solid Dark Color</option>
                 <option value="gradient">Modern Dark Gradient</option>
                 <option value="image">Google Drive Custom Wallpaper Image</option>
             </select>
 
-            <div id="themeColorBox">
+            <div id="themeColorBox" style="display:none;">
                 <label style="font-size: 12px; font-weight: bold;">Background Color:</label>
                 <div class="color-picker-row">
                     <input type="color" id="themeBgColor" value="#0f172a" onchange="document.getElementById('themeBgHex').value = this.value">
@@ -145,7 +122,7 @@
         </div>
 
         <!-- MAIN MENU FORM AND LIST -->
-        <div id="mainMenuSection" style="display: none;">
+        <div id="mainMenuSection">
             <div class="card" id="menuFormCard" style="display: none; border: 1px solid #38bdf8;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h3 id="formTitle" style="margin: 0; color: #38bdf8;">➕ Magdagdag ng Item</h3>
@@ -205,7 +182,6 @@
                 <button class="btn-green" onclick="addMenuItemToSheet()">💾 I-save ang Item sa Google Sheet</button>
             </div>
 
-            <!-- Active Menu List -->
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
                     <h3 style="margin:0;">Lista ng mga Item sa Google Sheet</h3>
@@ -230,13 +206,22 @@
     let activeStore = "";
     let activeWebhookUrl = "";
     let activeStorePassword = "";
-    let loadedMenuItems = [];
-    let currentVariantsList = [];
 
     function toggleThemeTypeFields() {
         const type = document.getElementById("themeBgType").value;
         document.getElementById("themeColorBox").style.display = type === "color" ? "block" : "none";
         document.getElementById("themeImageBox").style.display = type === "image" ? "block" : "none";
+    }
+
+    function resetThemeToDefault() {
+        document.getElementById("themeStoreLogo").value = "";
+        document.getElementById("themePrimaryColor").value = "#0284c7";
+        document.getElementById("themePrimaryHex").value = "#0284c7";
+        document.getElementById("themeBgType").value = "default";
+        document.getElementById("themeBgColor").value = "#0f172a";
+        document.getElementById("themeBgHex").value = "#0f172a";
+        document.getElementById("themeDriveImage").value = "";
+        toggleThemeTypeFields();
     }
 
     async function loadStoreThemeSettings() {
@@ -258,6 +243,8 @@
                     document.getElementById("themeBgHex").value = theme.bgColor;
                 }
                 if (theme.bgImage) document.getElementById("themeDriveImage").value = theme.bgImage;
+            } else {
+                resetThemeToDefault();
             }
         } catch (e) { console.error("Theme load error:", e); }
     }
@@ -308,13 +295,7 @@
         loadStoreThemeSettings();
     }
     
-    // (Other basic manager functions remain matching your structure...)
     function logoutStore() { window.location.reload(); }
-    function toggleVariantMode() {
-        const isEnabled = document.getElementById("enableVariantsToggle").checked;
-        document.getElementById("soloItemPricingBox").style.display = isEnabled ? "none" : "block";
-        document.getElementById("variantBuilderBox").style.display = isEnabled ? "block" : "none";
-    }
 </script>
 </body>
 </html>
