@@ -21,7 +21,7 @@
         }
         .container { max-width: 480px; margin: 0 auto; }
         
-        /* STORE BRANDING HEADER (<circleImage> / 🏪 + @Storename) */
+        /* STORE BRANDING HEADER (<circleImage> + @Storename) */
         .store-header { text-align: center; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .store-logo-circle { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.4); background: #334155; }
         .store-header h2 { margin: 0; color: #38bdf8; font-size: 20px; font-weight: bold; }
@@ -262,27 +262,34 @@
         }
 
         document.getElementById('storeTitle').innerText = "@" + storePage + " - Kiosk Menu";
-        loadStoreThemeAndMenu();
+        loadKioskMenu();
 
         // Auto-sync / Poll fresh menu data from Google Sheets every 15 seconds
         setInterval(loadKioskMenuSilent, 15000);
     };
 
-    // LOAD THEME, LOGO, AND MENU FROM SUPABASE & SHEETS
-    async function loadStoreThemeAndMenu() {
+    async function loadKioskMenu() {
+        await fetchAndProcessMenu(false);
+    }
+
+    async function loadKioskMenuSilent() {
+        await fetchAndProcessMenu(true);
+    }
+
+    async function fetchAndProcessMenu(isSilent) {
         try {
-            const { data, error } = await supabaseClient
+            const { data: licenseData, error: licenseError } = await supabaseClient
                 .from('licenses')
                 .select('menu_sheet_url, kiosk_theme_config')
                 .eq('username', storePage.toLowerCase())
                 .single();
 
-            if (!error && data) {
-                // Apply Custom Theme Settings & Logo
-                if (data.kiosk_theme_config) {
-                    let theme = typeof data.kiosk_theme_config === "string" ? JSON.parse(data.kiosk_theme_config) : data.kiosk_theme_config;
+            if (!error && licenseData) {
+                // 1. APPLY THEME, LOGO, AND BACKGROUND CONFIGS
+                if (licenseData.kiosk_theme_config) {
+                    let theme = typeof licenseData.kiosk_theme_config === "string" ? JSON.parse(licenseData.kiosk_theme_config) : licenseData.kiosk_theme_config;
                     
-                    // 1. Circle Store Logo or Default Reset
+                    // Circle Logo / Reset Default
                     const logoEl = document.getElementById('storeLogoImg');
                     if (theme.storeLogo && theme.storeLogo.trim() !== "") {
                         logoEl.src = theme.storeLogo;
@@ -291,12 +298,12 @@
                         logoEl.style.display = 'none';
                     }
 
-                    // 2. Custom Color Theme Picker (Primary Accent)
+                    // Custom Color Theme Picker
                     if (theme.primary) {
                         document.documentElement.style.setProperty('--primary', theme.primary);
                     }
 
-                    // 3. Custom Image Theme / Background Style
+                    // Background Theme (Default, Color, Gradient, or Image)
                     if (theme.bgType === "color" && theme.bgColor) {
                         document.body.style.background = theme.bgColor;
                     } else if (theme.bgType === "gradient") {
@@ -308,36 +315,41 @@
                         document.body.style.backgroundPosition = "center";
                         document.body.style.backgroundAttachment = "fixed";
                     } else {
-                        // Default Fallback (#0f172a)
                         document.body.style.background = "#0f172a";
                     }
                 }
 
-                // Load Menu Items from Google Sheet URL
-                if (data.menu_sheet_url) {
-                    const res = await fetch(data.menu_sheet_url + "?action=GET_ITEMS");
+                // 2. FETCH MENU ITEMS FROM SHEET OR FALLBACK TO DEFAULT DEMO ITEMS
+                if (licenseData.menu_sheet_url) {
+                    const res = await fetch(licenseData.menu_sheet_url + "?action=GET_ITEMS");
                     const sheetItems = await res.json();
-                    allFetchedItems = sheetItems || [];
+                    
+                    if (!sheetItems || sheetItems.length === 0) {
+                        if (!isSilent) allFetchedItems = DEFAULT_KIOSK_MENU;
+                    } else {
+                        allFetchedItems = sheetItems.map(i => ({
+                            ...i,
+                            rating: parseFloat(i.rating) || 4.8,
+                            ratingCount: parseInt(i.ratingCount) || 50,
+                            specialDesc: i.specialDesc && i.specialDesc.trim() !== "" ? i.specialDesc : (i.description || "")
+                        }));
+                    }
+                } else {
+                    if (!isSilent) allFetchedItems = DEFAULT_KIOSK_MENU;
                 }
+            } else {
+                if (!isSilent) allFetchedItems = DEFAULT_KIOSK_MENU;
             }
+
         } catch (err) {
-            console.error("Error sa pag-load ng theme/menu:", err);
+            console.error("Error sa pag-load ng menu/theme:", err);
+            if (!isSilent) allFetchedItems = DEFAULT_KIOSK_MENU;
         }
 
-        buildCategoryTabs();
-        filterAndRenderGrid("ALL");
-    }
-
-    async function loadKioskMenuSilent() {
-        try {
-            const { data } = await supabaseClient.from('licenses').select('menu_sheet_url').eq('username', storePage.toLowerCase()).single();
-            if (data && data.menu_sheet_url) {
-                const res = await fetch(data.menu_sheet_url + "?action=GET_ITEMS");
-                const sheetItems = await res.json();
-                if (sheetItems) allFetchedItems = sheetItems;
-                filterAndRenderGrid(activeCategory);
-            }
-        } catch (e) {}
+        if (!isSilent) {
+            buildCategoryTabs();
+        }
+        filterAndRenderGrid(activeCategory);
     }
 
     function openSearchBar() {
