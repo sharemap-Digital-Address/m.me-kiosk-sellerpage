@@ -23,14 +23,14 @@
         
         /* STORE BRANDING HEADER (<circleImage> + @Storename) */
         .store-header { text-align: center; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .store-logo-circle { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.4); background: #334155; }
+        .store-logo-circle { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.4); background: #334155; display: none; }
         .store-header h2 { margin: 0; color: #38bdf8; font-size: 20px; font-weight: bold; }
 
         .navigation-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; position: relative; height: 38px; }
         .category-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex-grow: 1; align-items: center; transition: all 0.3s ease; }
         .category-tabs::-webkit-scrollbar { display: none; }
         .cat-tab { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; white-space: nowrap; cursor: pointer; transition: 0.2s; }
-        .cat-tab.active { background: var(--primary); color: #ffffff; border-color: #38bdf8; }
+        .cat-tab.active { background: var(--primary) !important; color: #ffffff; border-color: var(--primary) !important; }
 
         .search-trigger-btn { background: #1e293b; color: #38bdf8; border: 1px solid #334155; width: 38px; height: 38px; min-width: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: 0.2s; }
         .search-trigger-btn:hover { background: var(--primary); color: #ffffff; }
@@ -58,7 +58,7 @@
         
         .qty-control { display: flex; align-items: center; justify-content: space-between; background: #0f172a; border-radius: 6px; padding: 4px; border: 1px solid #475569; margin-top: 5px; }
         .qty-btn { background: #334155; color: white; border: none; width: 28px; height: 28px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .qty-btn:hover { background: var(--primary); }
+        .qty-btn:hover { background: var(--primary) !important; }
         .qty-val { font-weight: bold; font-size: 13px; }
 
         .mix-btn { background: #d97706; color: white; border: none; padding: 6px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
@@ -95,7 +95,7 @@
 
 <div class="container">
     <div class="store-header">
-        <img id="storeLogoImg" src="" alt="Store Logo" class="store-logo-circle" style="display:none;">
+        <img id="storeLogoImg" src="" alt="Store Logo" class="store-logo-circle">
         <h2 id="storeTitle">🏪 Loading Kiosk Menu...</h2>
         <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Pumili ng category o mag-search para mag-order:</p>
     </div>
@@ -175,7 +175,7 @@
         </div>
         <div class="carousel-hint" id="carouselHintText">👉 I-swipe ang larawan papuntang kanan para sa Video Reel Preview!</div>
 
-        <div id="mPrice" style="font-size:16px; font-weight:bold; color:#38bdf8; margin-bottom:8px;"></div>
+        <div id="mPrice" style="font-size:16px; font-weight:bold; color:var(--primary); margin-bottom:8px;"></div>
         <div id="mRating" class="rating-badge" style="font-size: 13px; margin-bottom: 10px;"></div>
         <p id="mDesc" style="font-size:12px; color:#cbd5e1; line-height: 1.5; margin-bottom: 15px;"></p>
         
@@ -261,7 +261,7 @@
             return;
         }
 
-        document.getElementById('storeTitle').innerText = "@" + storePage + " - Kiosk Menu";
+        document.getElementById('storeTitle').innerText = "🏪 @" + storePage + " - Kiosk Menu";
         loadKioskMenu();
 
         // Auto-sync / Poll fresh menu data from Google Sheets every 15 seconds
@@ -278,7 +278,7 @@
 
     async function fetchAndProcessMenu(isSilent) {
         try {
-            const { data: licenseData, error: licenseError } = await supabaseClient
+            const { data: licenseData, error } = await supabaseClient
                 .from('licenses')
                 .select('menu_sheet_url, kiosk_theme_config')
                 .eq('username', storePage.toLowerCase())
@@ -287,27 +287,36 @@
             if (!error && licenseData) {
                 // 1. APPLY THEME, LOGO, AND BACKGROUND CONFIGS
                 if (licenseData.kiosk_theme_config) {
-                    let theme = typeof licenseData.kiosk_theme_config === "string" ? JSON.parse(licenseData.kiosk_theme_config) : licenseData.kiosk_theme_config;
+                    let theme = {};
+                    try {
+                        theme = typeof licenseData.kiosk_theme_config === "string" ? JSON.parse(licenseData.kiosk_theme_config) : licenseData.kiosk_theme_config;
+                    } catch (e) {
+                        theme = {};
+                    }
                     
-                    // Circle Logo / Reset Default
+                    // Circle Logo or Default 🏪 Emoji
                     const logoEl = document.getElementById('storeLogoImg');
                     if (theme.storeLogo && theme.storeLogo.trim() !== "") {
                         logoEl.src = theme.storeLogo;
                         logoEl.style.display = 'block';
+                        document.getElementById('storeTitle').innerText = "@" + storePage + " - Kiosk Menu";
                     } else {
                         logoEl.style.display = 'none';
+                        document.getElementById('storeTitle').innerText = "🏪 @" + storePage + " - Kiosk Menu";
                     }
 
-                    // Custom Color Theme Picker
-                    if (theme.primary) {
+                    // Custom Color Theme Picker (Primary Accent)
+                    if (theme.primary && theme.primary.trim() !== "") {
                         document.documentElement.style.setProperty('--primary', theme.primary);
+                    } else {
+                        document.documentElement.style.setProperty('--primary', '#0284c7');
                     }
 
                     // Background Theme (Default, Color, Gradient, or Image)
                     if (theme.bgType === "color" && theme.bgColor) {
                         document.body.style.background = theme.bgColor;
                     } else if (theme.bgType === "gradient") {
-                        document.body.style.background = `linear-gradient(135deg, ${theme.bgColor || '#0f172a'} 0%, #0284c7 100%)`;
+                        document.body.style.background = `linear-gradient(135deg, ${theme.bgColor || '#0f172a'} 0%, ${theme.primary || '#0284c7'} 100%)`;
                         document.body.style.backgroundAttachment = "fixed";
                     } else if (theme.bgType === "image" && theme.bgImage) {
                         document.body.style.background = `linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)), url('${theme.bgImage}')`;
@@ -317,10 +326,15 @@
                     } else {
                         document.body.style.background = "#0f172a";
                     }
+                } else {
+                    document.getElementById('storeTitle').innerText = "🏪 @" + storePage + " - Kiosk Menu";
+                    document.documentElement.style.setProperty('--primary', '#0284c7');
+                    document.body.style.background = "#0f172a";
+                    document.getElementById('storeLogoImg').style.display = 'none';
                 }
 
                 // 2. FETCH MENU ITEMS FROM SHEET OR FALLBACK TO DEFAULT DEMO ITEMS
-                if (licenseData.menu_sheet_url) {
+                if (licenseData.menu_sheet_url && licenseData.menu_sheet_url.trim() !== "") {
                     const res = await fetch(licenseData.menu_sheet_url + "?action=GET_ITEMS");
                     const sheetItems = await res.json();
                     
@@ -338,11 +352,13 @@
                     if (!isSilent) allFetchedItems = DEFAULT_KIOSK_MENU;
                 }
             } else {
+                document.getElementById('storeTitle').innerText = "🏪 @" + storePage + " - Kiosk Menu";
                 if (!isSilent) allFetchedItems = DEFAULT_KIOSK_MENU;
             }
 
         } catch (err) {
             console.error("Error sa pag-load ng menu/theme:", err);
+            document.getElementById('storeTitle').innerText = "🏪 @" + storePage + " - Kiosk Menu";
             if (!isSilent) allFetchedItems = DEFAULT_KIOSK_MENU;
         }
 
