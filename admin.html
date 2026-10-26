@@ -1,182 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShareMap Admin Dashboard (Supabase Powered)</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>ShareMap Admin Dashboard (Edge Function Secured)</title>
     <style>
-        :root {
-            --primary: #2563eb;
-            --bg: #0f172a;
-            --card: #1e293b;
-            --text: #f8fafc;
-            --border: #334155;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 15px;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
+        :root { --primary: #2563eb; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .container { max-width: 600px; margin: 0 auto; }
         h2 { text-align: center; color: #38bdf8; margin-top: 0; }
-        .card {
-            background: var(--card);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            margin-bottom: 15px;
-            border: 1px solid var(--border);
-        }
-        input, select, button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 8px;
-            margin-bottom: 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 14px;
-            background-color: #0f172a;
-            color: #fff;
-        }
-        button {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
+        .card { background: var(--card); padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); margin-bottom: 15px; border: 1px solid var(--border); }
+        input, select, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 14px; background-color: #0f172a; color: #fff; }
+        button { background-color: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
         button:hover { opacity: 0.9; }
-        .store-item {
-            padding: 12px 10px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .store-item { padding: 12px 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .store-info div { font-size: 13px; color: #94a3b8; margin-top: 2px; }
-        .actions button {
-            width: auto;
-            padding: 5px 8px;
-            font-size: 11px;
-            margin-left: 3px;
-            margin-top: 2px;
-        }
-        .badge {
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-        .active { background: #166534; color: #dcfce7; }
-        .expired { background: #991b1b; color: #fee2e2; }
-        .trial { background: #854d0e; color: #fef08a; }
-        .pwd-set { background: #0369a1; color: #e0f2fe; }
-        .pwd-unset { background: #a16207; color: #fef3c7; }
-        .token-set { background: #15803d; color: #dcfce7; }
-        .token-offline { background: #b91c1c; color: #fee2e2; }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            padding: 15px;
-        }
-        .modal-content {
-            background: var(--card);
-            padding: 20px;
-            border-radius: 12px;
-            max-width: 480px;
-            width: 100%;
-            border: 1px solid var(--border);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
+        .actions button { width: auto; padding: 5px 8px; font-size: 11px; margin-left: 3px; margin-top: 2px; }
+        .badge { padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .active { background: #166534; color: #dcfce7; } .expired { background: #991b1b; color: #fee2e2; } .trial { background: #854d0e; color: #fef08a; }
+        .pwd-set { background: #0369a1; color: #e0f2fe; } .pwd-unset { background: #a16207; color: #fef3c7; }
+        .token-set { background: #15803d; color: #dcfce7; } .token-offline { background: #b91c1c; color: #fee2e2; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
+        .modal-content { background: var(--card); padding: 20px; border-radius: 12px; max-width: 480px; width: 100%; border: 1px solid var(--border); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <h2>🛡️ ShareMap Admin Portal</h2>
-
-    <!-- MASTER ADMIN LOGIN CARD -->
+    <h2>🛡️ ShareMap Admin Portal (Edge Secured)</h2>
     <div class="card" id="adminLoginCard">
         <h3>🔑 Master Admin Verification</h3>
-        <p style="font-size:12px; color:#94a3b8;">Mangyaring i-type ang Master Admin Password para buksan ang dashboard controls:</p>
-        
+        <p style="font-size:12px; color:#94a3b8;">Master Admin Password para buksan dashboard (JayromeAdmin2026)</p>
         <label>Master Passcode:</label>
         <input type="password" id="masterPasswordInput" placeholder="I-type ang Master Admin Password">
-
         <button onclick="verifyMasterAdmin()" style="background-color: #2563eb;">Verify & Unlock Admin</button>
     </div>
 
-    <!-- MAIN ADMIN DASHBOARD SECTION -->
     <div id="adminDashboardSection" style="display: none;">
-        
-        <!-- Add / Edit Store Card -->
         <div class="card" id="licenseFormCard" style="display: none; border: 1px solid #38bdf8;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h3 id="formTitle" style="margin: 0; color: #38bdf8;">➕ Magdagdag ng Store License</h3>
                 <button onclick="hideFormCard()" style="width: auto; padding: 4px 10px; background: #64748b; font-size: 11px; margin: 0;">❌ Isara</button>
             </div>
-            
             <label style="margin-top: 10px; display: block;">Page Username:</label>
             <input type="text" id="storeUsername" placeholder="halimbawa: marjevinsoylucena">
-
             <label>Client Email Address:</label>
             <input type="email" id="clientEmailInput" placeholder="halimbawa: client@gmail.com">
-
             <label>Store Password (Admin Reset / Set):</label>
             <input type="text" id="storePasswordInput" placeholder="Iwanang blanko kung si client ang magse-set">
-
             <label>Plan Type:</label>
             <select id="planType" onchange="autoSetExpiry()">
                 <option value="TRIAL_ACCESS">30-Day Free Trial</option>
                 <option value="BRONZE_MONTHLY">Bronze Monthly (P499/mo)</option>
                 <option value="PLATINUM_LIFETIME">Platinum Lifetime (No Expiry)</option>
             </select>
-
             <label>Expiry Date (YYYY-MM-DD):</label>
             <input type="date" id="expiryDate">
-
-            <button onclick="saveStoreLicense()" style="background-color: #16a34a; margin-bottom: 0;">💾 I-save sa Supabase</button>
+            <button onclick="saveStoreLicense()" style="background-color: #16a34a; margin-bottom: 0;">💾 I-save via Edge Function</button>
         </div>
 
-        <!-- Search & Filter Card -->
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                <h3 style="margin:0;">Lista ng mga Store</h3>
+                <h3 style="margin:0;">Lista ng mga Store (via Edge)</h3>
                 <button onclick="logoutAdmin()" style="width:auto; padding:5px 10px; background:#dc2626; font-size:11px; margin:0;">Lock Dashboard</button>
             </div>
-
-            <button onclick="showCreateForm()" style="background-color: #16a34a; font-size: 15px; padding: 12px; margin-bottom: 10px;">
-                ➕ Create New License
-            </button>
-
+            <button onclick="showCreateForm()" style="background-color: #16a34a; font-size: 15px; padding: 12px; margin-bottom: 10px;">➕ Create New License</button>
             <input type="text" id="searchInput" placeholder="Mag-search ng Store Username..." onkeyup="filterStores()" style="margin-top:5px;">
-            
             <div id="storeListContainer" style="max-height: 500px; overflow-y: auto; margin-top: 10px;">
-                <p style="text-align: center; color: #94a3b8;">Lino-load ang listahan mula sa Supabase...</p>
+                <p style="text-align: center; color: #94a3b8;">Lino-load via Edge Function...</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Activation Dialog -->
 <div class="modal-overlay" id="emailModal">
     <div class="modal-content">
         <h3 style="margin-top:0; color:#38bdf8;">🚀 Send Activation / Setup Links</h3>
-        <p style="font-size:13px; color:#cbd5e1;">Nai-save na sa Supabase! Pindutin ang button sa ibaba para kopyahin ang template at buksan ang email App.</p>
-        
+        <p style="font-size:13px; color:#cbd5e1;">Nai-save na via Edge! Pindutin button para kopyahin template.</p>
         <button onclick="sendActivationEmail()" style="background-color: #2563eb; margin-top: 10px;">📧 I-open ang Email App & Copy Template</button>
         <button onclick="closeModal()" style="background-color: #475569; margin-top: 5px;">Isara (Skip)</button>
     </div>
@@ -184,22 +104,20 @@
 
 <script>
     const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
     const BASE_GATEWAY_URL = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/multigateway.html";
     const BASE_SETUP_URL = "https://sharemap-digital-address.github.io/m.me-kiosk-sellerpage/accountgateway.html";
-
     const MASTER_ADMIN_PASS = "JayromeAdmin2026";
-
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let licensesData = [];
     let lastSavedUsername = "";
     let lastSavedEmail = "";
     let lastSavedPlan = "";
     let lastSavedExpiry = "";
+    let adminSecret = "";
 
     window.onload = function() {
         if (sessionStorage.getItem('master_admin_authed') === 'true') {
+            adminSecret = sessionStorage.getItem('master_admin_secret') || MASTER_ADMIN_PASS;
             unlockDashboard();
         }
     };
@@ -207,7 +125,9 @@
     function verifyMasterAdmin() {
         const inputPass = document.getElementById('masterPasswordInput').value.trim();
         if (inputPass === MASTER_ADMIN_PASS) {
+            adminSecret = inputPass;
             sessionStorage.setItem('master_admin_authed', 'true');
+            sessionStorage.setItem('master_admin_secret', inputPass);
             unlockDashboard();
         } else {
             alert("❌ Mali ang Master Admin Password!");
@@ -222,6 +142,7 @@
 
     function logoutAdmin() {
         sessionStorage.removeItem('master_admin_authed');
+        sessionStorage.removeItem('master_admin_secret');
         document.getElementById('adminLoginCard').style.display = 'block';
         document.getElementById('adminDashboardSection').style.display = 'none';
         document.getElementById('masterPasswordInput').value = "";
@@ -251,81 +172,56 @@
     function autoSetExpiry() {
         let plan = document.getElementById('planType').value;
         let d = new Date();
-
         if (plan === "PLATINUM_LIFETIME") {
             document.getElementById('expiryDate').value = "";
             document.getElementById('expiryDate').disabled = true;
         } else {
             document.getElementById('expiryDate').disabled = false;
-            let days = 30;
-            d.setDate(d.getDate() + days);
+            d.setDate(d.getDate() + 30);
             document.getElementById('expiryDate').value = d.toISOString().split('T')[0];
         }
     }
 
+    // === BAGO: GAMIT EDGE FUNCTION, HINDI NA ANON KEY SELECT ===
     async function loadLicensesFromSupabase() {
-        const { data, error } = await supabaseClient.from('licenses').select('*').order('username', { ascending: true });
-        if (error) {
-            alert("Error sa pag-fetch sa Supabase: " + error.message);
-            return;
+        try {
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-get-licenses`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ adminSecret: adminSecret })
+            });
+            const result = await res.json();
+            if (result.error) {
+                alert("Error: " + result.error);
+                return;
+            }
+            licensesData = result.data || [];
+            renderStores(licensesData);
+        } catch (e) {
+            alert("Failed to load via Edge Function: " + e.message);
         }
-        licensesData = data || [];
-        renderStores(licensesData);
     }
 
     function renderStores(data) {
         const container = document.getElementById('storeListContainer');
         container.innerHTML = "";
-
         if(data.length === 0) {
-            container.innerHTML = `<p style="text-align: center; color: #94a3b8;">Walang nakitang account sa Supabase.</p>`;
+            container.innerHTML = `<p style="text-align: center; color: #94a3b8;">Walang account.</p>`;
             return;
         }
-
         let today = new Date().toISOString().split('T')[0];
-
         data.forEach(store => {
-            let statusClass = "active";
-            let statusText = "Active";
-
-            if (store.expiry && today > store.expiry) {
-                statusClass = "expired";
-                statusText = "Expired";
-            } else if (store.plan === "TRIAL_ACCESS") {
-                statusClass = "trial";
-                statusText = "Trial";
-            }
-
+            let statusClass = "active"; let statusText = "Active";
+            if (store.expiry && today > store.expiry) { statusClass = "expired"; statusText = "Expired"; }
+            else if (store.plan === "TRIAL_ACCESS") { statusClass = "trial"; statusText = "Trial"; }
             let expiryLabel = store.expiry ? store.expiry : "Lifetime";
             let emailLabel = store.email ? store.email : "Wala pang email";
-
-            let pwdLabel = store.password && store.password.trim() !== "" 
-                ? `<span class="badge pwd-set">🔑 Pwd: <b>${store.password}</b></span>`
-                : `<span class="badge pwd-unset">⚠️ Pwd: Not Set</span>`;
-
-            // BAGONG CHECKING: Active lang kung MAY TOKEN at HINDI ito OFFLINE_TOKEN_EXPIRED
-            let isTokenActive = store.page_access_token 
-                && store.page_access_token.trim() !== "" 
-                && store.page_access_token.trim() !== "OFFLINE_TOKEN_EXPIRED";
-
-            let tokenLabel = isTokenActive
-                ? `<span class="badge token-set">🟢 Meta Token: Active</span>`
-                : `<span class="badge token-offline">🔴 Meta Token: Offline (Logged Out)</span>`;
-
+            let pwdLabel = store.password && store.password.trim() !== "" ? `<span class="badge pwd-set">🔑 Pwd: <b>${store.password}</b></span>` : `<span class="badge pwd-unset">⚠️ Pwd: Not Set</span>`;
+            let isTokenActive = store.page_access_token && store.page_access_token.trim() !== "" && store.page_access_token.trim() !== "OFFLINE_TOKEN_EXPIRED";
+            let tokenLabel = isTokenActive ? `<span class="badge token-set">🟢 Meta Token: Active</span>` : `<span class="badge token-offline">🔴 Meta Token: Offline</span>`;
             let div = document.createElement('div');
             div.className = "store-item";
-            div.innerHTML = `
-                <div class="store-info">
-                    <strong>@${store.username}</strong> <span class="badge ${statusClass}">${statusText}</span> ${pwdLabel} ${tokenLabel}
-                    <div>Email: ${emailLabel}</div>
-                    <div>Plan: ${store.plan} | Expiry: ${expiryLabel}</div>
-                </div>
-                <div class="actions">
-                    <button onclick="editStore('${store.username}')" style="background:#2563eb;">Edit</button>
-                    <button onclick="copySetupLink('${store.username}')" style="background:#16a34a;" title="Copy Password Setup Link">🔗 Link</button>
-                    <button onclick="deleteStore('${store.username}')" style="background:#dc2626;">Del</button>
-                </div>
-            `;
+            div.innerHTML = `<div class="store-info"><strong>@${store.username}</strong> <span class="badge ${statusClass}">${statusText}</span> ${pwdLabel} ${tokenLabel}<div>Email: ${emailLabel}</div><div>Plan: ${store.plan} | Expiry: ${expiryLabel}</div></div><div class="actions"><button onclick="editStore('${store.username}')" style="background:#2563eb;">Edit</button><button onclick="copySetupLink('${store.username}')" style="background:#16a34a;">🔗 Link</button><button onclick="deleteStore('${store.username}')" style="background:#dc2626;">Del</button></div>`;
             container.appendChild(div);
         });
     }
@@ -346,13 +242,7 @@
             document.getElementById('storePasswordInput').value = store.password || "";
             document.getElementById('planType').value = store.plan;
             document.getElementById('expiryDate').value = store.expiry || "";
-            
-            if (store.plan === "PLATINUM_LIFETIME") {
-                document.getElementById('expiryDate').disabled = true;
-            } else {
-                document.getElementById('expiryDate').disabled = false;
-            }
-
+            document.getElementById('expiryDate').disabled = (store.plan === "PLATINUM_LIFETIME");
             document.getElementById('licenseFormCard').style.display = 'block';
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
@@ -360,9 +250,7 @@
 
     function copySetupLink(username) {
         const link = `${BASE_SETUP_URL}?page=${username}`;
-        navigator.clipboard.writeText(link).then(() => {
-            alert(`✅ Na-copy na sa clipboard ang Password Setup Link para sa @${username}:\n\n${link}`);
-        });
+        navigator.clipboard.writeText(link).then(() => { alert(`✅ Na-copy link para @${username}:\n${link}`); });
     }
 
     async function saveStoreLicense() {
@@ -371,93 +259,48 @@
         const pwd = document.getElementById('storePasswordInput').value.trim();
         const plan = document.getElementById('planType').value;
         const expiry = (plan === "PLATINUM_LIFETIME") ? null : document.getElementById('expiryDate').value;
-
-        if(!username) {
-            alert("Pakipunan ang store username.");
-            return;
-        }
-
-        const payload = {
-            username: username,
-            status: "ACTIVE",
-            plan: plan,
-            expiry: expiry,
-            email: email ? email : null,
-            password: pwd ? pwd : null
-        };
-
-        const { error } = await supabaseClient.from('licenses').upsert(payload, { onConflict: 'username' });
-
-        if (error) {
-            alert("Error sa pag-save: " + error.message);
-            return;
-        }
-
-        lastSavedUsername = username;
-        lastSavedEmail = email;
-        lastSavedPlan = plan;
-        lastSavedExpiry = expiry;
-
-        hideFormCard();
-
-        await loadLicensesFromSupabase();
-        document.getElementById('emailModal').style.display = 'flex';
+        if(!username) { alert("Pakipunan username."); return; }
+        const payload = { adminSecret, username, status: "ACTIVE", plan, expiry, email: email || null, password: pwd || null };
+        try {
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-upsert-license`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (result.error) { alert("Error: " + result.error); return; }
+            lastSavedUsername = username; lastSavedEmail = email; lastSavedPlan = plan; lastSavedExpiry = expiry;
+            hideFormCard();
+            await loadLicensesFromSupabase();
+            document.getElementById('emailModal').style.display = 'flex';
+        } catch (e) { alert("Save failed: " + e.message); }
     }
 
     async function deleteStore(username) {
-        if(!confirm(`Sigurado ka bang gusto mong tanggalin si @${username}?`)) return;
-
-        const { error } = await supabaseClient.from('licenses').delete().eq('username', username);
-        if (error) {
-            alert("Error sa pagbura: " + error.message);
-        } else {
-            alert("Nababura na ang account.");
-            loadLicensesFromSupabase();
-        }
+        if(!confirm(`Sigurado ka bang tanggalin @${username}?`)) return;
+        try {
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-delete-license`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ adminSecret, username })
+            });
+            const result = await res.json();
+            if (result.error) { alert("Error: " + result.error); }
+            else { alert("Nabura na."); loadLicensesFromSupabase(); }
+        } catch (e) { alert("Delete failed: " + e.message); }
     }
 
-    function closeModal() {
-        document.getElementById('emailModal').style.display = 'none';
-    }
-
+    function closeModal() { document.getElementById('emailModal').style.display = 'none'; }
     function sendActivationEmail() {
         const gatewayLink = `${BASE_GATEWAY_URL}?page=${lastSavedUsername}`;
         const setupPasswordLink = `${BASE_SETUP_URL}?page=${lastSavedUsername}`;
         const emailToSend = lastSavedEmail || "";
-
         let subject = "🚀 Welcome to ShareMap Kiosk - Account Activation & Password Setup";
-        let emailBody = `Magandang araw po! 👋
-
-Maraming salamat sa pagtangkilik sa ShareMap Order Gateway System.
-
-1. 🔗 Inyong Customer Order Gateway Link:
-${gatewayLink}
-
-2. 🔑 I-set up ang inyong Portal Password (Isang Mabilisang Hakbang):
-Mangyaring i-click ang link sa ibaba upang makagawa ng inyong sariling password para sa inyong Kiosk Management Portal:
-👉 Password Setup Link: ${setupPasswordLink}
-
-Plan: ${lastSavedPlan}
-Expiry Date: ${lastSavedExpiry || 'Lifetime'}
-
-Kung may tanong ka o kailangan ng tulong, mag-reply lamang sa email na ito. Happy selling!
-
-Magalang na sumasainyo,
-Jayrome
-ShareMap Developer & Administrator`;
-
-        navigator.clipboard.writeText(emailBody).then(() => {
-            alert("✅ Na-copy na sa clipboard ang email message template!");
-        });
-
-        if (emailToSend) {
-            const mailtoUrl = `mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-            window.location.href = mailtoUrl;
-        }
-
+        let emailBody = `Magandang araw po! 👋\n\nMaraming salamat sa ShareMap Order Gateway System.\n\n1. 🔗 Customer Order Gateway Link:\n${gatewayLink}\n\n2. 🔑 Password Setup Link:\n👉 ${setupPasswordLink}\n\nPlan: ${lastSavedPlan}\nExpiry: ${lastSavedExpiry || 'Lifetime'}\n\nJayrome\nShareMap Developer`;
+        navigator.clipboard.writeText(emailBody).then(() => { alert("✅ Na-copy template!"); });
+        if (emailToSend) { window.location.href = `mailto:${emailToSend}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`; }
         closeModal();
     }
 </script>
-
-</body>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
 </html>
