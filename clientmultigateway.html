@@ -161,7 +161,7 @@ function generateSpreadsheetOrderID() {
 // === BAGONG FLOW: get-store-config EDGE FUNCTION (NO ANON KEY) ===
 async function checkShareMapAccess(pageId) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`, {
+    const res = await fetch(`https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ page: pageId })
