@@ -262,7 +262,7 @@
         if(!username) { alert("Pakipunan username."); return; }
         const payload = { adminSecret, username, status: "ACTIVE", plan, expiry, email: email || null, password: pwd || null };
         try {
-            const res = await fetch(`https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/quick-function`, {
+            const res = await fetch(`https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/admin-upsert-license`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
