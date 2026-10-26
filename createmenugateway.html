@@ -16,6 +16,8 @@
         .btn-blue { background: #0284c7; color: white; }
         .btn-green { background: #16a34a; color: white; }
         .btn-secondary { background: #475569; color: white; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-danger:hover { background: #b91c1c; }
         .item-row { background: #334155; padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .cat-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #0284c7; color: #fff; margin-left: 4px; font-weight: bold; }
@@ -145,13 +147,19 @@
             </div>
             <button class="btn-blue" onclick="saveStoreThemeSettings()" style="margin-bottom:0;">💾 I-save ang Theme Settings</button>
         </div>
+        
+        <!-- RECONFIG GOOGLE SHEET SECTION -->
         <div id="reconfigSection" class="card" style="display: none;">
             <h3 style="margin-top:0; color:#38bdf8;">⚙️ Re-config Google Sheet Link</h3>
             <label style="font-size: 12px; font-weight: bold;">Web App URL (/exec):</label>
             <input type="text" id="reconfigWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
             <button class="btn-green" onclick="saveReconfigSheetUrl()">💾 Save Google Sheet Link</button>
-            <button class="btn-secondary" onclick="openCodeModal()" style="margin-top: 8px;">📜 Tignan ang Apps Script Code</button>
+            <button class="btn-secondary" onclick="openCodeModal()" style="margin-top: 4px;">📜 Tignan ang Apps Script Code</button>
+            
+            <!-- DELETE GOOGLE SHEET LINK BUTTON WITH PASSWORD CONFIRM -->
+            <button class="btn-danger" onclick="deleteGoogleSheetLink()" style="margin-top: 15px;">🗑️ Tanggalin / Alisin ang Google Sheet Link</button>
         </div>
+
         <div id="mainMenuSection">
             <div class="card" id="menuFormCard" style="display: none; border: 1px solid #38bdf8;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -309,7 +317,6 @@ function doGet(e) {
         });
     }
 
-    // SECURED: check password status via verify-and-update-theme
     async function checkStorePasswordStatus() {
         const username = document.getElementById('storeUsername').value.trim().toLowerCase();
         const pwdWrapper = document.getElementById('passwordWrapper');
@@ -320,22 +327,11 @@ function doGet(e) {
         try{
             const res = await fetch(GET_CONFIG_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: username, page: username }) });
             const result = await res.json();
-            if(result.error || !result.data && !result.username){
-                // Try check via existence
-                if(result.error){
-                    notice.style.display = "block"; notice.style.background = "#ef4444"; notice.innerText = "❌ Walang natagpung lisensyadong Store Account.";
-                    pwdWrapper.style.display = "none"; actionBtn.style.display = "none"; return;
-                }
-            }
             const data = result.data || result;
             if(!data || (!data.username && result.error)){
                 notice.style.display = "block"; notice.style.background = "#ef4444"; notice.innerText = "❌ Walang natagpung lisensyadong Store Account.";
                 pwdWrapper.style.display = "none"; actionBtn.style.display = "none"; return;
             }
-            // If license exists, check if has password via verify endpoint - need to try verify without pwd? We use status hasPassword flag
-            // For UX: if password empty, we need to know. So get-store-config must return has_password boolean
-            // For now, assume password exists if license exists -> show password field
-            // You should add has_password in get-store-config
             if(data.has_password === false){
                 pwdWrapper.style.display = "none";
                 notice.style.display = "block"; notice.style.background = "#eab308"; notice.style.color = "#000";
@@ -348,13 +344,10 @@ function doGet(e) {
             }
         }catch(e){
             notice.style.display="none";
-            console.error(e);
-            // Fallback: show login
             pwdWrapper.style.display = "block"; actionBtn.style.display = "block"; actionBtn.innerText = "Log In & Load Menu"; actionBtn.onclick = loginAndLoadMenu;
         }
     }
 
-    // SECURED LOGIN via https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/verify-and-update-theme
     async function loginAndLoadMenu() {
         const username = document.getElementById('storeUsername').value.trim().toLowerCase();
         const pwd = document.getElementById('storePassword').value.trim();
@@ -367,7 +360,6 @@ function doGet(e) {
             });
             const result = await res.json();
             if(result.error){ alert("❌ "+result.error); btn.innerText="Log In & Load Menu"; btn.disabled=false; return; }
-            // Expiry check server side
             if(result.expiry){
                 const today=new Date().toISOString().split('T')[0];
                 if(today>result.expiry && result.status!=="ACTIVE"){ alert("❌ Expired na! Contact admin."); btn.innerText="Log In & Load Menu"; btn.disabled=false; return; }
@@ -426,7 +418,6 @@ function doGet(e) {
         if (allCatCheck && allCatCheck.checked) return "ALL_CATEGORIES"; let selected = []; checks.forEach(c => selected.push(c.value)); return selected.length > 0 ? selected.join(', ') : "ALL_CATEGORIES";
     }
 
-    // SECURED: Load sheet url via get-store-config
     async function loadStoreSheetUrl() {
         try {
             const res = await fetch(GET_CONFIG_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: activeStore, page: activeStore }) });
@@ -447,16 +438,16 @@ function doGet(e) {
         } catch (err) { console.error(err); }
     }
 
-    // SECURED: Save via verify-and-update-theme
     async function saveSheetUrlToSupabase() {
         const urlInput = document.getElementById("sheetWebhookUrl").value.trim();
         if (!urlInput) { alert("Paki-paste ang Google Sheet Webhook URL!"); return; }
         try{
             const res = await fetch(VERIFY_THEME_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: activeStore, password: activeStorePassword, menu_sheet_url: urlInput }) });
             const result = await res.json();
-            if(result.error){ alert("Error: "+result.error); } else { activeWebhookUrl = urlInput; alert("✅ Matagumpay na naisafe via verify-and-update-theme!"); loadStoreSheetUrl(); }
+            if(result.error){ alert("Error: "+result.error); } else { activeWebhookUrl = urlInput; alert("✅ Matagumpay na naisafe!"); loadStoreSheetUrl(); }
         }catch(e){ alert("Error: "+e.message); }
     }
+
     async function saveReconfigSheetUrl() {
         const urlInput = document.getElementById("reconfigWebhookUrl").value.trim();
         if (!urlInput) { alert("Paki-paste ang Google Sheet Webhook URL!"); return; }
@@ -465,6 +456,42 @@ function doGet(e) {
             const result = await res.json();
             if(result.error){ alert("Error: "+result.error); } else { activeWebhookUrl = urlInput; alert("✅ Matagumpay na na-update ang Sheet Link!"); switchTab('menuTab'); loadStoreSheetUrl(); }
         }catch(e){ alert("Error: "+e.message); }
+    }
+
+    /* --- IDINAGDAG: PASSWORD CONFIRMATION SA DELETE GOOGLE SHEET LINK --- */
+    async function deleteGoogleSheetLink() {
+        const confirmPwd = prompt("🔑 I-type ang iyong Store Password para kumpirmahin ang pag-delete ng Google Sheet link:");
+        if (confirmPwd === null) return; // Na-cancel ng user
+
+        if (confirmPwd !== activeStorePassword) {
+            alert("❌ Mali ang password! Hindi natanggal ang Google Sheet link.");
+            return;
+        }
+
+        try {
+            const res = await fetch(VERIFY_THEME_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: activeStore,
+                    password: activeStorePassword,
+                    menu_sheet_url: "" // Ginagawang blangko sa database
+                })
+            });
+            const result = await res.json();
+            if (result.error) {
+                alert("❌ Bigo sa pagtanggal: " + result.error);
+            } else {
+                activeWebhookUrl = "";
+                document.getElementById("reconfigWebhookUrl").value = "";
+                alert("🗑️ Matagumpay na natanggal ang Google Sheet link!");
+                // Ibabalik ang user sa setup card para makapaglagay ng bago
+                document.getElementById('reconfigSection').style.display = 'none';
+                document.getElementById('firstTimeSetupCard').style.display = 'block';
+            }
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
     }
 
     async function loadStoreThemeSettings() {
@@ -482,7 +509,6 @@ function doGet(e) {
         } catch (e) { console.error("Theme load error:", e); }
     }
 
-    // SECURED SAVE THEME via https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/verify-and-update-theme
     async function saveStoreThemeSettings() {
         const storeLogo = convertGoogleDriveLink(document.getElementById("themeStoreLogo").value.trim());
         const primary = document.getElementById("themePrimaryHex").value.trim() || "#0284c7";
