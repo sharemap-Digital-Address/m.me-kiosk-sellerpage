@@ -6,16 +6,18 @@
     <title>ShareMap Kiosk Visual Menu</title>
     <style>
         :root { --primary: #0284c7; --bg: #0f172a; --card: #1e293b; --text: #ffffff; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; padding-bottom: 90px; background-size: cover; background-position: center; background-attachment: fixed; transition: all 0.3s ease; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; padding-bottom: 90px; background-size: cover; background-position: center; background-attachment: fixed; }
         .container { max-width: 480px; margin: 0 auto; }
         .store-header { text-align: center; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .store-logo-circle { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.4); background: #334155; display: none; }
         .store-header h2 { margin: 0; color: #38bdf8; font-size: 20px; font-weight: bold; }
+        .order-info-bar { background: #0f172a; border: 1px dashed #38bdf8; padding: 10px; border-radius: 8px; margin-bottom: 12px; text-align: left; font-size: 12px; }
+        .order-info-bar b { color: #38bdf8; }
         .navigation-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; position: relative; height: 38px; }
         .category-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex-grow: 1; align-items: center; }
         .category-tabs::-webkit-scrollbar { display: none; }
         .cat-tab { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; white-space: nowrap; cursor: pointer; }
-        .cat-tab.active { background: var(--primary) !important; color: #ffffff; border-color: var(--primary) !important; }
+        .cat-tab.active { background: var(--primary) !important; color: #ffffff; }
         .search-trigger-btn { background: #1e293b; color: #38bdf8; border: 1px solid #334155; width: 38px; height: 38px; min-width: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; }
         .collapsible-search-box { display: none; width: 100%; height: 38px; background: #1e293b; border: 1px solid #38bdf8; border-radius: 20px; padding: 0 12px; align-items: center; gap: 8px; box-sizing: border-box; }
         .collapsible-search-box input { background: transparent; border: none; outline: none; color: #ffffff; font-size: 13px; width: 100%; }
@@ -60,8 +62,17 @@
     <div class="store-header">
         <img id="storeLogoImg" src="" alt="Store Logo" class="store-logo-circle">
         <h2 id="storeTitle">🏪 Loading Kiosk Menu...</h2>
-        <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Pumili ng category o mag-search para mag-order:</p>
+        <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Pumili ng category o mag-search:</p>
     </div>
+
+    <!-- MAKIKITA ORDER#, PSID, FULLNAME - HINDI BACKGROUND LANG! -->
+    <div class="order-info-bar" id="orderInfoBar">
+        <div>🔢 <b>Order #:</b> <span id="previewOrderId">Wala pa - pindutin Place Order</span></div>
+        <div>🔒 <b>PSID:</b> <span id="previewPsid">MESSENGER_WEB_USER</span></div>
+        <div>👤 <b>Fullname:</b> <span id="previewName">Hindi pa naka-login</span></div>
+        <div>⏰ <b>Clicked At:</b> <span id="previewClicked">-</span></div>
+    </div>
+
     <div class="navigation-row">
         <button class="search-trigger-btn" id="searchTriggerBtn" onclick="openSearchBar()">🔍</button>
         <div class="category-tabs" id="categoryTabsContainer"></div>
@@ -74,37 +85,72 @@
     <div class="menu-grid" id="kioskMenuGrid"><p style="text-align:center; grid-column: 1 / -1; color:#94a3b8;">Lino-load ang Visual Menu...</p></div>
 </div>
 <div class="cart-bar" id="cartBar" onclick="openCheckoutTypeModal()" style="display:none;"><span id="cartSummaryText">🛒 0 Items</span><span>Place Order ➔</span></div>
-<div id="checkoutTypeModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeCheckoutTypeModal()">Isara ✕</button><h3 style="color:#38bdf8;">Pumili ng Uri ng Order</h3><div class="txn-card" onclick="proceedToGatewayWithType('delivery')"><div class="txn-icon">🛵</div><div><div class="txn-title">Book Delivery</div><div class="txn-desc">Padala sa bahay</div></div></div><div class="txn-card" onclick="proceedToGatewayWithType('dinein')"><div class="txn-icon">🍽️</div><div><div class="txn-title">Dine-In</div><div class="txn-desc">Kakain sa store</div></div></div><div class="txn-card" onclick="proceedToGatewayWithType('counter')"><div class="txn-icon">💳</div><div><div class="txn-title">Over-The-Counter</div><div class="txn-desc">QR Code sa Cashier</div></div></div></div></div>
-<div id="itemModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeItemModal()">Isara ✕</button><h3 id="mTitle" style="color:#38bdf8;"></h3><div><span id="mType" class="type-badge"></span><span id="mSize" class="size-badge"></span></div><div class="carousel-wrapper"><div class="carousel-track" id="modalCarouselTrack"></div></div><div class="carousel-hint" id="carouselHintText">👉 I-swipe para sa Video!</div><div id="mPrice" style="font-weight:bold; color:var(--primary); margin-bottom:8px;"></div><div id="mRating" class="rating-badge"></div><p id="mDesc" style="font-size:12px; color:#cbd5e1;"></p><div style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155; text-align:center;"><p style="font-size:12px; color:#38bdf8; font-weight:bold;">⭐ Mag-rate (1-10):</p><div style="display:flex; justify-content:center; gap:4px; flex-wrap:wrap;"><button onclick="submitRating(1)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">1</button><button onclick="submitRating(2)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">2</button><button onclick="submitRating(3)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">3</button><button onclick="submitRating(4)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">4</button><button onclick="submitRating(5)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">5</button><button onclick="submitRating(6)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">6</button><button onclick="submitRating(7)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">7</button><button onclick="submitRating(8)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">8</button><button onclick="submitRating(9)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">9</button><button onclick="submitRating(10)" style="width:30px; height:30px; background:#16a34a; color:#fff; border:none; border-radius:4px;">10</button></div><p id="rateFeedback" style="font-size:11px; color:#16a34a; display:none;">Salamat!</p></div></div></div>
+
+<div id="checkoutTypeModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeCheckoutTypeModal()">Isara ✕</button>
+<h3 style="color:#38bdf8;">Pumili ng Uri ng Order</h3>
+<div style="background:#0f172a; border:1px solid #38bdf8; padding:10px; border-radius:8px; margin-bottom:12px; font-size:12px;">
+<div>🔢 Order #: <b id="modalOrderId" style="color:#38bdf8;">-</b></div>
+<div>🔒 PSID: <b id="modalPsid">-</b></div>
+<div>👤 Name: <b id="modalName">-</b></div>
+<div>⏰ Clicked At: <b id="modalClicked">-</b></div>
+</div>
+<div class="txn-card" onclick="proceedToGatewayWithType('delivery')"><div class="txn-icon">🛵</div><div><div class="txn-title">Book Delivery</div><div class="txn-desc">Padala sa bahay</div></div></div>
+<div class="txn-card" onclick="proceedToGatewayWithType('dinein')"><div class="txn-icon">🍽️</div><div><div class="txn-title">Dine-In</div><div class="txn-desc">Kakain sa store</div></div></div>
+<div class="txn-card" onclick="proceedToGatewayWithType('counter')"><div class="txn-icon">💳</div><div><div class="txn-title">Over-The-Counter</div><div class="txn-desc">QR Code sa Cashier</div></div></div>
+</div></div>
+
+<div id="itemModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeItemModal()">Isara ✕</button><h3 id="mTitle" style="color:#38bdf8;"></h3><div><span id="mType" class="type-badge"></span><span id="mSize" class="size-badge"></span></div><div class="carousel-wrapper"><div class="carousel-track" id="modalCarouselTrack"></div></div><div class="carousel-hint" id="carouselHintText">👉 I-swipe para sa Video!</div><div id="mPrice" style="font-weight:bold; color:var(--primary); margin-bottom:8px;"></div><div id="mRating" class="rating-badge"></div><p id="mDesc" style="font-size:12px; color:#cbd5e1;"></p></div></div>
 <div id="mixModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeMixModal()">Isara ✕</button><h3 style="color:#38bdf8;">🔄 Piliin ang Ka-Match</h3><p id="mixModalSub" style="font-size:12px; color:#94a3b8;"></p><div id="mixTargetsContainer"></div><button style="background:#16a34a; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer;" onclick="closeMixModal()">Tapusin</button></div></div>
 <div id="variantAddModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeVariantAddModal()">Isara ✕</button><h3 id="varAddTitle" style="color:#38bdf8;"></h3><div id="variantAddListContainer"></div></div></div>
 <div id="variantRemoveModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeVariantRemoveModal()">Isara ✕</button><h3 id="varRemoveTitle" style="color:#ef4444;"></h3><div id="variantRemoveListContainer"></div></div></div>
+
 <script>
     const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
     let storePage = "";
     let currentPsid = "MESSENGER_WEB_USER";
+    let currentFullName = "";
     let selectedCart = {}; 
     let allFetchedItems = [];
     let activeCategory = "ALL";
     let activeModalItem = null;
+    let generatedOrderID = "";
+    let clickedAtTimestamp = 0;
+
     const DEFAULT_KIOSK_MENU = [
         { productType: "Food", name: "Burger Cheezy", category: "Best Sellers", size: "N/A", price: "120", description: "Juicy beef", specialDesc: "Best burger!", rating: 4.9, ratingCount: 310, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", youtubeLink: "https://www.youtube.com/shorts/3Z7L2I140iE", status: "Available", quantity: "Unlimited" },
-        { productType: "Food", name: "Halo-Halo Special", category: "Desserts", size: "N/A", price: "85", description: "Loaded", specialDesc: "Award-winning!", rating: 5.0, ratingCount: 512, image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", youtubeLink: "https://www.youtube.com/shorts/s8379B89x74", status: "Available", quantity: "Unlimited" }
     ];
+
+    // === LUMA CODE MO - EXACT! ===
+    function generateSpreadsheetOrderID() {
+        const now = new Date();
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const minute = now.getMinutes();
+        let letterCode = minute < 26 ? alphabet[minute] : (minute < 52 ? "A" + alphabet[minute - 26] : "B" + alphabet[minute - 52]);
+        return `${letterCode}${String(now.getSeconds()).padStart(2, '0')[0]}${String(now.getMilliseconds()).padStart(3, '0')[0]}`;
+    }
+
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         storePage = urlParams.get('page') || localStorage.getItem('sharemap_page');
         currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+        currentFullName = urlParams.get('fn') || localStorage.getItem('sharemap_fullname') || "";
+
         if(!storePage){document.getElementById('storeTitle').innerText="⚠️ Invalid Store Link";return;}
         document.getElementById('storeTitle').innerText="🏪 @"+storePage+" - Kiosk Menu";
+
+        // PREVIEW - MAKIKITA AGAD PSID + FULLNAME GALING WEBHOOK
+        document.getElementById('previewPsid').innerText = currentPsid;
+        document.getElementById('previewName').innerText = currentFullName || "Wala pa";
+        document.getElementById('previewOrderId').innerText = "Wala pa - pindutin Place Order para mag-generate (luma code)";
+
         loadKioskMenu();
         setInterval(loadKioskMenuSilent,15000);
     };
+
     async function loadKioskMenu(){await fetchAndProcessMenu(false);}
     async function loadKioskMenuSilent(){await fetchAndProcessMenu(true);}
     async function fetchAndProcessMenu(isSilent){
         try{
-            // SECURED: via Edge Function, hindi na direct from('licenses')!
             const res = await fetch(`https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config`,{
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
@@ -123,10 +169,9 @@
                 else if(theme.bgType==="image"&&theme.bgImage){document.body.style.background=`linear-gradient(rgba(15,23,42,0.9),rgba(15,23,42,0.9)), url('${theme.bgImage}')`;document.body.style.backgroundSize="cover";}
                 else document.body.style.background="#0f172a";
             }
-            // Expiry check - secured! Kahit i-edit sa Network tab, server pa rin mag-decide!
             if(licenseData.expiry){
                 const today=new Date().toISOString().split('T')[0];
-                if(today>licenseData.expiry){document.getElementById('storeTitle').innerText="⚠️ Expired - contact admin";document.getElementById('kioskMenuGrid').innerHTML="<p style='text-align:center;color:#ef4444;'>Expired license</p>";return;}
+                if(today>licenseData.expiry){document.getElementById('storeTitle').innerText="⚠️ Expired";document.getElementById('kioskMenuGrid').innerHTML="<p style='text-align:center;color:#ef4444;'>Expired</p>";return;}
             }
             if(licenseData.menu_sheet_url&&licenseData.menu_sheet_url.trim()!==""){
                 try{
@@ -140,6 +185,7 @@
         if(!isSilent) buildCategoryTabs();
         filterAndRenderGrid(activeCategory);
     }
+
     function openSearchBar(){document.getElementById('searchTriggerBtn').style.display='none';document.getElementById('categoryTabsContainer').style.display='none';document.getElementById('searchBox').style.display='flex';document.getElementById('searchInput').focus();}
     function closeSearchBar(){document.getElementById('searchInput').value="";document.getElementById('searchBox').style.display='none';document.getElementById('searchTriggerBtn').style.display='flex';document.getElementById('categoryTabsContainer').style.display='flex';filterAndRenderGrid(activeCategory);}
     function filterBySearch(){const q=document.getElementById('searchInput').value.trim().toLowerCase();if(!q){filterAndRenderGrid(activeCategory);return;}let r=allFetchedItems.filter(i=>(i.name||"").toLowerCase().includes(q)||(i.description||"").toLowerCase().includes(q)||(i.category||"").toLowerCase().includes(q));renderGrid(r);}
@@ -157,19 +203,50 @@
     function selectVariantToRemove(k){updateQty(k,-1);closeVariantRemoveModal();filterAndRenderGrid(activeCategory);}
     function closeVariantRemoveModal(){document.getElementById("variantRemoveModal").style.display="none";}
     function extractYoutubeVideoId(url){if(!url) return null;const regex=/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;const m=url.match(regex);return(m&&m[1])?m[1]:null;}
-    function openItemModal(item){activeModalItem=item;document.getElementById('mTitle').innerText=item.name;document.getElementById('mType').innerText=item.productType||'Food';document.getElementById('mSize').innerText=item.size&&item.size!=="N/A"?`Has Variants`:'';document.getElementById('mSize').style.display=item.size&&item.size!=="N/A"?'inline-block':'none';const track=document.getElementById('modalCarouselTrack');track.innerHTML="";const s1=document.createElement('div');s1.className="carousel-slide";s1.innerHTML=`<img src="${item.image||'https://via.placeholder.com/300'}" alt="${item.name}">`;track.appendChild(s1);const ytId=extractYoutubeVideoId(item.youtubeLink);if(ytId){const s2=document.createElement('div');s2.className="carousel-slide";s2.innerHTML=`<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&loop=1&playlist=${ytId}&controls=0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;track.appendChild(s2);document.getElementById('carouselHintText').style.display='block';}else{document.getElementById('carouselHintText').style.display='none';}document.getElementById('mPrice').innerText=`₱${item.price}`;document.getElementById('mRating').innerHTML=`⭐ ${parseFloat(item.rating||4.8).toFixed(1)} / 10.0`;document.getElementById('mDesc').innerText=item.specialDesc&&item.specialDesc.trim()!==""?item.specialDesc:(item.description||"");document.getElementById('rateFeedback').style.display='none';document.getElementById('itemModal').style.display='flex';}
+    function openItemModal(item){activeModalItem=item;document.getElementById('mTitle').innerText=item.name;document.getElementById('mType').innerText=item.productType||'Food';document.getElementById('mSize').innerText=item.size&&item.size!=="N/A"?`Has Variants`:'';document.getElementById('mSize').style.display=item.size&&item.size!=="N/A"?'inline-block':'none';const track=document.getElementById('modalCarouselTrack');track.innerHTML="";const s1=document.createElement('div');s1.className="carousel-slide";s1.innerHTML=`<img src="${item.image||'https://via.placeholder.com/300'}" alt="${item.name}">`;track.appendChild(s1);const ytId=extractYoutubeVideoId(item.youtubeLink);if(ytId){const s2=document.createElement('div');s2.className="carousel-slide";s2.innerHTML=`<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&loop=1&playlist=${ytId}&controls=0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;track.appendChild(s2);document.getElementById('carouselHintText').style.display='block';}else{document.getElementById('carouselHintText').style.display='none';}document.getElementById('mPrice').innerText=`₱${item.price}`;document.getElementById('mRating').innerHTML=`⭐ ${parseFloat(item.rating||4.8).toFixed(1)} / 10.0`;document.getElementById('mDesc').innerText=item.specialDesc&&item.specialDesc.trim()!==""?item.specialDesc:(item.description||"");document.getElementById('itemModal').style.display='flex';}
     function closeItemModal(){document.getElementById('itemModal').style.display='none';}
-    function submitRating(v){if(!activeModalItem) return;let cr=parseFloat(activeModalItem.rating||4.8);let cc=parseInt(activeModalItem.ratingCount||50);let nr=Math.min(10.0,parseFloat(((cr*cc+v*0.1)/(cc+1)).toFixed(1)));activeModalItem.rating=nr;activeModalItem.ratingCount=cc+1;let f=allFetchedItems.find(i=>i.name===activeModalItem.name);if(f){f.rating=nr;f.ratingCount=activeModalItem.ratingCount;}document.getElementById('mRating').innerHTML=`⭐ ${nr.toFixed(1)} / 10.0`;document.getElementById('rateFeedback').innerText=`✅ Salamat! Rating ${v}/10.`;document.getElementById('rateFeedback').style.display='block';setTimeout(()=>{closeItemModal();filterAndRenderGrid(activeCategory);},1200);}
     function openMixMatchModal(mainItem){document.getElementById('mixModalSub').innerText=`Combo para sa "${mainItem.name}"`;const c=document.getElementById('mixTargetsContainer');c.innerHTML="";let targetItems=allFetchedItems.filter(i=>{if(mainItem.mixMatchType==="Category") return (i.category||"").trim().toLowerCase()===(mainItem.mixMatchTarget||"").trim().toLowerCase();else return (i.name||"").trim().toLowerCase()===(mainItem.mixMatchTarget||"").trim().toLowerCase();});if(targetItems.length===0){c.innerHTML=`<p style="color:#ef4444; text-align:center; font-size:12px;">Walang ka-match.</p>`;}else{targetItems.forEach(matchItem=>{let comboKey=`${mainItem.name} + ${matchItem.name} (Mix&Match)`;let qty=selectedCart[comboKey]||0;let finalComboPrice=(parseFloat(mainItem.price)+parseFloat(matchItem.price)-parseFloat(mainItem.mixMatchDiscount||0));let row=document.createElement('div');row.style.cssText="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #334155;";row.innerHTML=`<div style="display:flex; align-items:center; gap:8px;"><img src="${matchItem.image||''}" style="width:40px; height:40px; object-fit:cover; border-radius:6px;"><div><div style="font-size:12px; font-weight:bold;">${matchItem.name}</div><div style="font-size:11px; color:var(--primary);">Combo: ₱${finalComboPrice}</div></div></div><div class="qty-control" style="margin-top:0;"><button type="button" class="qty-btn" onclick="updateMixQty('${escapeQuotes(comboKey)}', -1)">-</button><span class="qty-val" id="mix-qty-${CSS.escape(comboKey)}">${qty}</span><button type="button" class="qty-btn" onclick="updateMixQty('${escapeQuotes(comboKey)}', 1)">+</button></div>`;c.appendChild(row);});}document.getElementById('mixModal').style.display='flex';}
     function closeMixModal(){document.getElementById('mixModal').style.display='none';updateCartBar();}
     function updateMixQty(k,d){if(!selectedCart[k]) selectedCart[k]=0;selectedCart[k]+=d;if(selectedCart[k]<0) selectedCart[k]=0;if(selectedCart[k]===0) delete selectedCart[k];let el=document.getElementById(`mix-qty-${CSS.escape(k)}`);if(el) el.innerText=selectedCart[k]||0;updateCartBar();}
     function updateQty(k,d){if(!selectedCart[k]) selectedCart[k]=0;selectedCart[k]+=d;if(selectedCart[k]<0) selectedCart[k]=0;if(selectedCart[k]===0) delete selectedCart[k];let main=k.split(' (')[0];let totalEl=document.getElementById(`qty-val-${CSS.escape(main)}`);if(totalEl) totalEl.innerText=getProductTotalCartQty(main);updateCartBar();}
-    function getItemUnitPrice(k){if(k.includes(" + ")&&k.includes("(Mix&Match)")){let parts=k.replace(" (Mix&Match)","").split(" + ");let mainName=parts[0].trim();let matchFullName=parts[1].trim();let mainObj=allFetchedItems.find(i=>i.name===mainName);let matchObj=allFetchedItems.find(i=>matchFullName.startsWith(i.name));if(mainObj&&matchObj){let discount=parseFloat(mainObj.mixMatchDiscount||0);return (parseFloat(mainObj.price||0)+parseFloat(matchObj.price||0))-discount;}}if(k.includes(" (")&&k.endsWith(")")){let mainName=k.split(" (")[0].trim();let varName=k.split(" (")[1].replace(")","").trim();let mainObj=allFetchedItems.find(i=>i.name===mainName);if(mainObj){let variantsArr=parseVariants(mainObj.size);let foundVar=variantsArr.find(v=>v.name===varName);if(foundVar&&foundVar.price) return parseFloat(foundVar.price);return parseFloat(mainObj.price||0);}}let mainObj=allFetchedItems.find(i=>i.name===k);if(mainObj) return parseFloat(mainObj.price||0);return 0;}
-    function updateCartBar(){let totalCount=0;let totalPrice=0;for(let key in selectedCart){let qty=selectedCart[key];if(qty>0){totalCount+=qty;totalPrice+=(getItemUnitPrice(key)*qty);}}const bar=document.getElementById('cartBar');if(totalCount>0){bar.style.display='flex';document.getElementById('cartSummaryText').innerText=`🛒 ${totalCount} Items | Total: ₱${totalPrice.toFixed(2)}`;}else{bar.style.display='none';}}
+    function getItemUnitPrice(k){if(k.includes(" + ")&&k.includes("(Mix&Match)")){let parts=k.replace(" (Mix&Match)","").split(" + ");let mainName=parts[0].trim();let matchFullName=parts[1].trim();let mainObj=allFetchedItems.find(i=>i.name===mainName);let matchObj=allFetchedItems.find(i=>matchFullName.startsWith(i.name));if(mainObj&&matchObj){let discount=parseFloat(mainObj.mixMatchDiscount||0);return (parseFloat(mainObj.price||0)+parseFloat(matchObj.price||0))-discount;}}if(k.includes(" (")&&k.endsWith(")")){let mainName=k.split(" (")[0].trim();let varName=k.split(" (")[1].replace(")","").trim();let mainObj=allFetchedItems.find(i=>i.name==mainName);if(mainObj){let variantsArr=parseVariants(mainObj.size);let foundVar=variantsArr.find(v=>v.name===varName);if(foundVar&&foundVar.price) return parseFloat(foundVar.price);return parseFloat(mainObj.price||0);}}let mainObj=allFetchedItems.find(i=>i.name===k);if(mainObj) return parseFloat(mainObj.price||0);return 0;}
+    function updateCartBar(){
+      let totalCount=0;let totalPrice=0;
+      for(let key in selectedCart){let qty=selectedCart[key];if(qty>0){totalCount+=qty;totalPrice+=(getItemUnitPrice(key)*qty);}}
+      const bar=document.getElementById('cartBar');
+      if(totalCount>0){
+        bar.style.display='flex';
+        document.getElementById('cartSummaryText').innerText=`🛒 ${totalCount} Items | Total: ₱${totalPrice.toFixed(2)}`;
+      }else{bar.style.display='none';}
+    }
     function escapeQuotes(s){return s.replace(/'/g,"\\'").replace(/"/g,'&quot;');}
-    function openCheckoutTypeModal(){document.getElementById('checkoutTypeModal').style.display='flex';}
+    function openCheckoutTypeModal(){
+      // === DITO MAG-GENERATE NG ORDER ID - PAG PINDOT NG PLACE ORDER! ===
+      generatedOrderID = generateSpreadsheetOrderID(); // LUMA CODE MO!
+      clickedAtTimestamp = Date.now(); // TIMESTAMP BASEHAN PAG SABAY
+
+      document.getElementById('previewOrderId').innerText = generatedOrderID;
+      document.getElementById('previewClicked').innerText = new Date(clickedAtTimestamp).toLocaleString();
+      localStorage.setItem('sharemap_orderid', generatedOrderID);
+      localStorage.setItem('sharemap_clicked_at', clickedAtTimestamp);
+
+      // Modal preview
+      document.getElementById('modalOrderId').innerText = generatedOrderID;
+      document.getElementById('modalPsid').innerText = currentPsid;
+      document.getElementById('modalName').innerText = currentFullName || "Customer";
+      document.getElementById('modalClicked').innerText = new Date(clickedAtTimestamp).toLocaleString();
+
+      document.getElementById('checkoutTypeModal').style.display='flex';
+    }
     function closeCheckoutTypeModal(){document.getElementById('checkoutTypeModal').style.display='none';}
-    function proceedToGatewayWithType(typeStr){let orderArray=[];let grandTotal=0;for(let name in selectedCart){if(selectedCart[name]>0){let unitPrice=getItemUnitPrice(name);let itemTotal=unitPrice*selectedCart[name];grandTotal+=itemTotal;orderArray.push(`${name} x${selectedCart[name]}`);}}let orderString=orderArray.join(', ');window.location.href=`./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&total=${grandTotal.toFixed(2)}&type=${encodeURIComponent(typeStr)}&psid=${encodeURIComponent(currentPsid)}`;}
+
+    function proceedToGatewayWithType(typeStr){
+      let orderArray=[];let grandTotal=0;
+      for(let name in selectedCart){if(selectedCart[name]>0){let unitPrice=getItemUnitPrice(name);let itemTotal=unitPrice*selectedCart[name];grandTotal+=itemTotal;orderArray.push(`${name} x${selectedCart[name]}`);}}
+      let orderString=orderArray.join(', ');
+      // Kasama na Order#, PSID, Fullname, Clicked At papuntang multigateway!
+      window.location.href=`./multigateway.html?page=${encodeURIComponent(storePage)}&oid=${encodeURIComponent(generatedOrderID)}&psid=${encodeURIComponent(currentPsid)}&fn=${encodeURIComponent(currentFullName)}&ord=${encodeURIComponent(orderString)}&total=${grandTotal.toFixed(2)}&type=${encodeURIComponent(typeStr)}&clicked_at=${clickedAtTimestamp}`;
+    }
 </script>
 </body>
 </html>
