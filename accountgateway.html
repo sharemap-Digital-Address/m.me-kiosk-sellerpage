@@ -4,112 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShareMap Merchant Password Setup</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --primary: #2563eb;
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --text: #1e293b;
-            --border: #cbd5e1;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            box-sizing: border-box;
-        }
-        .container {
-            max-width: 400px;
-            width: 100%;
-            background: var(--card);
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
+        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --border: #cbd5e1; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        .container { max-width: 400px; width: 100%; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h2 { text-align: center; color: var(--primary); margin-top: 0; }
         label { font-weight: 600; font-size: 13px; color: #475569; display: block; margin-top: 10px; }
-        input, button {
-            width: 100%;
-            padding: 11px;
-            margin-top: 6px;
-            margin-bottom: 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
-        button {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 15px;
-        }
+        input, button { width: 100%; padding: 11px; margin-top: 6px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { background-color: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
         button:hover { opacity: 0.9; }
-        .store-badge {
-            background: #e2e8f0;
-            padding: 10px 12px;
-            border-radius: 6px;
-            font-weight: bold;
-            color: #1e293b;
-            text-align: center;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
+        .store-badge { background: #e2e8f0; padding: 10px 12px; border-radius: 6px; font-weight: bold; color: #1e293b; text-align: center; margin-bottom: 15px; font-size: 14px; }
         .note { font-size: 12px; color: #64748b; text-align: center; margin-top: 15px; line-height: 1.4; }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h2>Merchant Account Setup</h2>
     <p style="text-align:center; font-size:13px; color:#64748b; margin-bottom:15px;">Gumawa ng sariling password para sa iyong Kiosk Management Portal.</p>
-
-    <!-- Store Badge / Input Box -->
-    <div id="storeHeaderArea">
-        <div class="store-badge" id="displayUsername">🔍 Sinusuri ang Store ID...</div>
-    </div>
-
+    <div id="storeHeaderArea"><div class="store-badge" id="displayUsername">🔍 Sinusuri ang Store ID...</div></div>
     <div id="formFieldsArea">
-        <label>Bagong Password:</label>
-        <input type="password" id="newPassword" placeholder="Gumawa ng secure na password">
-
-        <label>Kumpirmahin ang Password:</label>
-        <input type="password" id="confirmPassword" placeholder="I-type ulit ang password">
-
-        <button onclick="savePassword()">I-save ang Password</button>
+        <label>Bagong Password:</label><input type="password" id="newPassword" placeholder="Gumawa ng secure na password">
+        <label>Kumpirmahin ang Password:</label><input type="password" id="confirmPassword" placeholder="I-type ulit ang password">
+        <button id="saveBtn" onclick="savePassword()">I-save ang Password</button>
     </div>
-
-    <div class="note">
-        🔒 Ang password na ito ay gagamitin para makapag-log in at makapag-manage ng iyong Kiosk Menu at Prices.
-    </div>
+    <div class="note">🔒 SECURED via Edge Function - hindi na ma-takeover via ANON_KEY!</div>
 </div>
-
 <script>
-    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+    const SETUP_PASSWORD_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/setup-password-&-account";
+    const GET_CONFIG_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config";
     let currentStore = "";
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         currentStore = urlParams.get('page') || localStorage.getItem('sharemap_page');
-
         if (!currentStore || currentStore.trim() === "") {
-            // Kung walang nailagay sa URL, bigyan sila ng input box para mag-type ng Store ID
-            document.getElementById('storeHeaderArea').innerHTML = `
-                <label>Store FB Page Username:</label>
-                <input type="text" id="manualStoreInput" placeholder="halimbawa: marjevinsoylucena" style="border: 1px solid #2563eb;">
-            `;
+            document.getElementById('storeHeaderArea').innerHTML = `<label>Store FB Page Username:</label><input type="text" id="manualStoreInput" placeholder="halimbawa: marjevinsoylucena" style="border: 1px solid #2563eb;">`;
             document.getElementById('displayUsername').style.display = "none";
         } else {
             currentStore = currentStore.toLowerCase();
@@ -118,48 +47,35 @@
     };
 
     async function savePassword() {
-        // Kung manual input ang ginamit
         if (!currentStore) {
             const manualIn = document.getElementById('manualStoreInput');
-            if (manualIn && manualIn.value.trim()) {
-                currentStore = manualIn.value.trim().toLowerCase();
-            }
+            if (manualIn && manualIn.value.trim()) { currentStore = manualIn.value.trim().toLowerCase(); }
         }
-
-        if (!currentStore) {
-            alert("⚠️ Pakilagay muna ang Store Page Username.");
-            return;
-        }
-
+        if (!currentStore) { alert("⚠️ Pakilagay muna ang Store Page Username."); return; }
         const pwd = document.getElementById('newPassword').value.trim();
         const confirmPwd = document.getElementById('confirmPassword').value.trim();
+        if (!pwd || !confirmPwd) { alert("⚠️ Pakipunan ang password fields."); return; }
+        if (pwd !== confirmPwd) { alert("❌ Hindi magkatugma ang dalawang password."); return; }
+        if (pwd.length < 4) { alert("⚠️ Masyadong maikli ang password. Min 4 chars."); return; }
 
-        if (!pwd || !confirmPwd) {
-            alert("⚠️ Pakipunan ang password fields.");
-            return;
-        }
-
-        if (pwd !== confirmPwd) {
-            alert("❌ Hindi magkatugma ang dalawang password. Paki-check ulit.");
-            return;
-        }
-
-        // I-update ang password sa Supabase table
-        const { data, error } = await supabaseClient
-            .from('licenses')
-            .update({ password: pwd })
-            .eq('username', currentStore);
-
-        if (error) {
-            alert("Error sa pag-save: " + error.message);
-        } else {
-            alert(`✅ Tagumpay! Naka-set na ang password para sa @${currentStore}. Maaari mo na itong gamitin sa pag-login.`);
-            
-            // I-redirect pabalik sa createmenugateway.html para makapag-login na sila
-            window.location.href = `./createmenugateway.html?page=${encodeURIComponent(currentStore)}`;
-        }
+        const btn = document.getElementById('saveBtn'); btn.innerText="⏳ Saving..."; btn.disabled=true;
+        try{
+            // SECURED via https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/setup-password-&-accout
+            const res = await fetch(SETUP_PASSWORD_URL,{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ username: currentStore, password: pwd })
+            });
+            const result = await res.json();
+            if(result.error){
+                alert("❌ "+result.error);
+                btn.innerText="I-save ang Password"; btn.disabled=false;
+            }else{
+                alert(`✅ Tagumpay! Naka-set na ang password para sa @${currentStore}.`);
+                window.location.href = `./createmenugateway.html?page=${encodeURIComponent(currentStore)}`;
+            }
+        }catch(e){ alert("Error: "+e.message); btn.innerText="I-save ang Password"; btn.disabled=false; }
     }
 </script>
-
 </body>
 </html>
