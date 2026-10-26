@@ -185,7 +185,7 @@
     // === BAGO: GAMIT EDGE FUNCTION, HINDI NA ANON KEY SELECT ===
     async function loadLicensesFromSupabase() {
         try {
-            const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-get-licenses`, {
+            const res = await fetch(`https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/admin-get-licenses`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adminSecret: adminSecret })
@@ -262,7 +262,7 @@
         if(!username) { alert("Pakipunan username."); return; }
         const payload = { adminSecret, username, status: "ACTIVE", plan, expiry, email: email || null, password: pwd || null };
         try {
-            const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-upsert-license`, {
+            const res = await fetch(`https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/quick-function`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -279,7 +279,7 @@
     async function deleteStore(username) {
         if(!confirm(`Sigurado ka bang tanggalin @${username}?`)) return;
         try {
-            const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-delete-license`, {
+            const res = await fetch(`https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/admin-delete-license`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adminSecret, username })
