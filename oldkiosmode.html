@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareMap Kiosk Visual Menu</title>
+    <style>
+        :root { --primary: #0284c7; --bg: #0f172a; --card: #1e293b; --text: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; padding-bottom: 90px; background-size: cover; background-position: center; background-attachment: fixed; transition: all 0.3s ease; }
+        .container { max-width: 480px; margin: 0 auto; }
+        .store-header { text-align: center; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .store-logo-circle { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.4); background: #334155; display: none; }
+        .store-header h2 { margin: 0; color: #38bdf8; font-size: 20px; font-weight: bold; }
+        .navigation-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; position: relative; height: 38px; }
+        .category-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex-grow: 1; align-items: center; }
+        .category-tabs::-webkit-scrollbar { display: none; }
+        .cat-tab { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; white-space: nowrap; cursor: pointer; }
+        .cat-tab.active { background: var(--primary) !important; color: #ffffff; border-color: var(--primary) !important; }
+        .search-trigger-btn { background: #1e293b; color: #38bdf8; border: 1px solid #334155; width: 38px; height: 38px; min-width: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; }
+        .collapsible-search-box { display: none; width: 100%; height: 38px; background: #1e293b; border: 1px solid #38bdf8; border-radius: 20px; padding: 0 12px; align-items: center; gap: 8px; box-sizing: border-box; }
+        .collapsible-search-box input { background: transparent; border: none; outline: none; color: #ffffff; font-size: 13px; width: 100%; }
+        .search-close-btn { background: transparent; border: none; color: #ef4444; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .menu-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; position: relative; }
+        .img-container { position: relative; width: 100%; height: 110px; background: #334155; cursor: pointer; }
+        .img-container img { width: 100%; height: 100%; object-fit: cover; }
+        .img-container.out-of-stock img { filter: grayscale(100%); opacity: 0.4; }
+        .out-of-stock-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-12deg); background: rgba(239, 68, 68, 0.9); color: white; padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; border: 1px solid #f87171; text-transform: uppercase; pointer-events: none; white-space: nowrap; }
+        .menu-details { padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .menu-title { font-weight: bold; font-size: 13px; margin-bottom: 2px; }
+        .menu-desc { font-size: 10px; color: #94a3b8; margin-bottom: 6px; line-height: 1.3; }
+        .type-badge { font-size: 9px; padding: 2px 5px; border-radius: 4px; background: #d97706; color: #fff; display: inline-block; margin-bottom: 4px; font-weight: bold; }
+        .size-badge { font-size: 9px; padding: 2px 5px; border-radius: 4px; background: #8b5cf6; color: #fff; display: inline-block; margin-bottom: 4px; font-weight: bold; }
+        .rating-badge { font-size: 10px; color: #f59e0b; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+        .qty-control { display: flex; align-items: center; justify-content: space-between; background: #0f172a; border-radius: 6px; padding: 4px; border: 1px solid #475569; margin-top: 5px; }
+        .qty-btn { background: #334155; color: white; border: none; width: 28px; height: 28px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .qty-btn:hover { background: var(--primary) !important; }
+        .qty-val { font-weight: bold; font-size: 13px; }
+        .mix-btn { background: #d97706; color: white; border: none; padding: 6px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
+        .cart-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); max-width: 450px; width: 90%; background: #16a34a; color: white; padding: 14px 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); font-weight: bold; cursor: pointer; z-index: 1000; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 15px; box-sizing: border-box; }
+        .modal-box { background: #1e293b; border-radius: 16px; padding: 20px; max-width: 420px; width: 100%; border: 1px solid #475569; max-height: 90vh; overflow-y: auto; box-sizing: border-box; text-align: left; }
+        .close-modal { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; float: right; font-size: 12px; }
+        .carousel-wrapper { position: relative; width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 12px; background: #000; }
+        .carousel-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+        .carousel-track::-webkit-scrollbar { display: none; }
+        .carousel-slide { min-width: 100%; width: 100%; scroll-snap-align: start; flex-shrink: 0; height: 230px; display: flex; justify-content: center; align-items: center; background: #0f172a; }
+        .carousel-slide img { width: 100%; height: 100%; object-fit: cover; }
+        .carousel-slide iframe { width: 100%; height: 100%; border: none; }
+        .carousel-hint { text-align: center; font-size: 10px; color: #38bdf8; margin-top: -6px; margin-bottom: 8px; font-weight: bold; }
+        .variant-select-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 8px; cursor: pointer; }
+        .txn-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .txn-icon { font-size: 28px; background: #1e293b; border-radius: 10px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .txn-title { font-weight: bold; font-size: 14px; color: #38bdf8; margin-bottom: 3px; }
+        .txn-desc { font-size: 11px; color: #94a3b8; line-height: 1.3; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="store-header">
+        <img id="storeLogoImg" src="" alt="Store Logo" class="store-logo-circle">
+        <h2 id="storeTitle">🏪 Loading Kiosk Menu...</h2>
+        <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Pumili ng category o mag-search para mag-order:</p>
+    </div>
+    <div class="navigation-row">
+        <button class="search-trigger-btn" id="searchTriggerBtn" onclick="openSearchBar()">🔍</button>
+        <div class="category-tabs" id="categoryTabsContainer"></div>
+        <div class="collapsible-search-box" id="searchBox">
+            <span>🔍</span>
+            <input type="text" id="searchInput" placeholder="Maghanap..." oninput="filterBySearch()">
+            <button class="search-close-btn" onclick="closeSearchBar()">✕</button>
+        </div>
+    </div>
+    <div class="menu-grid" id="kioskMenuGrid"><p style="text-align:center; grid-column: 1 / -1; color:#94a3b8;">Lino-load ang Visual Menu...</p></div>
+</div>
+<div class="cart-bar" id="cartBar" onclick="openCheckoutTypeModal()" style="display:none;"><span id="cartSummaryText">🛒 0 Items</span><span>Place Order ➔</span></div>
+<div id="checkoutTypeModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeCheckoutTypeModal()">Isara ✕</button><h3 style="color:#38bdf8;">Pumili ng Uri ng Order</h3><div class="txn-card" onclick="proceedToGatewayWithType('delivery')"><div class="txn-icon">🛵</div><div><div class="txn-title">Book Delivery</div><div class="txn-desc">Padala sa bahay</div></div></div><div class="txn-card" onclick="proceedToGatewayWithType('dinein')"><div class="txn-icon">🍽️</div><div><div class="txn-title">Dine-In</div><div class="txn-desc">Kakain sa store</div></div></div><div class="txn-card" onclick="proceedToGatewayWithType('counter')"><div class="txn-icon">💳</div><div><div class="txn-title">Over-The-Counter</div><div class="txn-desc">QR Code sa Cashier</div></div></div></div></div>
+<div id="itemModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeItemModal()">Isara ✕</button><h3 id="mTitle" style="color:#38bdf8;"></h3><div><span id="mType" class="type-badge"></span><span id="mSize" class="size-badge"></span></div><div class="carousel-wrapper"><div class="carousel-track" id="modalCarouselTrack"></div></div><div class="carousel-hint" id="carouselHintText">👉 I-swipe para sa Video!</div><div id="mPrice" style="font-weight:bold; color:var(--primary); margin-bottom:8px;"></div><div id="mRating" class="rating-badge"></div><p id="mDesc" style="font-size:12px; color:#cbd5e1;"></p><div style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155; text-align:center;"><p style="font-size:12px; color:#38bdf8; font-weight:bold;">⭐ Mag-rate (1-10):</p><div style="display:flex; justify-content:center; gap:4px; flex-wrap:wrap;"><button onclick="submitRating(1)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">1</button><button onclick="submitRating(2)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">2</button><button onclick="submitRating(3)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">3</button><button onclick="submitRating(4)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">4</button><button onclick="submitRating(5)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">5</button><button onclick="submitRating(6)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">6</button><button onclick="submitRating(7)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">7</button><button onclick="submitRating(8)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">8</button><button onclick="submitRating(9)" style="width:30px; height:30px; background:#334155; color:#fff; border:none; border-radius:4px;">9</button><button onclick="submitRating(10)" style="width:30px; height:30px; background:#16a34a; color:#fff; border:none; border-radius:4px;">10</button></div><p id="rateFeedback" style="font-size:11px; color:#16a34a; display:none;">Salamat!</p></div></div></div>
+<div id="mixModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeMixModal()">Isara ✕</button><h3 style="color:#38bdf8;">🔄 Piliin ang Ka-Match</h3><p id="mixModalSub" style="font-size:12px; color:#94a3b8;"></p><div id="mixTargetsContainer"></div><button style="background:#16a34a; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer;" onclick="closeMixModal()">Tapusin</button></div></div>
+<div id="variantAddModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeVariantAddModal()">Isara ✕</button><h3 id="varAddTitle" style="color:#38bdf8;"></h3><div id="variantAddListContainer"></div></div></div>
+<div id="variantRemoveModal" class="modal-overlay"><div class="modal-box"><button class="close-modal" onclick="closeVariantRemoveModal()">Isara ✕</button><h3 id="varRemoveTitle" style="color:#ef4444;"></h3><div id="variantRemoveListContainer"></div></div></div>
+<script>
+    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
+    let storePage = "";
+    let currentPsid = "MESSENGER_WEB_USER";
+    let selectedCart = {}; 
+    let allFetchedItems = [];
+    let activeCategory = "ALL";
+    let activeModalItem = null;
+    const DEFAULT_KIOSK_MENU = [
+        { productType: "Food", name: "Burger Cheezy", category: "Best Sellers", size: "N/A", price: "120", description: "Juicy beef", specialDesc: "Best burger!", rating: 4.9, ratingCount: 310, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300", youtubeLink: "https://www.youtube.com/shorts/3Z7L2I140iE", status: "Available", quantity: "Unlimited" },
+        { productType: "Food", name: "Halo-Halo Special", category: "Desserts", size: "N/A", price: "85", description: "Loaded", specialDesc: "Award-winning!", rating: 5.0, ratingCount: 512, image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300", youtubeLink: "https://www.youtube.com/shorts/s8379B89x74", status: "Available", quantity: "Unlimited" }
+    ];
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        storePage = urlParams.get('page') || localStorage.getItem('sharemap_page');
+        currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+        if(!storePage){document.getElementById('storeTitle').innerText="⚠️ Invalid Store Link";return;}
+        document.getElementById('storeTitle').innerText="🏪 @"+storePage+" - Kiosk Menu";
+        loadKioskMenu();
+        setInterval(loadKioskMenuSilent,15000);
+    };
+    async function loadKioskMenu(){await fetchAndProcessMenu(false);}
+    async function loadKioskMenuSilent(){await fetchAndProcessMenu(true);}
+    async function fetchAndProcessMenu(isSilent){
+        try{
+            // SECURED: via Edge Function, hindi na direct from('licenses')!
+            const res = await fetch(`https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config`,{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ username: storePage.toLowerCase(), page: storePage.toLowerCase() })
+            });
+            const result = await res.json();
+            if(result.error) throw new Error(result.error);
+            const licenseData = result.data || result;
+            if(licenseData.kiosk_theme_config){
+                let theme={}; try{theme=typeof licenseData.kiosk_theme_config==="string"?JSON.parse(licenseData.kiosk_theme_config):licenseData.kiosk_theme_config;}catch(e){theme={};}
+                const logoEl=document.getElementById('storeLogoImg');
+                if(theme.storeLogo&&theme.storeLogo.trim()!==""){logoEl.src=theme.storeLogo;logoEl.style.display='block';}else{logoEl.style.display='none';}
+                if(theme.primary) document.documentElement.style.setProperty('--primary',theme.primary);
+                if(theme.bgType==="color"&&theme.bgColor) document.body.style.background=theme.bgColor;
+                else if(theme.bgType==="gradient") document.body.style.background=`linear-gradient(135deg, ${theme.bgColor||'#0f172a'} 0%, ${theme.primary||'#0284c7'} 100%)`;
+                else if(theme.bgType==="image"&&theme.bgImage){document.body.style.background=`linear-gradient(rgba(15,23,42,0.9),rgba(15,23,42,0.9)), url('${theme.bgImage}')`;document.body.style.backgroundSize="cover";}
+                else document.body.style.background="#0f172a";
+            }
+            // Expiry check - secured! Kahit i-edit sa Network tab, server pa rin mag-decide!
+            if(licenseData.expiry){
+                const today=new Date().toISOString().split('T')[0];
+                if(today>licenseData.expiry){document.getElementById('storeTitle').innerText="⚠️ Expired - contact admin";document.getElementById('kioskMenuGrid').innerHTML="<p style='text-align:center;color:#ef4444;'>Expired license</p>";return;}
+            }
+            if(licenseData.menu_sheet_url&&licenseData.menu_sheet_url.trim()!==""){
+                try{
+                    const r=await fetch(licenseData.menu_sheet_url+"?action=GET_ITEMS");
+                    const sheetItems=await r.json();
+                    if(sheetItems&&sheetItems.length>0){allFetchedItems=sheetItems.map(i=>({...i,rating:parseFloat(i.rating)||4.8,ratingCount:parseInt(i.ratingCount)||50,specialDesc:i.specialDesc&&i.specialDesc.trim()!==""?i.specialDesc:(i.description||"")}));}
+                    else{if(!isSilent) allFetchedItems=DEFAULT_KIOSK_MENU;}
+                }catch(e){if(!isSilent) allFetchedItems=DEFAULT_KIOSK_MENU;}
+            }else{if(!isSilent) allFetchedItems=DEFAULT_KIOSK_MENU;}
+        }catch(err){console.error(err);if(!isSilent) allFetchedItems=DEFAULT_KIOSK_MENU;}
+        if(!isSilent) buildCategoryTabs();
+        filterAndRenderGrid(activeCategory);
+    }
+    function openSearchBar(){document.getElementById('searchTriggerBtn').style.display='none';document.getElementById('categoryTabsContainer').style.display='none';document.getElementById('searchBox').style.display='flex';document.getElementById('searchInput').focus();}
+    function closeSearchBar(){document.getElementById('searchInput').value="";document.getElementById('searchBox').style.display='none';document.getElementById('searchTriggerBtn').style.display='flex';document.getElementById('categoryTabsContainer').style.display='flex';filterAndRenderGrid(activeCategory);}
+    function filterBySearch(){const q=document.getElementById('searchInput').value.trim().toLowerCase();if(!q){filterAndRenderGrid(activeCategory);return;}let r=allFetchedItems.filter(i=>(i.name||"").toLowerCase().includes(q)||(i.description||"").toLowerCase().includes(q)||(i.category||"").toLowerCase().includes(q));renderGrid(r);}
+    function buildCategoryTabs(){const c=document.getElementById('categoryTabsContainer');c.innerHTML="";let cats=["ALL"];allFetchedItems.forEach(i=>{let cat=i.category?i.category.trim():"General";if(!cats.includes(cat)) cats.push(cat);});let hasMix=allFetchedItems.some(i=>i.mixMatchType&&i.mixMatchType!=="N/A");if(hasMix&&!cats.includes("🔄 Mix & Match")) cats.push("🔄 Mix & Match");cats.forEach(cat=>{let tab=document.createElement('button');tab.className=`cat-tab ${cat===activeCategory?'active':''}`;tab.innerText=cat==="ALL"?"⭐ All Items":cat;tab.onclick=()=>{activeCategory=cat;document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');filterAndRenderGrid(cat);};c.appendChild(tab);});}
+    function filterAndRenderGrid(cat){let items=allFetchedItems;if(cat==="🔄 Mix & Match") items=allFetchedItems.filter(i=>i.mixMatchType&&i.mixMatchType!=="N/A");else if(cat!=="ALL") items=allFetchedItems.filter(i=>{let ic=i.category?i.category.trim():"General";return ic===cat;});renderGrid(items);}
+    function parseVariants(s){if(!s||s==="N/A") return[];try{let p=JSON.parse(s);if(Array.isArray(p)) return p;}catch(e){return s.split(',').map(s=>({name:s.trim(),price:"0",status:"Available",qty:""}));}return[];}
+    function getProductTotalCartQty(name){let c=0;for(let k in selectedCart){if(k===name||k.startsWith(`${name} (`)) c+=selectedCart[k];}return c;}
+    function renderGrid(items){const grid=document.getElementById('kioskMenuGrid');grid.innerHTML="";if(items.length===0){grid.innerHTML=`<p style="text-align:center; grid-column:1/-1; color:#94a3b8;">Walang item.</p>`;return;}items.forEach(item=>{let statusStr=item.status?item.status.toLowerCase():"";let qtyVal=item.quantity!==undefined?item.quantity:"Unlimited";let isZero=(qtyVal!=="Unlimited"&&qtyVal!==""&&!isNaN(qtyVal)&&parseInt(qtyVal)<=0);let isAvail=(statusStr.includes("available")||statusStr.includes("in stock")||!item.status)&&!isZero;let itemName=item.name;let variantsArr=parseVariants(item.size);let hasVariants=variantsArr.length>0;let totalQty=getProductTotalCartQty(itemName);let hasMix=item.mixMatchType&&item.mixMatchType!=="N/A";let card=document.createElement('div');card.className="menu-card";card.innerHTML=`<div class="img-container ${!isAvail?'out-of-stock':''}" onclick='openItemModal(${JSON.stringify(item)})'><img src="${item.image||'https://via.placeholder.com/150'}" alt="${itemName}">${!isAvail?`<div class="out-of-stock-watermark">Out of Stock</div>`:''}</div><div class="menu-details"><div><div class="menu-title" onclick='openItemModal(${JSON.stringify(item)})' style="cursor:pointer;">${itemName}</div>${item.productType?`<span class="type-badge">${item.productType}</span>`:''}${hasVariants?`<span class="size-badge">${variantsArr.length} Variants</span>`:''}<div class="rating-badge">⭐ ${parseFloat(item.rating||4.8).toFixed(1)} <span style="color:#94a3b8;">(${item.ratingCount||50})</span></div><div style="font-size:13px; font-weight:bold; color:var(--primary);">₱${item.price||"0"}${hasVariants?'+':''}</div><div class="menu-desc">${item.description||''}</div></div><div>${isAvail?`${hasMix?`<button type="button" class="mix-btn" onclick='openMixMatchModal(${JSON.stringify(item)})'>🔄 Ka-Match</button>`:`<div class="qty-control"><button type="button" class="qty-btn" onclick="handleMinusClick('${escapeQuotes(itemName)}')">-</button><span class="qty-val" id="qty-val-${CSS.escape(itemName)}">${totalQty}</span><button type="button" class="qty-btn" onclick="handlePlusClick('${escapeQuotes(itemName)}')">+</button></div>`}`:'<div style="color:#ef4444; font-size:11px; font-weight:bold; text-align:center;">Out of Stock</div>'}</div></div>`;grid.appendChild(card);});updateCartBar();}
+    function handlePlusClick(n){let obj=allFetchedItems.find(i=>i.name===n);if(!obj) return;let v=parseVariants(obj.size);if(v.length>0) openVariantAddModal(obj,v);else updateQty(n,1);}
+    function handleMinusClick(n){let obj=allFetchedItems.find(i=>i.name===n);if(!obj) return;let v=parseVariants(obj.size);if(v.length>0) openVariantRemoveModal(n);else updateQty(n,-1);}
+    function openVariantAddModal(itemObj,variantsArr){document.getElementById("varAddTitle").innerText=`➕ ${itemObj.name}`;const c=document.getElementById("variantAddListContainer");c.innerHTML="";variantsArr.forEach(v=>{let vs=v.status?v.status.toLowerCase():"";let vq=v.qty!==undefined&&v.qty!==""?parseInt(v.qty):9999;let isZero=(v.qty!==""&&!isNaN(v.qty)&&vq<=0);let isAvail=vs!=="out of stock"&&!isZero;let dk=`${itemObj.name} (${v.name})`;let cur=selectedCart[dk]||0;let div=document.createElement("div");div.className="variant-select-item";div.innerHTML=`<div><b>${v.name}</b> ${v.qty!==""?`<small style="color:#94a3b8;">(Stock:${v.qty})</small>`:''}<br><span style="font-size:12px; color:var(--primary);">₱${v.price}</span> <span style="font-size:10px; color:${isAvail?'#16a34a':'#ef4444'};">(${isAvail?v.status||'Available':'Out of Stock'})</span></div><div>${isAvail?`<button type="button" style="padding:6px 14px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="selectVariantToAdd('${escapeQuotes(dk)}')">➕ Add (${cur})</button>`:'<span style="font-size:11px; color:#ef4444;">Ubos na</span>'}</div>`;c.appendChild(div);});document.getElementById("variantAddModal").style.display="flex";}
+    function selectVariantToAdd(k){updateQty(k,1);closeVariantAddModal();filterAndRenderGrid(activeCategory);}
+    function closeVariantAddModal(){document.getElementById("variantAddModal").style.display="none";}
+    function openVariantRemoveModal(itemName){document.getElementById("varRemoveTitle").innerText=`➖ ${itemName}`;const c=document.getElementById("variantRemoveListContainer");c.innerHTML="";let ordered=[];for(let k in selectedCart){if(k.startsWith(`${itemName} (`)) ordered.push({key:k,qty:selectedCart[k]});}if(ordered.length===0){c.innerHTML=`<p style="color:#94a3b8; font-size:12px; text-align:center;">Wala pang variant.</p>`;}else{ordered.forEach(ov=>{let div=document.createElement("div");div.className="variant-select-item";div.innerHTML=`<div><b>${ov.key}</b><br><span style="font-size:12px; color:var(--primary);">Qty: <b>${ov.qty}</b></span></div><button type="button" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold;" onclick="selectVariantToRemove('${escapeQuotes(ov.key)}')">➖ Bawasan</button>`;c.appendChild(div);});}document.getElementById("variantRemoveModal").style.display="flex";}
+    function selectVariantToRemove(k){updateQty(k,-1);closeVariantRemoveModal();filterAndRenderGrid(activeCategory);}
+    function closeVariantRemoveModal(){document.getElementById("variantRemoveModal").style.display="none";}
+    function extractYoutubeVideoId(url){if(!url) return null;const regex=/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;const m=url.match(regex);return(m&&m[1])?m[1]:null;}
+    function openItemModal(item){activeModalItem=item;document.getElementById('mTitle').innerText=item.name;document.getElementById('mType').innerText=item.productType||'Food';document.getElementById('mSize').innerText=item.size&&item.size!=="N/A"?`Has Variants`:'';document.getElementById('mSize').style.display=item.size&&item.size!=="N/A"?'inline-block':'none';const track=document.getElementById('modalCarouselTrack');track.innerHTML="";const s1=document.createElement('div');s1.className="carousel-slide";s1.innerHTML=`<img src="${item.image||'https://via.placeholder.com/300'}" alt="${item.name}">`;track.appendChild(s1);const ytId=extractYoutubeVideoId(item.youtubeLink);if(ytId){const s2=document.createElement('div');s2.className="carousel-slide";s2.innerHTML=`<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&loop=1&playlist=${ytId}&controls=0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;track.appendChild(s2);document.getElementById('carouselHintText').style.display='block';}else{document.getElementById('carouselHintText').style.display='none';}document.getElementById('mPrice').innerText=`₱${item.price}`;document.getElementById('mRating').innerHTML=`⭐ ${parseFloat(item.rating||4.8).toFixed(1)} / 10.0`;document.getElementById('mDesc').innerText=item.specialDesc&&item.specialDesc.trim()!==""?item.specialDesc:(item.description||"");document.getElementById('rateFeedback').style.display='none';document.getElementById('itemModal').style.display='flex';}
+    function closeItemModal(){document.getElementById('itemModal').style.display='none';}
+    function submitRating(v){if(!activeModalItem) return;let cr=parseFloat(activeModalItem.rating||4.8);let cc=parseInt(activeModalItem.ratingCount||50);let nr=Math.min(10.0,parseFloat(((cr*cc+v*0.1)/(cc+1)).toFixed(1)));activeModalItem.rating=nr;activeModalItem.ratingCount=cc+1;let f=allFetchedItems.find(i=>i.name===activeModalItem.name);if(f){f.rating=nr;f.ratingCount=activeModalItem.ratingCount;}document.getElementById('mRating').innerHTML=`⭐ ${nr.toFixed(1)} / 10.0`;document.getElementById('rateFeedback').innerText=`✅ Salamat! Rating ${v}/10.`;document.getElementById('rateFeedback').style.display='block';setTimeout(()=>{closeItemModal();filterAndRenderGrid(activeCategory);},1200);}
+    function openMixMatchModal(mainItem){document.getElementById('mixModalSub').innerText=`Combo para sa "${mainItem.name}"`;const c=document.getElementById('mixTargetsContainer');c.innerHTML="";let targetItems=allFetchedItems.filter(i=>{if(mainItem.mixMatchType==="Category") return (i.category||"").trim().toLowerCase()===(mainItem.mixMatchTarget||"").trim().toLowerCase();else return (i.name||"").trim().toLowerCase()===(mainItem.mixMatchTarget||"").trim().toLowerCase();});if(targetItems.length===0){c.innerHTML=`<p style="color:#ef4444; text-align:center; font-size:12px;">Walang ka-match.</p>`;}else{targetItems.forEach(matchItem=>{let comboKey=`${mainItem.name} + ${matchItem.name} (Mix&Match)`;let qty=selectedCart[comboKey]||0;let finalComboPrice=(parseFloat(mainItem.price)+parseFloat(matchItem.price)-parseFloat(mainItem.mixMatchDiscount||0));let row=document.createElement('div');row.style.cssText="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #334155;";row.innerHTML=`<div style="display:flex; align-items:center; gap:8px;"><img src="${matchItem.image||''}" style="width:40px; height:40px; object-fit:cover; border-radius:6px;"><div><div style="font-size:12px; font-weight:bold;">${matchItem.name}</div><div style="font-size:11px; color:var(--primary);">Combo: ₱${finalComboPrice}</div></div></div><div class="qty-control" style="margin-top:0;"><button type="button" class="qty-btn" onclick="updateMixQty('${escapeQuotes(comboKey)}', -1)">-</button><span class="qty-val" id="mix-qty-${CSS.escape(comboKey)}">${qty}</span><button type="button" class="qty-btn" onclick="updateMixQty('${escapeQuotes(comboKey)}', 1)">+</button></div>`;c.appendChild(row);});}document.getElementById('mixModal').style.display='flex';}
+    function closeMixModal(){document.getElementById('mixModal').style.display='none';updateCartBar();}
+    function updateMixQty(k,d){if(!selectedCart[k]) selectedCart[k]=0;selectedCart[k]+=d;if(selectedCart[k]<0) selectedCart[k]=0;if(selectedCart[k]===0) delete selectedCart[k];let el=document.getElementById(`mix-qty-${CSS.escape(k)}`);if(el) el.innerText=selectedCart[k]||0;updateCartBar();}
+    function updateQty(k,d){if(!selectedCart[k]) selectedCart[k]=0;selectedCart[k]+=d;if(selectedCart[k]<0) selectedCart[k]=0;if(selectedCart[k]===0) delete selectedCart[k];let main=k.split(' (')[0];let totalEl=document.getElementById(`qty-val-${CSS.escape(main)}`);if(totalEl) totalEl.innerText=getProductTotalCartQty(main);updateCartBar();}
+    function getItemUnitPrice(k){if(k.includes(" + ")&&k.includes("(Mix&Match)")){let parts=k.replace(" (Mix&Match)","").split(" + ");let mainName=parts[0].trim();let matchFullName=parts[1].trim();let mainObj=allFetchedItems.find(i=>i.name===mainName);let matchObj=allFetchedItems.find(i=>matchFullName.startsWith(i.name));if(mainObj&&matchObj){let discount=parseFloat(mainObj.mixMatchDiscount||0);return (parseFloat(mainObj.price||0)+parseFloat(matchObj.price||0))-discount;}}if(k.includes(" (")&&k.endsWith(")")){let mainName=k.split(" (")[0].trim();let varName=k.split(" (")[1].replace(")","").trim();let mainObj=allFetchedItems.find(i=>i.name===mainName);if(mainObj){let variantsArr=parseVariants(mainObj.size);let foundVar=variantsArr.find(v=>v.name===varName);if(foundVar&&foundVar.price) return parseFloat(foundVar.price);return parseFloat(mainObj.price||0);}}let mainObj=allFetchedItems.find(i=>i.name===k);if(mainObj) return parseFloat(mainObj.price||0);return 0;}
+    function updateCartBar(){let totalCount=0;let totalPrice=0;for(let key in selectedCart){let qty=selectedCart[key];if(qty>0){totalCount+=qty;totalPrice+=(getItemUnitPrice(key)*qty);}}const bar=document.getElementById('cartBar');if(totalCount>0){bar.style.display='flex';document.getElementById('cartSummaryText').innerText=`🛒 ${totalCount} Items | Total: ₱${totalPrice.toFixed(2)}`;}else{bar.style.display='none';}}
+    function escapeQuotes(s){return s.replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+    function openCheckoutTypeModal(){document.getElementById('checkoutTypeModal').style.display='flex';}
+    function closeCheckoutTypeModal(){document.getElementById('checkoutTypeModal').style.display='none';}
+    function proceedToGatewayWithType(typeStr){let orderArray=[];let grandTotal=0;for(let name in selectedCart){if(selectedCart[name]>0){let unitPrice=getItemUnitPrice(name);let itemTotal=unitPrice*selectedCart[name];grandTotal+=itemTotal;orderArray.push(`${name} x${selectedCart[name]}`);}}let orderString=orderArray.join(', ');window.location.href=`./multigateway.html?page=${encodeURIComponent(storePage)}&ord=${encodeURIComponent(orderString)}&total=${grandTotal.toFixed(2)}&type=${encodeURIComponent(typeStr)}&psid=${encodeURIComponent(currentPsid)}`;}
+</script>
+</body>
+</html>
