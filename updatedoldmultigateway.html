@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    
-<!--old multigateway with fb login updated for edge function-->
-    
+<!--old multigateway with fb login updated with block screen license check-->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShareMap - Order & Service Gateway</title>
@@ -150,7 +148,7 @@
             generatedOrderID = generateSpreadsheetOrderID();
             document.getElementById("orderIdBadge").innerText = `🔢 Order ID: #${generatedOrderID}`;
 
-            // Pinalitan ang lumang database query ng Edge Function call
+            // Pagsusuri ng lisensya gamit ang Edge Function
             checkShareMapAccess(pageId);
             
             const urlParams = new URLSearchParams(window.location.search);
@@ -183,66 +181,82 @@
             renderOrderUI();
         });
 
-async function checkShareMapAccess(pageId) {
-    try {
-        updateSdkDebugToast("⏳ Verifying store license via Edge Function...");
-        
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ page: pageId.toLowerCase(), username: pageId.toLowerCase() })
-        });
-        
-        const result = await res.json();
-        const data = result.data || result; // Para sa response structure ng get-store-config
+        // --- PINATIBAY NA LICENSE CHECKING SA EDGE FUNCTION ---
+        async function checkShareMapAccess(pageId) {
+            try {
+                updateSdkDebugToast("⏳ Verifying store license via Edge Function...");
+                
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: pageId.toLowerCase(), page: pageId.toLowerCase() })
+                });
+                
+                const result = await res.json();
+                const data = result.data || result;
+                const today = new Date().toISOString().split('T')[0];
 
-        const today = new Date().toISOString().split('T')[0];
+                // 1. KUNG WALANG MAHANAP NA STORE O MAY ERROR SA API
+                if (result.error || !data || (!data.username && !data.page_access_token)) {
+                    showBlockScreen(
+                        "⚠️ Walang Lisensya / Inactive Account", 
+                        `Ang store username na "@${pageId}" ay wala pang lisensya sa ShareMap.`
+                    );
+                    return;
+                }
 
-        // 1. KUNG WALANG MAHANAP NA STORE ACCOUNT / MAY ERROR
-        if (result.error || !data || (!data.username && !data.page_access_token)) {
-            showBlockScreen(
-                "⚠️ Walang Lisensya / Inactive Account", 
-                `Ang store username na "@${pageId}" ay hindi rehistrado o walang lisensya sa ShareMap. Mangyaring makipag-ugnayan sa provider.`
-            );
-            return;
+                // 2. KUNG INACTIVE ANG ACCOUNT
+                if (data.status === "INACTIVE") {
+                    showBlockScreen(
+                        "⚠️ Inactive Account", 
+                        "Ang store na ito ay kasalukuyang inactive sa ShareMap system."
+                    );
+                    return;
+                }
+
+                // 3. KUNG EXPIRED NA ANG LISENSYA
+                if (data.expiry && today > data.expiry && data.status !== "ACTIVE") {
+                    showBlockScreen(
+                        "🚫 Expired License", 
+                        `Ang inyong subscription ay nag-expire noong ${data.expiry}. Paki-renew ang iyong access.`
+                    );
+                    return;
+                }
+
+                // 4. KUNG VALID ANG ACCOUNT AT MAY TOKEN
+                if (data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED") {
+                    activePageAccessToken = data.page_access_token;
+                    document.getElementById('debugToken').value = "SUCCESS: Nakuha ang Token (" + activePageAccessToken.substring(0, 10) + "...)";
+                    fetchMetaConversations();
+                    initializeClientAutoLogin();
+                } else {
+                    showBlockScreen("⚠️ Error sa Token", "Walang active token ang Store POS na ito.");
+                }
+
+            } catch (err) {
+                console.error("Verification error:", err);
+                showBlockScreen(
+                    "⚠️ Connection Error", 
+                    "Hindi makakonekta sa ShareMap Server. Paki-check ang iyong internet connection."
+                );
+            }
         }
 
-        // 2. KUNG INACTIVE ANG ACCOUNT
-        if (data.status === "INACTIVE") {
-            showBlockScreen(
-                "⚠️ Inactive Account", 
-                "Ang store na ito ay kasalukuyang inactive sa ShareMap system."
-            );
-            return;
+        // --- BLOCK SCREEN UI GAYA SA INDEX.HTML ---
+        function showBlockScreen(title, message) {
+            const CONTACT_LINK = "https://m.me/sharemap.digital.address"; 
+            document.body.innerHTML = `
+                <div style="background:#0f172a; color:#fff; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; font-family:sans-serif;">
+                    <div style="background:#1e293b; padding:30px; border-radius:12px; border:1px solid #ef4444; max-width:400px; width:90%;">
+                        <h2 style="color:#ef4444; margin-top:0; font-size:20px;">${title}</h2>
+                        <p style="color:#cbd5e1; font-size:14px; line-height:1.5;">${message}</p>
+                        <a href="${CONTACT_LINK}" target="_blank" style="display:inline-block; margin-top:15px; background:#2563eb; color:#fff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; width:80%;">💬 Contact Developer / Renew Access</a>
+                        <hr style="border:0; border-top:1px solid #334155; margin:25px 0 15px 0;">
+                        <p style="font-size:11px; color:#94a3b8; margin:0;">ShareMap Licensing Protection &copy; 2026</p>
+                    </div>
+                </div>
+            `;
         }
-
-        // 3. KUNG EXPIRED NA ANG LISENSYA
-        if (data.expiry && today > data.expiry && data.status !== "ACTIVE") {
-            showBlockScreen(
-                "🚫 Expired License", 
-                `Ang inyong subscription ay nag-expire noong ${data.expiry}. Paki-renew ang iyong access.`
-            );
-            return;
-        }
-
-        // 4. KUNG VALID ANG ACCOUNT AT MAY TOKEN
-        if (data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED") {
-            activePageAccessToken = data.page_access_token;
-            document.getElementById('debugToken').value = "SUCCESS: Nakuha ang Token (" + activePageAccessToken.substring(0, 10) + "...)";
-            fetchMetaConversations();
-            initializeClientAutoLogin();
-        } else {
-            document.getElementById('debugToken').value = "ERROR: Offline o walang active token ang Store POS!";
-        }
-
-    } catch (err) {
-        console.error("Verification error:", err);
-        showBlockScreen(
-            "⚠️ Connection Error", 
-            "Hindi makakonekta sa ShareMap Server. Paki-check ang iyong internet connection."
-        );
-    }
-}
 
         async function fetchMetaConversations() {
             if (!activePageAccessToken) return;
