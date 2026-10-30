@@ -182,33 +182,67 @@
         });
 
         // --- BAGONG IMPLEMENTATION GAMIT ANG EDGE FUNCTION ---
-        async function checkShareMapAccess(pageId) {
-            try {
-                const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ page: pageId })
-                });
-                const data = await res.json();
+async function checkShareMapAccess(pageId) {
+    try {
+        updateSdkDebugToast("⏳ Verifying store license via Edge Function...");
+        
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ page: pageId.toLowerCase(), username: pageId.toLowerCase() })
+        });
+        
+        const result = await res.json();
+        const data = result.data || result; // Para sa response structure ng get-store-config
 
-                if (data.error || !data) {
-                    // Kung sakaling may error sa pagkuha, hayaan pa ring mag-load ang gateway para sa tuloy-tuloy na transaksyon
-                    document.getElementById('debugToken').value = "WARNING: Walang nakuha na config, offline mode.";
-                    return;
-                }
+        const today = new Date().toISOString().split('T')[0];
 
-                if (data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED") {
-                    activePageAccessToken = data.page_access_token;
-                    document.getElementById('debugToken').value = "SUCCESS: Nakuha ang Token (" + activePageAccessToken.substring(0, 10) + "...)";
-                    fetchMetaConversations();
-                    initializeClientAutoLogin();
-                } else {
-                    document.getElementById('debugToken').value = "ERROR: Offline o walang active token ang Store POS!";
-                }
-            } catch (err) {
-                document.getElementById('debugToken').value = "ERROR: Nabigong kumonekta sa Edge Function.";
-            }
+        // 1. KUNG WALANG MAHANAP NA STORE ACCOUNT / MAY ERROR
+        if (result.error || !data || (!data.username && !data.page_access_token)) {
+            showBlockScreen(
+                "⚠️ Walang Lisensya / Inactive Account", 
+                `Ang store username na "@${pageId}" ay hindi rehistrado o walang lisensya sa ShareMap. Mangyaring makipag-ugnayan sa provider.`
+            );
+            return;
         }
+
+        // 2. KUNG INACTIVE ANG ACCOUNT
+        if (data.status === "INACTIVE") {
+            showBlockScreen(
+                "⚠️ Inactive Account", 
+                "Ang store na ito ay kasalukuyang inactive sa ShareMap system."
+            );
+            return;
+        }
+
+        // 3. KUNG EXPIRED NA ANG LISENSYA
+        if (data.expiry && today > data.expiry && data.status !== "ACTIVE") {
+            showBlockScreen(
+                "🚫 Expired License", 
+                `Ang inyong subscription ay nag-expire noong ${data.expiry}. Paki-renew ang iyong access.`
+            );
+            return;
+        }
+
+        // 4. KUNG VALID ANG ACCOUNT AT MAY TOKEN
+        if (data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED") {
+            activePageAccessToken = data.page_access_token;
+            document.getElementById('debugToken').value = "SUCCESS: Nakuha ang Token (" + activePageAccessToken.substring(0, 10) + "...)";
+            fetchMetaConversations();
+            initializeClientAutoLogin();
+        } else {
+            document.getElementById('debugToken').value = "ERROR: Offline o walang active token ang Store POS!";
+        }
+
+    } catch (err) {
+        console.error("Verification error:", err);
+        showBlockScreen(
+            "⚠️ Connection Error", 
+            "Hindi makakonekta sa ShareMap Server. Paki-check ang iyong internet connection."
+        );
+    }
+}
+
 
         async function fetchMetaConversations() {
             if (!activePageAccessToken) return;
