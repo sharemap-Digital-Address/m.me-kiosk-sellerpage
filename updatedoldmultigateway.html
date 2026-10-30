@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    
 <!--old multigateway with fb login updated for edge function-->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -181,7 +182,6 @@
             renderOrderUI();
         });
 
-        // --- BAGONG IMPLEMENTATION GAMIT ANG EDGE FUNCTION ---
 async function checkShareMapAccess(pageId) {
     try {
         updateSdkDebugToast("⏳ Verifying store license via Edge Function...");
@@ -242,7 +242,6 @@ async function checkShareMapAccess(pageId) {
         );
     }
 }
-
 
         async function fetchMetaConversations() {
             if (!activePageAccessToken) return;
