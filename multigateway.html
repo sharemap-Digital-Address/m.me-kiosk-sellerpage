@@ -35,7 +35,7 @@
         .saved-text { flex: 1; font-size: 13px; color: #f8fafc; }
         .btn { background-color: #0284c7; color: #ffffff; border: none; padding: 12px 20px; font-size: 0.95rem; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 8px; }
         .error-msg { color: #f87171; font-size: 12px; margin-top: 6px; display: none; }
-        .btn-fb-login { background-color: #1877f2; color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration:none; }
+        /* btn-fb-login REMOVED - localStorage fast lane */
         .qr-display-box { background: #ffffff; padding: 15px; border-radius: 12px; display: inline-block; margin-top: 10px; }
         .total-amount-badge { background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }
     </style>
@@ -51,7 +51,7 @@
             <div id="profileNameDisplay" style="font-size:13px; font-weight:bold; color:#38bdf8; margin-top:5px;"></div>
             <div id="psidStatus" style="font-size:10px; color:#94a3b8;">Waiting...</div>
         </div>
-        <a id="fbLoginBtn" href="#" target="_blank" class="btn-fb-login">💬 Continue with Messenger</a>
+        <!-- Continue with Messenger REMOVED - using localStorage fast lane -->
         <div class="service-toggle">
             <div class="service-option"><input type="radio" id="typeDelivery" name="serviceType" value="delivery" checked onchange="toggleServiceType()"><label for="typeDelivery">🛵 Delivery</label></div>
             <div class="service-option"><input type="radio" id="typeDineIn" name="serviceType" value="dinein" onchange="toggleServiceType()"><label for="typeDineIn">🍽️ Dine-In</label></div>
@@ -92,11 +92,10 @@ async function checkShareMapAccess(pageId){
     if(oidFromUrl){
       isFromKiosk=true; generatedOrderID=oidFromUrl; clickedAtTimestamp=urlParams.get('clicked_at')||localStorage.getItem('sharemap_clicked_at')||Date.now();
       currentFullNameFromKiosk=urlParams.get('fn')||""; actualLoggedInPsid=urlParams.get('psid')||"";
-      document.getElementById("orderIdBadge").innerText=`🔢 Order ID: #${generatedOrderID} (from Kiosk)`; document.getElementById('fbLoginBtn').style.display='none';
+      document.getElementById("orderIdBadge").innerText=`🔢 Order ID: #${generatedOrderID} (from Kiosk)`;
     } else {
       generatedOrderID=generateSpreadsheetOrderID(); document.getElementById("orderIdBadge").innerText=`🔢 Order ID: #${generatedOrderID}`;
-      await createInitialOrder(pageId); const messengerLink=`https://m.me/${encodeURIComponent(pageId)}?ref=order_${generatedOrderID}`;
-      const btn=document.getElementById('fbLoginBtn'); btn.href=messengerLink; btn.innerHTML=`💬 Continue with Messenger - Order #${generatedOrderID}`; startPollingForPsid();
+      // REMOVED: createInitialOrder + m.me messengerLink + startPollingForPsid - using localStorage fast lane na
     }
     updatePreview();
   }catch(err){ console.error(err); }
@@ -115,23 +114,14 @@ function updatePreview(){
   }
 }
 async function createInitialOrder(pageId){
-  try{ await fetch(`${SUPABASE_URL}/functions/v1/create-order`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:generatedOrderID,store_page:pageId.toLowerCase(),orders_list:getFormattedOrdersText()||"Pending order",messenger_psid:null,customer_name:null,customer_profile_pic:null,status:'WAITING_PSID'} )}); }catch(e){}
+  // REMOVED - makakatipid sa call, hindi na gumagawa ng WAITING_PSID order sa Supabase pag fresh open
+  console.log("ℹ️ createInitialOrder disabled - localStorage fast lane");
+  return;
 }
 function startPollingForPsid(){
-  if(isFromKiosk) return;
-  if(pollingInterval) clearInterval(pollingInterval);
-  pollingInterval=setInterval(async()=>{
-    try{
-      const res=await fetch(`${SUPABASE_URL}/functions/v1/get-order-psid`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:generatedOrderID})});
-      const orderData=await res.json();
-      if(orderData&&orderData.messenger_psid){
-        clearInterval(pollingInterval); document.getElementById('displayPsid').value=orderData.messenger_psid;
-        document.getElementById('fullName').value=orderData.customer_name||""; document.getElementById('profileNameDisplay').innerText=orderData.customer_name||"";
-        document.getElementById('psidStatus').innerText=`✅ Verified via Webhook`; if(orderData.customer_profile_pic) document.getElementById('profilePic').src=orderData.customer_profile_pic;
-        actualLoggedInPsid=orderData.messenger_psid; isPsidVerifiedFromSuggestion=true; localStorage.setItem('sharemap_psid',orderData.messenger_psid); updatePreview();
-      }
-    }catch(e){}
-  },2000);
+  // REMOVED - makakatipid sa call, localStorage fast lane na gamit
+  console.log("ℹ️ startPollingForPsid disabled - using localStorage fast lane");
+  return;
 }
 async function fetchMetaConversations(){
   if(!activePageAccessToken) return;
