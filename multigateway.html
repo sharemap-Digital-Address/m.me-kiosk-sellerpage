@@ -23,6 +23,15 @@
         let clickedAtTimestamp = 0; 
         let currentFullNameFromKiosk = "";
 
+        function updateSdkDebugToast(message, isError = false) {
+            const toastEl = document.getElementById('debugSdkToast');
+            if (toastEl) {
+                toastEl.innerText = message;
+                toastEl.style.color = isError ? "#f87171" : "#38bdf8";
+            }
+            console.log("[SDK LOG]:", message);
+        }
+
         function getPageId() {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get('page') || localStorage.getItem('sharemap_page') || "sharemapdammystore";
@@ -39,6 +48,8 @@
         // --- ORIHINAL NA LISENSYA AT SECURITY CHECKING SYSTEM ---
         async function checkShareMapAccess(pageId) {
             try {
+                updateSdkDebugToast("⏳ Verifying store license via Edge Function...");
+                
                 const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -75,9 +86,13 @@
 
                 if (data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED") {
                     activePageAccessToken = data.page_access_token;
+                    document.getElementById('debugToken').value = "SUCCESS: Nakuha ang Token (" + activePageAccessToken.substring(0, 10) + "...)";
+                    updateSdkDebugToast("✅ Store license verified & token loaded.");
                     fetchMetaConversations();
                 } else {
                     if (data.status === "ACTIVE" || data.username) {
+                        document.getElementById('debugToken').value = "WARNING: Active ang store pero walang page token.";
+                        updateSdkDebugToast("⚠️ Active ang store pero walang page token.");
                         window.hasValidPageToken = false;
                         isPsidVerifiedFromSuggestion = true;
                         document.getElementById('displayPsid').value = "MESSENGER_WEB_USER";
@@ -103,6 +118,7 @@
 
             } catch (err) {
                 console.error("Verification error:", err);
+                updateSdkDebugToast("❌ Connection Error sa Server", true);
                 showBlockScreen(
                     "⚠️ Connection Error", 
                     "Hindi makakonekta sa ShareMap Server. Paki-check ang iyong internet connection."
@@ -250,6 +266,12 @@
         <h3 style="margin: 0 0 4px 0;">📍 ShareMap Ordering Gateway</h3>
         <div id="orderIdBadge" class="order-id-badge">🔢 Order ID: GENERATING...</div>
 
+        <!-- DEBUG TOAST BOX -->
+        <div style="background: #0f172a; padding: 6px; border-radius: 6px; border: 1px solid #0284c7; margin-bottom: 8px; text-align: left;">
+            <label style="font-size: 10px; color: #94a3b8; display: block;">🛠️ System Status:</label>
+            <div id="debugSdkToast" style="font-size: 11px; font-weight: bold; color: #e2e8f0; word-break: break-all;">Ready...</div>
+        </div>
+
         <!-- PREVIEW INFO BOX -->
         <div class="info-box">
             <div>🔢 Order #: <b id="pOrder">-</b></div>
@@ -269,6 +291,12 @@
             <div class="service-option"><input type="radio" id="typeDelivery" name="serviceType" value="delivery" checked onchange="toggleServiceType()"><label for="typeDelivery">🛵 Delivery</label></div>
             <div class="service-option"><input type="radio" id="typeDineIn" name="serviceType" value="dinein" onchange="toggleServiceType()"><label for="typeDineIn">🍽️ Dine-In</label></div>
             <div class="service-option"><input type="radio" id="typeCounter" name="serviceType" value="counter" onchange="toggleServiceType()"><label for="typeCounter">💳 Counter</label></div>
+        </div>
+
+        <!-- Supabase Token Debugger Field (Green Box) -->
+        <div class="form-group" style="background: #064e3b; padding: 6px; border-radius: 6px; border: 1px solid #10b981; margin-bottom: 8px;">
+            <label style="font-size: 10px; color: #34d399; margin-bottom: 2px;">🟢 Supabase Token Status:</label>
+            <input type="text" id="debugToken" readonly style="background: transparent; border: none; color: #ecfdf5; font-size: 11px; font-weight: bold; padding: 2px 0;" value="Checking Supabase Edge Function...">
         </div>
 
         <div class="form-group"><label>🔒 PSID:</label><input type="text" id="displayPsid" readonly style="background:transparent; border:none; color:#cbd5e1; font-size:12px; font-weight:bold;" value="MESSENGER_WEB_USER"></div>
@@ -308,6 +336,12 @@ function toggleServiceType(){
     document.getElementById("proceedBtn").style.display = isCounter ? "none" : "block"; 
     document.getElementById("counterQrContainer").style.display = isCounter ? "block" : "none";
     
+    if (isDelivery) {
+        proceedBtn.innerText = "📍 Sunod: Kunin ang GPS Location ➔";
+    } else if (isDineIn) {
+        proceedBtn.innerText = "📩 I-send ang Dine-In Order sa POS & Messenger ➔";
+    }
+
     if(isCounter) generateCounterQr();
 }
 
@@ -355,6 +389,10 @@ function renderOrderUI(){
         container.appendChild(row); 
     });
     document.getElementById('grandTotalText').innerText = totalAmountPesos.toFixed(2); 
+    
+    let summaryText = currentOrdersList.map(i => `${i.name} x${i.qty}`).join(', ');
+    localStorage.setItem('sharemap_orders', summaryText);
+
     if(document.getElementById("typeCounter").checked) generateCounterQr();
 }
 
@@ -379,7 +417,7 @@ function deleteOrderItem(index){
 }
 
 function getFormattedOrdersText(){ 
-    if(currentOrdersList.length === 0) return "Pending order"; 
+    if(currentOrdersList.length === 0) return "Walang order"; 
     return currentOrdersList.map(i => `${i.name} x${i.qty}`).join(', '); 
 }
 
@@ -450,22 +488,51 @@ function downloadQrCodeImageWithDetails(){
     document.body.removeChild(link);
 }
 
+// === AUTO-COPY SA CLIPBOARD HELPER ===
+function copyTextToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            console.log("📋 Nakopya na sa clipboard ang order details!");
+        }).catch(err => {
+            console.error("Clipboard error:", err);
+        });
+    } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            console.log("📋 Nakopya na gamit ang fallback.");
+        } catch (err) {
+            console.error("Fallback copy failed:", err);
+        }
+        document.body.removeChild(textarea);
+    }
+}
+
 async function handleCounterCheckoutSequence(){
     const nameVal = document.getElementById('fullName').value.trim(); 
     const phoneVal = document.getElementById('phone').value.trim();
     const ordersVal = getFormattedOrdersText(); 
     const pageId = getPageId(); 
     const activePsid = document.getElementById('displayPsid').value;
+    
     if(!nameVal || !phoneVal){ 
-        document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact"; 
+        document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy."; 
         document.getElementById('errorMsg').style.display = "block"; 
         return; 
     }
     document.getElementById('errorMsg').style.display = "none";
+    
     downloadQrCodeImageWithDetails();
+    
     const formattedOrders = ordersVal.split(', ').join('\n'); 
     const shareText = `💳 OVER-THE-COUNTER ADVANCE ORDER\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Orders:\n${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
     
+    // Auto-copy sa clipboard sakaling magka-issue sa auto-fill sa chatbox
+    copyTextToClipboard(shareText);
+
     await saveOrderToSupabasePOS({ 
         order_id: generatedOrderID, 
         store_page: pageId.toLowerCase(), 
@@ -501,7 +568,7 @@ async function handleProcessOrder(){
     const activePsid = document.getElementById('displayPsid').value;
     
     if(!nameVal || !phoneVal){ 
-        document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact"; 
+        document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy."; 
         document.getElementById('errorMsg').style.display = "block"; 
         return; 
     }
@@ -512,6 +579,9 @@ async function handleProcessOrder(){
         const formattedOrders = ordersVal.split(', ').join('\n• '); 
         const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n🪑 Table: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
         
+        // Auto-copy sa clipboard para sa Dine-In sakaling pumalpak ang pag-auto fill sa chatbox
+        copyTextToClipboard(shareText);
+
         await saveOrderToSupabasePOS({ 
             order_id: generatedOrderID, 
             store_page: pageId.toLowerCase(), 
@@ -535,6 +605,7 @@ async function handleProcessOrder(){
         return;
     }
     
+    // Para sa Delivery -> Ipasa lahat sa index.html kasama ang buong detalye
     localStorage.setItem('sharemap_page', pageId); 
     localStorage.setItem('sharemap_orderid', generatedOrderID); 
     localStorage.setItem('sharemap_fullname', nameVal);
@@ -599,7 +670,7 @@ window.addEventListener('DOMContentLoaded', () => {
     toggleServiceType(); 
     renderOrderUI(); 
     
-    // Tawagin ang iyong orihinal at buong License Protection System
+    // Tawagin ang iyong orihinal na License Protection & Token Status Verification
     checkShareMapAccess(pageId);
     
     setTimeout(setupBackButtonTrayReturn, 800);
