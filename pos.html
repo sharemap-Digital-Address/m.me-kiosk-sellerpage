@@ -7,37 +7,79 @@
   <style>
     body { font-family: Arial, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #334155; }
     .header { text-align: center; margin-bottom: 20px; }
-    .fb-login-card { background: #ffffff; border-radius: 12px; padding: 16px; max-width: 600px; margin: 0 auto 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #cbd5e1; text-align: center; }
-    .btn-fb { background-color: #0084FF; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+    
+    .fb-login-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      max-width: 600px;
+      margin: 0 auto 20px auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #cbd5e1;
+      text-align: center;
+    }
+    .btn-fb {
+      background-color: #0084FF;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
     .btn-fb:hover { background-color: #006bce; }
     .btn-logout { background-color: #dc2626; margin-left: 8px; }
-    .token-status-box { margin-top: 10px; font-size: 12px; padding: 8px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; word-break: break-all; }
+    .token-status-box {
+      margin-top: 10px;
+      font-size: 12px;
+      padding: 8px;
+      border-radius: 6px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      word-break: break-all;
+    }
+
     .test-banner { background: #dcfce7; border: 1px dashed #16a34a; padding: 12px; border-radius: 8px; max-width: 600px; margin: 0 auto 20px auto; text-align: center; font-size: 13px; color: #166534; }
     .sim-btn-group { display: flex; justify-content: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
     .sim-btn { background: #16a34a; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; }
+    .sim-btn-dinein { background: #d97706; }
+    .sim-btn-counter { background: #0284c7; }
+    
     .nav-container { max-width: 1200px; margin: 0 auto 20px auto; display: flex; flex-direction: column; gap: 12px; }
     .nav-tabs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
     .tab-btn { padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; background: #cbd5e1; color: #334155; font-size: 13px; }
     .tab-btn.active { background: #0284c7; color: white; }
+
     .sub-tabs-container { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
     .sub-tab-btn { padding: 6px 12px; border: 1px solid #94a3b8; border-radius: 20px; font-size: 11px; font-weight: bold; cursor: pointer; background: #ffffff; color: #475569; display: none; }
     .sub-tab-btn.active { background: #1e293b; color: #ffffff; border-color: #1e293b; }
+    
     .search-box { display: flex; justify-content: center; }
     .search-input { width: 100%; max-width: 400px; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; box-sizing: border-box; }
+
     .order-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
     .order-card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; border-top: 5px solid #16a34a; }
     .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
     .order-id { font-weight: bold; color: #0369a1; font-size: 16px; }
+    
     .badge-container { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     .status-badge { background: #fef08a; color: #854d0e; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    .status-badge.accepted { background: #bbf7d0; color: #166534; }
     .status-badge.preparing { background: #fed7aa; color: #9a3412; }
     .status-badge.cancelled { background: #fecaca; color: #991b1b; }
     .payment-badge-paid { background: #dcfce7; color: #15803d; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
     .payment-badge-unpaid { background: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    
     .type-badge-delivery { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
     .type-badge-dinein { background: #ffedd5; color: #c2410c; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
     .type-badge-counter { background: #f3e8ff; color: #7e22ce; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    
     .order-raw-view { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; line-height: 1.4; margin-bottom: 12px; color: #1e293b; max-height: 250px; overflow-y: auto; }
+    
     .action-buttons { display: flex; flex-direction: column; gap: 8px; }
     .btn { padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; color: white; text-align: center; }
     .btn-print { background-color: #0284c7; }
@@ -45,11 +87,13 @@
     .btn-finish { background-color: #16a34a; }
     .btn-cancel { background-color: #dc2626; }
     .btn-copy { background-color: #475569; }
+
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
     .modal-content { background: white; padding: 25px; border-radius: 12px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     .keypad-display { background: #f8fafc; border: 2px solid #cbd5e1; padding: 12px; font-size: 22px; font-weight: bold; margin-bottom: 15px; border-radius: 6px; }
     .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
     .key-btn { padding: 12px; font-size: 18px; font-weight: bold; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; }
+
     @media print {
       body * { visibility: hidden; }
       #printArea, #printArea * { visibility: visible; }
@@ -63,6 +107,7 @@
   <div class="header">
     <h2>🛍️ ShareMap POS & Multi-Store Meta API Dashboard</h2>
     <p>Live Orders Queue para sa store: <b id="currentStoreDisplay">sharemapdammystore</b></p>
+    
     <div style="margin-top: 10px; font-size: 12px; background: #e2e8f0; display: inline-block; padding: 6px 12px; border-radius: 20px;">
       🔊 Alerto ng Tunog (Sound Alert): 
       <label style="cursor: pointer; font-weight: bold; color: #0369a1; margin-left: 5px;">
@@ -86,11 +131,11 @@
   </div>
 
   <div class="test-banner">
-    🚀 <b>Edge Function Cloud Sync Active:</b> Ligtas na kumukonekta sa Supabase Backend.<br>
+    🚀 <b>Edge Function Cloud Sync Active:</b> Awtomatikong isinasama sa lokal na device storage ang lahat ng detalye mula sa Supabase at binubura ito sa cloud.<br>
     <div class="sim-btn-group">
       <button class="sim-btn" onclick="simulateOrder('TAKEOUT', 'UNPAID')">🛵 Simulate Takeout</button>
-      <button class="sim-btn" onclick="simulateOrder('DINE_IN', 'UNPAID')" style="background:#d97706;">🍽️ Simulate Dine-In</button>
-      <button class="sim-btn" onclick="simulateOrder('COUNTER', 'UNPAID')" style="background:#0284c7;">💳 Simulate Counter</button>
+      <button class="sim-btn sim-btn-dinein" onclick="simulateOrder('DINE_IN', 'UNPAID')">🍽️ Simulate Dine-In</button>
+      <button class="sim-btn sim-btn-counter" onclick="simulateOrder('COUNTER', 'UNPAID')">💳 Simulate Counter</button>
     </div>
   </div>
 
@@ -179,7 +224,6 @@
   </script>
 
   <script>
-    // Palitan ito ng tamang Supabase Edge Function URL mo
     const EDGE_FUNCTION_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/pos-backend";
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -279,10 +323,11 @@
       loadOrdersFromDevice();
     }
 
+    // === PINALIGTAS AT DINAGDAGAN NG AUTOMATIC DELETE SA SUPABASE PAGKA-FETCH ===
     async function fetchStoreTokenAndOrders() {
       let newOrderReceived = false;
       try {
-        const response = await fetch(`${EDGE_FUNCTION_URL}?store=${encodeStore(storePageId)}`);
+        const response = await fetch(`${EDGE_FUNCTION_URL}?store=${encodeURIComponent(storePageId.toLowerCase())}`);
         const result = await response.json();
 
         if (result.success) {
@@ -297,11 +342,11 @@
             `;
           }
 
-          // 2. Check Orders
+          // 2. Check Orders at Awtomatikong Pagbura sa Supabase
           if (result.orders && result.orders.length > 0) {
             let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
 
-            result.orders.forEach(cloudOrder => {
+            for (const cloudOrder of result.orders) {
               const exists = waitingOrders.some(item => item.order_id === cloudOrder.order_id);
               if (!exists) {
                 newOrderReceived = true;
@@ -332,14 +377,16 @@
                   received_at: new Date().toLocaleTimeString() 
                 });
               }
-            });
+
+              // DIREKTANG BURAHIN AGAD SA SUPABASE GAMIT ANG EDGE FUNCTION KUNG NA-FETCH NA
+              try {
+                await fetch(`${EDGE_FUNCTION_URL}?order_id=${cloudOrder.order_id}`, { method: 'DELETE' });
+              } catch (delErr) {
+                console.error("Cloud delete error para sa order:", cloudOrder.order_id, delErr);
+              }
+            }
 
             localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
-
-            // Burahin na sa Supabase orders table para hindi paulit-ulit basahin
-            for (const ord of result.orders) {
-              await fetch(`${EDGE_FUNCTION_URL}?order_id=${ord.order_id}`, { method: 'DELETE' });
-            }
           }
         }
       } catch (err) { console.error("Edge fetch exception:", err); }
@@ -347,8 +394,6 @@
       if (newOrderReceived) playNotificationSound();
       loadOrdersFromDevice();
     }
-
-    function encodeStore(str) { return encodeURIComponent(str.toLowerCase()); }
 
     function simulateOrder(type, paymentStatus) {
       let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
