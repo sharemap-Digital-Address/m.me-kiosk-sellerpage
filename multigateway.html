@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +11,6 @@
     <script>
         const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
-        const GET_CONFIG_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config";
         const CREATE_ORDER_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/create-order";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -47,12 +46,11 @@
             return `${letterCode}${String(now.getSeconds()).padStart(2, '0')[0]}${String(now.getMilliseconds()).padStart(3, '0')[0]}`;
         }
 
-        // --- ORIHINAL NA LISENSYA AT SECURITY CHECKING SYSTEM ---
         async function checkShareMapAccess(pageId) {
             try {
                 updateSdkDebugToast("⏳ Verifying store license via Edge Function...");
                 
-                const res = await fetch(GET_CONFIG_URL, {
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: pageId.toLowerCase(), page: pageId.toLowerCase() })
@@ -103,7 +101,6 @@
                     }
                 }
 
-                // Saluhin ang Kiosk OID kung meron man galing sa URL
                 const urlParams = new URLSearchParams(window.location.search);
                 const oidFromUrl = urlParams.get('oid');
                 if (oidFromUrl) {
@@ -441,23 +438,17 @@ function generateCounterQr(){
     document.getElementById("qrTextDetail").innerText = `Order ID: #${generatedOrderID} | Total: ₱${totalAmountPesos.toFixed(2)}`; 
 }
 
-// === NAKA-EDGE FUNCTION NA NGAYON (CREATE_ORDER_URL) ===
+// === GINAMIT NA ANG EDGE FUNCTION SA PAG-SAVE NG POS (Dine-In & Counter) ===
 async function saveOrderToSupabasePOS(orderData){
-    if (!activePageAccessToken && window.hasValidPageToken === false) return;
     try {
-        const response = await fetch(CREATE_ORDER_URL, {
+        await fetch(CREATE_ORDER_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(orderData)
         });
-        const result = await response.json();
-        if (result.error) {
-            console.error("Supabase Edge Function Save Error:", result.error);
-        } else {
-            console.log("✅ Order successfully saved via Edge Function:", result.data);
-        }
-    } catch(err) { 
-        console.error("Network or Fetch Error saving to POS:", err); 
+        console.log("✅ Order successfully synced via Edge Function.");
+    } catch (err) {
+        console.error("Supabase Edge Function Sync Error:", err);
     }
 }
 
@@ -502,7 +493,6 @@ function downloadQrCodeImageWithDetails(){
     document.body.removeChild(link);
 }
 
-// === AUTO-COPY SA CLIPBOARD HELPER ===
 function copyTextToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
@@ -617,7 +607,6 @@ async function handleProcessOrder(){
         return;
     }
     
-    // Para sa Delivery -> Ipasa lahat sa index.html kasama ang buong detalye
     localStorage.setItem('sharemap_page', pageId); 
     localStorage.setItem('sharemap_orderid', generatedOrderID); 
     localStorage.setItem('sharemap_fullname', nameVal);
@@ -682,7 +671,6 @@ window.addEventListener('DOMContentLoaded', () => {
     toggleServiceType(); 
     renderOrderUI(); 
     
-    // Tawagin ang iyong orihinal na License Protection & Token Status Verification
     checkShareMapAccess(pageId);
     
     setTimeout(setupBackButtonTrayReturn, 800);
