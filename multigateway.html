@@ -14,6 +14,7 @@
 
         let activePageAccessToken = ""; 
         let cachedConversations = []; 
+        let isPsidVerifiedFromSuggestion = false; 
         let totalAmountPesos = 0;
 
         function updateSdkDebugToast(message, isError = false) {
@@ -122,8 +123,10 @@
                 } else {
                     if (data.status === "ACTIVE" || data.username) {
                         document.getElementById('debugToken').value = "WARNING: Active ang store pero walang page token.";
-                        // Walang Page Token kaya ita-tag natin na walang active token para sa message display
                         window.hasValidPageToken = false;
+                        // Kung walang page token, auto-verified na ang PSID as web user para hindi na kailangan ng strict suggestion matching
+                        isPsidVerifiedFromSuggestion = true;
+                        document.getElementById('displayPsid').value = "MESSENGER_WEB_USER";
                     } else {
                         showBlockScreen("⚠️ Error sa Token", "Walang active token o lisensya ang Store POS na ito.");
                     }
@@ -176,6 +179,11 @@
             const container = document.getElementById("suggestionBox");
             const notFoundInd = document.getElementById("notFoundIndicator");
             const cleanQuery = query.trim().toLowerCase();
+            
+            // Kung may active page token, i-reset muna hanggat walang napipiling valid suggestion
+            if (activePageAccessToken && window.hasValidPageToken !== false) {
+                isPsidVerifiedFromSuggestion = false;
+            }
 
             if (!cleanQuery) {
                 container.style.display = "none";
@@ -183,10 +191,10 @@
                 return;
             }
 
-            // Kung walang page token / offline / wala sa conversations cache
+            // Kapag walang page token / offline
             if (!activePageAccessToken || window.hasValidPageToken === false) {
                 container.style.display = "none";
-                notFoundInd.innerHTML = "​⚠️ Reminder: Ang store na ito ay offline o walang active POS ngayon. Ang iyong order ay diretso lamang sa chat at hindi papasok sa kanilang POS system. Mangyaring maghintay na lang na makita at i-replyan ng seller ang iyong order sa chat.";
+                notFoundInd.innerHTML = "⚠️ Reminder: Ang store na ito ay offline o walang active POS ngayon. Ang iyong order ay diretso lamang sa chat at hindi papasok sa kanilang POS system. Mangyaring maghintay na lang na makita at i-replyan ng seller ang iyong order sa chat.";
                 notFoundInd.style.display = "block";
                 return;
             }
@@ -215,6 +223,7 @@
             document.getElementById('fullName').value = name;
             document.getElementById('displayPsid').value = chosenPsid;
             localStorage.setItem('sharemap_psid', chosenPsid);
+            isPsidVerifiedFromSuggestion = true; // Na-verify na galing sa active chat list
             document.getElementById("suggestionBox").style.display = "none";
             document.getElementById("notFoundIndicator").style.display = "none";
         }
@@ -445,7 +454,7 @@
 
         function openKioskMenu() {
             const pageId = getPageId();
-            window.location.href = `./kioskmode.html?page=${encodeURIComponent(pageId)}&psid=MESSENGER_WEB_USER`;
+            window.location.href = `./kioskmode.html?page=${encodeURIComponent(pageId)}&psid=${encodeURIComponent(document.getElementById('displayPsid').value)}`;
         }
 
         function renderOrderUI() {
@@ -514,7 +523,7 @@
             const qrCanvasContainer = document.getElementById("qrcodeCanvas");
             qrCanvasContainer.innerHTML = "";
             
-            const activePsid = "MESSENGER_WEB_USER";
+            const activePsid = document.getElementById('displayPsid').value;
             const ordersVal = getFormattedOrdersText();
             const nameVal = document.getElementById('fullName').value.trim() || "Customer";
             
@@ -537,6 +546,12 @@
         }
 
         async function saveOrderToSupabasePOS(orderData) {
+            // KONTROL: Huwag mag-save sa Supabase kung WALANG active page token (offline/walang token store)
+            if (!activePageAccessToken || window.hasValidPageToken === false) {
+                console.log("🚫 Walang active page token. Nilaktawan ang pag-save sa Supabase POS upang maiwasan ang basura.");
+                return;
+            }
+
             try {
                 const { data, error } = await supabaseClient
                     .from('orders')
@@ -611,10 +626,18 @@
             const phoneVal = document.getElementById('phone').value.trim();
             const ordersVal = getFormattedOrdersText();
             const pageId = getPageId();
-            const activePsid = "MESSENGER_WEB_USER";
+            const activePsid = document.getElementById('displayPsid').value;
 
             if (!nameVal || !phoneVal) {
                 document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy.";
+                document.getElementById('errorMsg').style.display = "block";
+                return;
+            }
+
+            // HARANG KUNG MAY PAGE TOKEN PERO HINDI NA-VERIFY ANG PANGALAN
+            if (activePageAccessToken && window.hasValidPageToken !== false && !isPsidVerifiedFromSuggestion) {
+                alert("⚠️ Paki-select ang iyong tunay na Facebook Account mula sa suggestion box para maiwasto ang pangalan at PSID.");
+                document.getElementById('errorMsg').innerText = "⚠️ Paki-select ang iyong pangalan mula sa active chat list.";
                 document.getElementById('errorMsg').style.display = "block";
                 return;
             }
@@ -666,10 +689,18 @@
             const ordersVal = getFormattedOrdersText();
             const isDineIn = document.getElementById("typeDineIn").checked;
             const pageId = getPageId();
-            const activePsid = "MESSENGER_WEB_USER";
+            const activePsid = document.getElementById('displayPsid').value;
 
             if (!nameVal || !phoneVal) {
                 document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy.";
+                document.getElementById('errorMsg').style.display = "block";
+                return;
+            }
+
+            // HARANG KUNG MAY PAGE TOKEN PERO HINDI NA-VERIFY ANG PANGALAN
+            if (activePageAccessToken && window.hasValidPageToken !== false && !isPsidVerifiedFromSuggestion) {
+                alert("⚠️ Paki-select ang iyong tunay na Facebook Account mula sa suggestion box upang maipasa ang tamang PSID.");
+                document.getElementById('errorMsg').innerText = "⚠️ Paki-select ang iyong pangalan mula sa active chat list.";
                 document.getElementById('errorMsg').style.display = "block";
                 return;
             }
