@@ -201,7 +201,7 @@ function generateCounterQr(){ const qrCanvasContainer=document.getElementById("q
 async function saveOrderToSupabasePOS(orderData){
     try{
         // SECURED: via Edge Function (SERVICE_ROLE) - gumagana kahit ENABLED RLS sa orders
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/create-order`,{
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/pos-backend`,{
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify(orderData)
