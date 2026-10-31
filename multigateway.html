@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +11,8 @@
     <script>
         const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
+        const GET_CONFIG_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config";
+        const CREATE_ORDER_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/create-order";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let activePageAccessToken = ""; 
@@ -50,7 +52,7 @@
             try {
                 updateSdkDebugToast("⏳ Verifying store license via Edge Function...");
                 
-                const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`, {
+                const res = await fetch(GET_CONFIG_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: pageId.toLowerCase(), page: pageId.toLowerCase() })
@@ -439,12 +441,24 @@ function generateCounterQr(){
     document.getElementById("qrTextDetail").innerText = `Order ID: #${generatedOrderID} | Total: ₱${totalAmountPesos.toFixed(2)}`; 
 }
 
+// === NAKA-EDGE FUNCTION NA NGAYON (CREATE_ORDER_URL) ===
 async function saveOrderToSupabasePOS(orderData){
     if (!activePageAccessToken && window.hasValidPageToken === false) return;
-    try{
-        const { data, error } = await supabaseClient.from('orders').insert([orderData]);
-        if(error) console.error("Supabase Save Error:", error); 
-    }catch(err){ console.error(err); }
+    try {
+        const response = await fetch(CREATE_ORDER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderData)
+        });
+        const result = await response.json();
+        if (result.error) {
+            console.error("Supabase Edge Function Save Error:", result.error);
+        } else {
+            console.log("✅ Order successfully saved via Edge Function:", result.data);
+        }
+    } catch(err) { 
+        console.error("Network or Fetch Error saving to POS:", err); 
+    }
 }
 
 function downloadQrCodeImageWithDetails(){
@@ -530,7 +544,6 @@ async function handleCounterCheckoutSequence(){
     const formattedOrders = ordersVal.split(', ').join('\n'); 
     const shareText = `💳 OVER-THE-COUNTER ADVANCE ORDER\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Orders:\n${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
     
-    // Auto-copy sa clipboard sakaling magka-issue sa auto-fill sa chatbox
     copyTextToClipboard(shareText);
 
     await saveOrderToSupabasePOS({ 
@@ -579,7 +592,6 @@ async function handleProcessOrder(){
         const formattedOrders = ordersVal.split(', ').join('\n• '); 
         const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n🪑 Table: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
         
-        // Auto-copy sa clipboard para sa Dine-In sakaling pumalpak ang pag-auto fill sa chatbox
         copyTextToClipboard(shareText);
 
         await saveOrderToSupabasePOS({ 
