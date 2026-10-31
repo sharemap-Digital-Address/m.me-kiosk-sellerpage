@@ -1,267 +1,738 @@
 <!DOCTYPE html>
 <html lang="tl">
 <head>
-  <【entity-meta¦canonical_name=Meta】 charset="UTF-8">
-  <【entity-meta¦canonical_name=Meta】 name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShareMap POS & Multi-Store 【entity-Meta¦canonical_name=Meta】 API Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShareMap POS & Multi-Store Meta API Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #334155; }
     .header { text-align: center; margin-bottom: 20px; }
-    .fb-login-card { background: #ffffff; border-radius: 12px; padding: 16px; max-width: 600px; margin: 0 auto 20px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #cbd5e1; text-align: center; }
-    .btn-fb { background-color: #0084FF; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
-    .btn-fb:hover { background-color: #006bce; } .btn-logout { background-color: #dc2626; margin-left: 8px; }
-    .token-status-box { margin-top: 10px; font-size: 12px; padding: 8px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; word-break: break-all; }
+    
+    /* LOGIN & GO CARD STYLES */
+    .fb-login-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      max-width: 600px;
+      margin: 0 auto 20px auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #cbd5e1;
+      text-align: center;
+    }
+    .btn-fb {
+      background-color: #0084FF;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-fb:hover { background-color: #006bce; }
+    .btn-logout { background-color: #dc2626; margin-left: 8px; }
+    .token-status-box {
+      margin-top: 10px;
+      font-size: 12px;
+      padding: 8px;
+      border-radius: 6px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      word-break: break-all;
+    }
+
     .test-banner { background: #dcfce7; border: 1px dashed #16a34a; padding: 12px; border-radius: 8px; max-width: 600px; margin: 0 auto 20px auto; text-align: center; font-size: 13px; color: #166534; }
     .sim-btn-group { display: flex; justify-content: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
     .sim-btn { background: #16a34a; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; }
-    .sim-btn-dinein { background: #d97706; } .sim-btn-counter { background: #0284c7; }
+    .sim-btn-dinein { background: #d97706; }
+    .sim-btn-counter { background: #0284c7; }
+    
     .nav-container { max-width: 1200px; margin: 0 auto 20px auto; display: flex; flex-direction: column; gap: 12px; }
     .nav-tabs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
     .tab-btn { padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; background: #cbd5e1; color: #334155; font-size: 13px; }
     .tab-btn.active { background: #0284c7; color: white; }
+
+    /* SUB-TABS STYLES */
     .sub-tabs-container { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
     .sub-tab-btn { padding: 6px 12px; border: 1px solid #94a3b8; border-radius: 20px; font-size: 11px; font-weight: bold; cursor: pointer; background: #ffffff; color: #475569; display: none; }
     .sub-tab-btn.active { background: #1e293b; color: #ffffff; border-color: #1e293b; }
-    .search-box { display: flex; justify-content: center; } .search-input { width: 100%; max-width: 400px; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; box-sizing: border-box; }
+    
+    .search-box { display: flex; justify-content: center; }
+    .search-input { width: 100%; max-width: 400px; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; box-sizing: border-box; }
+
     .order-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
     .order-card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; border-top: 5px solid #16a34a; }
     .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
     .order-id { font-weight: bold; color: #0369a1; font-size: 16px; }
+    
     .badge-container { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     .status-badge { background: #fef08a; color: #854d0e; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
-    .status-badge.accepted { background: #bbf7d0; color: #166534; } .status-badge.preparing { background: #fed7aa; color: #9a3412; } .status-badge.cancelled { background: #fecaca; color: #991b1b; }
-    .payment-badge-paid { background: #dcfce7; color: #15803d; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; } .payment-badge-unpaid { background: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
-    .type-badge-delivery { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; } .type-badge-dinein { background: #ffedd5; color: #c2410c; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; } .type-badge-counter { background: #f3e8ff; color: #7e22ce; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    .status-badge.accepted { background: #bbf7d0; color: #166534; }
+    .status-badge.preparing { background: #fed7aa; color: #9a3412; }
+    .status-badge.cancelled { background: #fecaca; color: #991b1b; }
+    .payment-badge-paid { background: #dcfce7; color: #15803d; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    .payment-badge-unpaid { background: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    
+    .type-badge-delivery { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    .type-badge-dinein { background: #ffedd5; color: #c2410c; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    .type-badge-counter { background: #f3e8ff; color: #7e22ce; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+    
     .order-raw-view { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; line-height: 1.4; margin-bottom: 12px; color: #1e293b; max-height: 250px; overflow-y: auto; }
-    .action-buttons { display: flex; flex-direction: column; gap: 8px; } .btn { padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; color: white; text-align: center; }
-    .btn-print { background-color: #0284c7; } .btn-accept { background-color: #2563eb; } .btn-prep { background-color: #d97706; } .btn-finish { background-color: #16a34a; } .btn-cancel { background-color: #dc2626; } .btn-copy { background-color: #475569; }
+    
+    .action-buttons { display: flex; flex-direction: column; gap: 8px; }
+    .btn { padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; color: white; text-align: center; }
+    .btn-print { background-color: #0284c7; }
+    .btn-accept { background-color: #2563eb; }
+    .btn-prep { background-color: #d97706; }
+    .btn-finish { background-color: #16a34a; }
+    .btn-cancel { background-color: #dc2626; }
+    .btn-copy { background-color: #475569; }
+
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
     .modal-content { background: white; padding: 25px; border-radius: 12px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     .keypad-display { background: #f8fafc; border: 2px solid #cbd5e1; padding: 12px; font-size: 22px; font-weight: bold; margin-bottom: 15px; border-radius: 6px; }
     .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
     .key-btn { padding: 12px; font-size: 18px; font-weight: bold; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; }
-    @media print { body * { visibility: hidden; } #printArea, #printArea * { visibility: visible; } #printArea { position: absolute; left: 0; top: 0; width: 100%; font-family: monospace; padding: 15px; color: #000; font-size: 13px; } .page-break { page-break-after: always; break-after: page; } }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; font-family: monospace; padding: 15px; color: #000; font-size: 13px; }
+      .page-break { page-break-after: always; break-after: page; }
+    }
   </style>
 </head>
 <body>
+
   <div class="header">
-    <h2>🛍️ ShareMap POS Dashboard [SECURED]</h2>
-    <p>Live Orders: <b id="currentStoreDisplay">sharemapdammystore</b></p>
+    <h2>🛍️ ShareMap POS & Multi-Store Meta API Dashboard</h2>
+    <p>Live Orders Queue para sa store: <b id="currentStoreDisplay">sharemapdammystore</b></p>
+    
+    <!-- AUDIO NOTIFICATION SWITCH -->
     <div style="margin-top: 10px; font-size: 12px; background: #e2e8f0; display: inline-block; padding: 6px 12px; border-radius: 20px;">
-      🔊 Sound Alert: <label style="cursor: pointer; font-weight: bold; color: #0369a1; margin-left: 5px;"><input type="checkbox" id="soundToggle" checked onchange="toggleSound(this)"> On/Off</label>
+      🔊 Alerto ng Tunog (Sound Alert): 
+      <label style="cursor: pointer; font-weight: bold; color: #0369a1; margin-left: 5px;">
+        <input type="checkbox" id="soundToggle" checked onchange="toggleSound(this)"> On/Off
+      </label>
     </div>
   </div>
+
+  <!-- FACEBOOK LOGIN & GO CONTROLLER -->
   <div class="fb-login-card">
-    <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #0284c7;">🔑 Meta API Activation & Store Page Token Setup</div>
-    <div id="loginControlArea"><button class="btn-fb" onclick="loginWithFacebook()"><span>🔓 Login with 【entity-Facebook¦canonical_name=Facebook】 & Activate POS</span></button></div>
-    <div class="token-status-box" id="tokenStatusDisplay">🔴 Offline: Walang active Page Access Token.</div>
+    <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #0284c7;">
+      🔑 Meta API Activation & Store Page Token Setup
+    </div>
+    <div id="loginControlArea">
+      <button class="btn-fb" onclick="loginWithFacebook()">
+        <span>🔓 Login with Facebook & Activate POS</span>
+      </button>
+    </div>
+    <div class="token-status-box" id="tokenStatusDisplay">
+      🔴 Offline: Walang active Page Access Token. I-click ang button sa taas para mag-login.
+    </div>
   </div>
-  <div class="test-banner">🚀 <b>Live Cloud Sync Active via Edge Function:</b> Secured POS<br>
+
+  <div class="test-banner">
+    🚀 <b>Live Cloud Sync Active:</b> Awtomatikong isinasama sa lokal na device storage ang lahat ng detalye mula sa Supabase.<br>
     <div class="sim-btn-group">
       <button class="sim-btn" onclick="simulateOrder('TAKEOUT', 'UNPAID')">🛵 Simulate Takeout</button>
       <button class="sim-btn sim-btn-dinein" onclick="simulateOrder('DINE_IN', 'UNPAID')">🍽️ Simulate Dine-In</button>
       <button class="sim-btn sim-btn-counter" onclick="simulateOrder('COUNTER', 'UNPAID')">💳 Simulate Counter</button>
     </div>
   </div>
+
   <div class="nav-container">
     <div class="nav-tabs">
       <button class="tab-btn active" id="tabWaiting" onclick="switchTab('waiting')">📥 Waiting Room</button>
-      <button class="tab-btn" id="tabPreparing" onclick="switchTab('preparing')">🍳 Preparing</button>
-      <button class="tab-btn" id="tabCancelled" onclick="switchTab('cancelled')">❌ Cancelled</button>
-      <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">💾 History</button>
+      <button class="tab-btn" id="tabPreparing" onclick="switchTab('preparing')">🍳 Preparing Room</button>
+      <button class="tab-btn" id="tabCancelled" onclick="switchTab('cancelled')">❌ Cancelled Room</button>
+      <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">💾 Completed History</button>
     </div>
+
+    <!-- DINAMIKONG SUB-TABS (Nagtatago kung walang laman) -->
     <div class="sub-tabs-container" id="subTabsContainer">
       <button class="sub-tab-btn active" id="subTabAll" onclick="switchSubTab('ALL')">✨ Lahat</button>
       <button class="sub-tab-btn" id="subTabTakeout" onclick="switchSubTab('TAKEOUT')">🛵 Takeout</button>
       <button class="sub-tab-btn" id="subTabDineIn" onclick="switchSubTab('DINE_IN')">🍽️ Dine-In</button>
       <button class="sub-tab-btn" id="subTabCounter" onclick="switchSubTab('COUNTER')">💳 Over-Counter</button>
     </div>
-    <div class="search-box" style="margin-top: 10px;"><input type="text" id="searchInput" class="search-input" placeholder="🔍 Hanapin ang Order ID o Pangalan..." oninput="loadOrdersFromDevice()"></div>
+
+    <div class="search-box" style="margin-top: 10px;">
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Hanapin ang Order ID o Pangalan ng Kustomer..." oninput="loadOrdersFromDevice()">
+    </div>
   </div>
-  <div id="ordersContainer" class="order-container"><p style="text-align:center; width:100%; color:#64748b;">Naghahanap ng mga order...</p></div>
+
+  <div id="ordersContainer" class="order-container">
+    <p style="text-align:center; width:100%; color:#64748b;">Naghahanap ng mga papasok na order...</p>
+  </div>
+
+  <!-- PAYMENT MODAL KEYPAD -->
   <div id="paymentModal" class="modal-overlay">
     <div class="modal-content">
       <h3 style="margin-top:0; color:#0369a1;">💰 POS Payment Processor</h3>
       <p id="modalOrderInfo" style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Order # - Total: ₱250.00</p>
+      
       <div style="text-align: left; margin-bottom: 5px; font-size: 12px; font-weight: bold;">Paraan ng Pagbabayad:</div>
       <select id="paymentMethodSelect" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:12px; font-size:14px;">
-        <option value="CASH">💵 Cash</option><option value="GCASH">📱 GCash</option><option value="COD">🛵 COD</option>
+        <option value="CASH">💵 Cash (Over-the-Counter)</option>
+        <option value="GCASH">📱 GCash / Online Transfer</option>
+        <option value="COD">🛵 Cash on Delivery (COD)</option>
       </select>
-      <div style="text-align: left; margin-bottom: 5px; font-size: 12px; font-weight: bold;">Cash Tendered:</div>
+
+      <div style="text-align: left; margin-bottom: 5px; font-size: 12px; font-weight: bold;">Cash Tendered (Ibinayad):</div>
       <div id="cashDisplay" class="keypad-display">₱250.00</div>
+      
       <div class="keypad-grid">
-        <button class="key-btn" onclick="pressKey('1')">1</button><button class="key-btn" onclick="pressKey('2')">2</button><button class="key-btn" onclick="pressKey('3')">3</button>
-        <button class="key-btn" onclick="pressKey('4')">4</button><button class="key-btn" onclick="pressKey('5')">5</button><button class="key-btn" onclick="pressKey('6')">6</button>
-        <button class="key-btn" onclick="pressKey('7')">7</button><button class="key-btn" onclick="pressKey('8')">8</button><button class="key-btn" onclick="pressKey('9')">9</button>
-        <button class="key-btn" onclick="pressKey('0')">0</button><button class="key-btn" onclick="pressKey('00')">00</button><button class="key-btn" onclick="pressKey('DEL')">⌫</button>
+        <button class="key-btn" onclick="pressKey('1')">1</button>
+        <button class="key-btn" onclick="pressKey('2')">2</button>
+        <button class="key-btn" onclick="pressKey('3')">3</button>
+        <button class="key-btn" onclick="pressKey('4')">4</button>
+        <button class="key-btn" onclick="pressKey('5')">5</button>
+        <button class="key-btn" onclick="pressKey('6')">6</button>
+        <button class="key-btn" onclick="pressKey('7')">7</button>
+        <button class="key-btn" onclick="pressKey('8')">8</button>
+        <button class="key-btn" onclick="pressKey('9')">9</button>
+        <button class="key-btn" onclick="pressKey('0')">0</button>
+        <button class="key-btn" onclick="pressKey('00')">00</button>
+        <button class="key-btn" onclick="pressKey('DEL')">⌫</button>
       </div>
-      <div style="display: flex; gap: 8px;"><button class="btn btn-finish" style="flex: 1;" onclick="confirmPayment()">✅ Kumpirmahin</button><button class="btn btn-cancel" style="flex: 1;" onclick="closePaymentModal()">Kanselahin</button></div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-finish" style="flex: 1;" onclick="confirmPayment()">✅ Kumpirmahin ang Bayad</button>
+        <button class="btn btn-cancel" style="flex: 1;" onclick="closePaymentModal()">Kanselahin</button>
+      </div>
     </div>
   </div>
+
   <div id="printArea" style="display:none;"></div>
+
+  <!-- Meta Facebook SDK -->
   <script>
     const FACEBOOK_APP_ID = "2070260990400834"; 
-    window.fbAsyncInit = function() { FB.init({ appId: FACEBOOK_APP_ID, cookie: true, xfbml: true, version: 'v26.0' }); };
-    (function(d, s, id){ var js, fjs = d.getElementsByTagName(s)[0]; if (d.getElementById(id)) {return;} js = d.createElement(s); js.id = id; js.src = "https://connect.facebook.net/en_US/sdk.js"; fjs.parentNode.insertBefore(js, fjs); }(document, 'script', '【entity-facebook¦canonical_name=Facebook】-jssdk'));
+
+    window.fbAsyncInit = function() {
+        FB.init({
+            appId      : FACEBOOK_APP_ID,
+            cookie     : true,
+            xfbml      : true,
+            version    : 'v26.0'
+        });
+    };
+
+    (function(d, s, id){
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {return;}
+        js = d.createElement(s); js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
   </script>
+
   <script>
-    const GET_CONFIG_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config";
-    const UPDATE_TOKEN_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/update-store-token";
-    const GET_ORDERS_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-orders-for-pos";
-    const DELETE_ORDER_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/delete-order";
+    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const urlParams = new URLSearchParams(window.location.search);
     const storePageId = urlParams.get('page') || "sharemapdammystore";
     document.getElementById("currentStoreDisplay").innerText = storePageId;
 
-    let currentStoreToken = ""; let activePageId = ""; let currentTab = 'waiting'; let currentSubTab = 'ALL';
-    let soundAlertEnabled = true; let selectedOrderIdForPayment = null; let currentCashInput = "250";
+    let currentStoreToken = "";
+    let activePageId = "";
+    let currentTab = 'waiting';
+    let currentSubTab = 'ALL';
+    let soundAlertEnabled = true;
+    let selectedOrderIdForPayment = null;
+    let currentCashInput = "250";
+
     const STORAGE_WAITING = `sharemap_pos_waiting_${storePageId.toLowerCase()}`;
     const STORAGE_PREPARING = `sharemap_pos_preparing_${storePageId.toLowerCase()}`;
     const STORAGE_CANCELLED = `sharemap_pos_cancelled_${storePageId.toLowerCase()}`;
     const STORAGE_HISTORY = `sharemap_pos_history_${storePageId.toLowerCase()}`;
 
-    function toggleSound(cb){ soundAlertEnabled = cb.checked; }
-    function playNotificationSound(){ if(!soundAlertEnabled) return; try{ const audioCtx = new (window.AudioContext||window.webkitAudioContext)(); const osc=audioCtx.createOscillator(); const gain=audioCtx.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(587.33,audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(880,audioCtx.currentTime+0.15); gain.gain.setValueAtTime(0.3,audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.5); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime+0.5);}catch(e){} }
+    function toggleSound(checkbox) {
+      soundAlertEnabled = checkbox.checked;
+    }
 
-    function loginWithFacebook(){
-      FB.login(function(response){
-        if(response.authResponse){
-          FB.api('/me/accounts', async function(accountsResponse){
-            if(accountsResponse && accountsResponse.data && accountsResponse.data.length>0){
-              const page = accountsResponse.data[0]; activePageId=page.id; currentStoreToken=page.access_token;
-              await updateTokenAndPageIdInSupabase(storePageId, currentStoreToken, activePageId);
-              document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Connected to Page:</b> ${page.name} (ID: ${activePageId})<br><small style="color:#15803d;">SECURED via Edge Function!</small>`;
-              document.getElementById("loginControlArea").innerHTML = `<button class="btn-fb btn-logout" onclick="logoutFacebook()">🔒 Logout</button>`;
-            } else { alert("⚠️ Walang nakitang FB Page"); }
-          });
-        }
+    function playNotificationSound() {
+      if (!soundAlertEnabled) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      } catch (e) { console.error("Audio error:", e); }
+    }
+
+    function loginWithFacebook() {
+      FB.login(function(response) {
+          if (response.authResponse) {
+              FB.api('/me/accounts', async function(accountsResponse) {
+                  if (accountsResponse && accountsResponse.data && accountsResponse.data.length > 0) {
+                      const page = accountsResponse.data[0];
+                      activePageId = page.id; 
+                      currentStoreToken = page.access_token;
+                      
+                      await updateTokenAndPageIdInSupabase(storePageId, currentStoreToken, activePageId);
+
+                      document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Connected to Page:</b> ${page.name} (ID: ${activePageId})<br><small style="color:#15803d;">Active Page Token & Page ID Auto-Saved to Supabase!</small>`;
+                      document.getElementById("loginControlArea").innerHTML = `
+                        <button class="btn-fb btn-logout" onclick="logoutFacebook()">🔒 Logout & Switch Page</button>
+                      `;
+                  } else {
+                      alert("⚠️ Walang nakitang Facebook Page na naka-link sa account mo.");
+                  }
+              });
+          }
       }, {scope: 'pages_show_list, pages_messaging, pages_manage_metadata'});
     }
 
-    async function updateTokenAndPageIdInSupabase(username, token, pageNumId){
-      try{
-        await fetch(UPDATE_TOKEN_URL,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ username: username.toLowerCase(), page_access_token: token, page_id: pageNumId })
-        });
-      }catch(err){ console.error(err); }
+    async function updateTokenAndPageIdInSupabase(username, token, pageNumId) {
+      try {
+        const updatePayload = { page_access_token: token };
+        if (pageNumId) updatePayload.page_id = pageNumId;
+
+        const { error } = await supabaseClient
+          .from('licenses')
+          .update(updatePayload)
+          .eq('username', username.toLowerCase());
+
+        if (error) console.error("Supabase license save error:", error);
+      } catch (err) { console.error("Supabase exception:", err); }
     }
 
-    async function logoutFacebook(){
-      await updateTokenAndPageIdInSupabase(storePageId, "OFFLINE_TOKEN_EXPIRED", null);
-      currentStoreToken=""; document.getElementById("tokenStatusDisplay").innerHTML=`🔴 Offline: Naka-logout na.`;
-      document.getElementById("loginControlArea").innerHTML=`<button class="btn-fb" onclick="loginWithFacebook()">🔓 Login with Facebook</button>`;
-      alert("🔒 Naka-logout na.");
+    async function logoutFacebook() {
+      const expiredTokenMark = "OFFLINE_TOKEN_EXPIRED";
+      await updateTokenAndPageIdInSupabase(storePageId, expiredTokenMark, null);
+
+      currentStoreToken = "";
+      document.getElementById("tokenStatusDisplay").innerHTML = `🔴 Offline: Naka-logout na ang POS. (Token Status: OFFLINE_TOKEN_EXPIRED)`;
+      document.getElementById("loginControlArea").innerHTML = `
+        <button class="btn-fb" onclick="loginWithFacebook()">
+          <span>🔓 Login with Facebook & Activate POS</span>
+        </button>
+      `;
+      alert("🔒 Naka-logout na ang POS API session.");
     }
 
-    function switchTab(tab){ currentTab=tab; currentSubTab='ALL'; document.getElementById('tabWaiting').className=tab==='waiting'?'tab-btn active':'tab-btn'; document.getElementById('tabPreparing').className=tab==='preparing'?'tab-btn active':'tab-btn'; document.getElementById('tabCancelled').className=tab==='cancelled'?'tab-btn active':'tab-btn'; document.getElementById('tabHistory').className=tab==='history'?'tab-btn active':'tab-btn'; loadOrdersFromDevice(); }
-    function switchSubTab(subTab){ currentSubTab=subTab; loadOrdersFromDevice(); }
-
-    async function fetchStoreToken(){
-      try{
-        const res = await fetch(GET_CONFIG_URL,{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: storePageId.toLowerCase() })});
-        const result = await res.json(); const data = result.data||result;
-        if(data && data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED"){
-          currentStoreToken=data.page_access_token; if(data.page_id) activePageId=data.page_id;
-          document.getElementById("tokenStatusDisplay").innerHTML=`🟢 <b>Page Token Loaded (SECURED)</b> (Page ID: ${data.page_id||'N/A'})`;
-          document.getElementById("loginControlArea").innerHTML=`<button class="btn-fb btn-logout" onclick="logoutFacebook()">🔒 Logout</button>`;
-        }
-      }catch(err){ console.error(err); }
-    }
-
-    async function syncAndFetchNewOrders(){
-      let newOrderReceived=false;
-      try{
-        const res = await fetch(GET_ORDERS_URL,{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ store_page: storePageId.toLowerCase() })});
-        const result = await res.json();
-        const cloudOrders = result.data || result.orders || [];
-        if(cloudOrders && cloudOrders.length>0){
-          let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING))||[];
-          cloudOrders.forEach(cloudOrder=>{
-            const exists = waitingOrders.some(item=>item.order_id===cloudOrder.order_id);
-            if(!exists){
-              newOrderReceived=true;
-              const isDineIn = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("DINE-IN"));
-              const isCounter = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("OVER-THE-COUNTER")) || cloudOrder.plus_code==="COUNTER";
-              let orderType="TAKEOUT"; if(isDineIn) orderType="DINE_IN"; else if(isCounter) orderType="COUNTER";
-              waitingOrders.unshift({ order_id: cloudOrder.order_id, order_type: orderType, store_page: cloudOrder.store_page, branch: cloudOrder.branch||"Main Branch", schedule: cloudOrder.schedule||"Now", customer_name: cloudOrder.customer_name, customer_phone: cloudOrder.customer_phone, landmark: cloudOrder.landmark, orders_list: cloudOrder.orders_list, plus_code: cloudOrder.plus_code, latitude: cloudOrder.latitude, longitude: cloudOrder.longitude, raw_chat_output: cloudOrder.raw_chat_output, messenger_psid: cloudOrder.messenger_psid||cloudOrder.customer_psid, payment_status:'UNPAID', status:'PENDING', received_at: new Date().toLocaleTimeString() });
-            }
-          });
-          localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
-          // Auto delete via edge function
-          for(const ord of cloudOrders){
-            fetch(DELETE_ORDER_URL,{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ order_id: ord.order_id })});
-          }
-        }
-      }catch(err){ console.error(err); }
-      if(newOrderReceived) playNotificationSound();
+    function switchTab(tab) {
+      currentTab = tab;
+      currentSubTab = 'ALL';
+      document.getElementById('tabWaiting').className = tab === 'waiting' ? 'tab-btn active' : 'tab-btn';
+      document.getElementById('tabPreparing').className = tab === 'preparing' ? 'tab-btn active' : 'tab-btn';
+      document.getElementById('tabCancelled').className = tab === 'cancelled' ? 'tab-btn active' : 'tab-btn';
+      document.getElementById('tabHistory').className = tab === 'history' ? 'tab-btn active' : 'tab-btn';
       loadOrdersFromDevice();
     }
 
-    function simulateOrder(type, paymentStatus){
-      let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING))||[]; const prefix=type==='DINE_IN'?'AT':(type==='COUNTER'?'AC':'AU'); const orderId=prefix+Math.floor(10+Math.random()*90);
-      const sampleOrder={ order_id: orderId, order_type: type, store_page: storePageId.toLowerCase(), branch: "Main Branch", schedule: "Oct 18, 2026, 11:15 AM", customer_name: "Juan Dela Cruz", customer_phone: "09124356789", landmark: type==='COUNTER'?"Counter":"Malapit sa Panaderia", orders_list: "Halo-Halo Special x1\nCoke Regular x1", plus_code: type==='COUNTER'?"COUNTER":"7Q53WJQ4+CG", latitude:13.93859, longitude:121.60636, payment_status: paymentStatus, status:"PENDING", messenger_psid:"MESSENGER_WEB_USER", received_at: new Date().toLocaleTimeString() };
-      if(type==='COUNTER'){ sampleOrder.raw_chat_output=`💳 OVER-THE-COUNTER ADVANCE ORDER\npsid: ${sampleOrder.messenger_psid}\n🔢 Order ID: #${sampleOrder.order_id}\n🏪 Store: ${sampleOrder.store_page}\n💰 Total: ₱85.00\n\n🛒 Orders:\nHalo-Halo Special x1\n\n👤 Name: ${sampleOrder.customer_name}\n📞 Contact: ${sampleOrder.customer_phone}`; } else { sampleOrder.raw_chat_output=`🏪 Store / Page: ${sampleOrder.store_page}\n🔢 Order ID: #${sampleOrder.order_id}\n💳 Payment: ${paymentStatus}\n⏰ Schedule: ${sampleOrder.schedule}\n\nClient Order List:\n${sampleOrder.orders_list}\n\nName: ${sampleOrder.customer_name}\nPhone: ${sampleOrder.customer_phone}`; }
-      waitingOrders.unshift(sampleOrder); localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders)); playNotificationSound(); loadOrdersFromDevice(); alert(`✅ May pumasok na test ${type} order!`);
+    function switchSubTab(subTab) {
+      currentSubTab = subTab;
+      loadOrdersFromDevice();
     }
 
-    function loadOrdersFromDevice(){
-      const container=document.getElementById("ordersContainer"); container.innerHTML="";
-      const searchQuery=document.getElementById("searchInput").value.toLowerCase().trim();
-      let ordersList=[]; if(currentTab==='waiting') ordersList=JSON.parse(localStorage.getItem(STORAGE_WAITING))||'[]'); else if(currentTab==='preparing') ordersList=JSON.parse(localStorage.getItem(STORAGE_PREPARING))||'[]'; else if(currentTab==='cancelled') ordersList=JSON.parse(localStorage.getItem(STORAGE_CANCELLED))||'[]'; else ordersList=JSON.parse(localStorage.getItem(STORAGE_HISTORY))||'[]';
-      const countTakeout=ordersList.filter(o=>o.order_type==='TAKEOUT').length; const countDineIn=ordersList.filter(o=>o.order_type==='DINE_IN').length; const countCounter=ordersList.filter(o=>o.order_type==='COUNTER').length;
-      const btnAll=document.getElementById('subTabAll'); const btnTakeout=document.getElementById('subTabTakeout'); const btnDineIn=document.getElementById('subTabDineIn'); const btnCounter=document.getElementById('subTabCounter');
-      btnAll.style.display=ordersList.length>0?'inline-block':'none'; btnTakeout.style.display=countTakeout>0?'inline-block':'none'; btnTakeout.innerText=`🛵 Takeout (${countTakeout})`; btnDineIn.style.display=countDineIn>0?'inline-block':'none'; btnDineIn.innerText=`🍽️ Dine-In (${countDineIn})`; btnCounter.style.display=countCounter>0?'inline-block':'none'; btnCounter.innerText=`💳 Over-Counter (${countCounter})`;
-      btnAll.className=currentSubTab==='ALL'?'sub-tab-btn active':'sub-tab-btn'; btnTakeout.className=currentSubTab==='TAKEOUT'?'sub-tab-btn active':'sub-tab-btn'; btnDineIn.className=currentSubTab==='DINE_IN'?'sub-tab-btn active':'sub-tab-btn'; btnCounter.className=currentSubTab==='COUNTER'?'sub-tab-btn active':'sub-tab-btn';
-      if(currentSubTab!=='ALL'){ ordersList=ordersList.filter(item=>item.order_type===currentSubTab); }
-      if(searchQuery){ ordersList=ordersList.filter(item=>(item.order_id&&item.order_id.toLowerCase().includes(searchQuery))||(item.customer_name&&item.customer_name.toLowerCase().includes(searchQuery))); }
-      if(ordersList.length===0){ container.innerHTML=`<p style='text-align:center; width:100%; color:#64748b;'>Walang makitang order.</p>`; return; }
-      ordersList.forEach(order=>{
-        const card=document.createElement("div"); card.className="order-card";
-        let typeBadgeHtml=`<span class="type-badge-delivery">🛵 TAKEOUT</span>`; if(order.order_type==="DINE_IN") typeBadgeHtml=`<span class="type-badge-dinein">🍽️ DINE-IN</span>`; else if(order.order_type==="COUNTER") typeBadgeHtml=`<span class="type-badge-counter">💳 OVER-COUNTER</span>`;
-        const paymentBadgeHtml=order.payment_status==='PAID'?`<span class="payment-badge-paid">💳 PAID</span>`:`<span class="payment-badge-unpaid">🔴 UNPAID</span>`;
-        let statusClass='status-badge'; if(order.status==='ACCEPTED') statusClass='status-badge accepted'; else if(order.status==='PREPARING') statusClass='status-badge preparing'; else if(order.status==='CANCELLED') statusClass='status-badge cancelled';
-        const displayFormattedText=order.raw_chat_output||""; let actionButtonsHtml="";
-        if(currentTab==='waiting'){ actionButtonsHtml=`<button class="btn btn-accept" onclick="openPaymentModal('${order.order_id}')">💰 Process Payment & Accept</button><button class="btn btn-cancel" onclick="cancelOrder('${order.order_id}')">❌ Cancel</button>`; }
-        else if(currentTab==='preparing'){ actionButtonsHtml=`<button class="btn btn-print" onclick="printDualTickets('${order.order_id}', '${order.schedule}', \`${order.orders_list}\`, '${order.customer_name}', '${order.customer_phone}', '${order.order_type}', \`${displayFormattedText}\`)">🖨️ Print</button><button class="btn btn-copy" onclick="copyOrderDetails(\`${displayFormattedText}\`)">📋 Copy</button><button class="btn btn-finish" onclick="completeOrder('${order.order_id}')">✅ Complete</button><button class="btn btn-cancel" onclick="cancelOrder('${order.order_id}')">❌ Cancel</button>`; }
-        else { actionButtonsHtml=`<button class="btn btn-print" onclick="printDualTickets('${order.order_id}', '${order.schedule}', \`${order.orders_list}\`, '${order.customer_name}', '${order.customer_phone}', '${order.order_type}', \`${displayFormattedText}\`)">🖨️ Print</button><button class="btn btn-copy" onclick="copyOrderDetails(\`${displayFormattedText}\`)">📋 Copy</button>`; }
-        card.innerHTML=`<div class="order-header"><span class="order-id">#${order.order_id||'N/A'}</span><div class="badge-container">${typeBadgeHtml}${paymentBadgeHtml}<span class="${statusClass}">${order.status||'PENDING'}</span></div></div><div class="order-raw-view">${displayFormattedText}</div><p style="font-size:11px; color:#0284c7; margin-bottom:12px;">📥 Pumasok: ${order.received_at||'Kailan lang'}</p><div class="action-buttons">${actionButtonsHtml}</div>`; container.appendChild(card);
+    async function fetchStoreToken() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('licenses')
+          .select('page_access_token, page_id')
+          .eq('username', storePageId.toLowerCase())
+          .single();
+
+        if (!error && data && data.page_access_token) {
+          if (data.page_access_token === "OFFLINE_TOKEN_EXPIRED" || !data.page_access_token) return;
+
+          currentStoreToken = data.page_access_token;
+          if (data.page_id) activePageId = data.page_id;
+
+          document.getElementById("tokenStatusDisplay").innerHTML = `🟢 <b>Page Token Loaded from Database</b> (Page ID: ${data.page_id || 'N/A'})`;
+          document.getElementById("loginControlArea").innerHTML = `
+            <button class="btn-fb btn-logout" onclick="logoutFacebook()">🔒 Logout & Switch Page</button>
+          `;
+        }
+      } catch (err) { console.error("Token fetch error:", err); }
+    }
+
+    async function syncAndFetchNewOrders() {
+      let newOrderReceived = false;
+      try {
+        const { data: cloudOrders, error } = await supabaseClient
+          .from('orders')
+          .select('*')
+          .eq('store_page', storePageId.toLowerCase());
+
+        if (!error && cloudOrders && cloudOrders.length > 0) {
+          let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
+
+          cloudOrders.forEach(cloudOrder => {
+            const exists = waitingOrders.some(item => item.order_id === cloudOrder.order_id);
+            if (!exists) {
+              newOrderReceived = true;
+              const isDineIn = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("DINE-IN"));
+              const isCounter = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("OVER-THE-COUNTER")) || cloudOrder.plus_code === "COUNTER";
+              
+              let orderType = "TAKEOUT";
+              if (isDineIn) orderType = "DINE_IN";
+              else if (isCounter) orderType = "COUNTER";
+
+              waitingOrders.unshift({ 
+                order_id: cloudOrder.order_id,
+                order_type: orderType,
+                store_page: cloudOrder.store_page,
+                branch: cloudOrder.branch || "Main Branch",
+                schedule: cloudOrder.schedule || "Now (Agad-agad)",
+                customer_name: cloudOrder.customer_name,
+                customer_phone: cloudOrder.customer_phone,
+                landmark: cloudOrder.landmark,
+                orders_list: cloudOrder.orders_list,
+                plus_code: cloudOrder.plus_code,
+                latitude: cloudOrder.latitude,
+                longitude: cloudOrder.longitude,
+                raw_chat_output: cloudOrder.raw_chat_output,
+                messenger_psid: cloudOrder.messenger_psid,
+                payment_status: 'UNPAID',
+                status: 'PENDING',
+                received_at: new Date().toLocaleTimeString() 
+              });
+            }
+          });
+
+          localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
+
+          for (const ord of cloudOrders) {
+            await supabaseClient.from('orders').delete().eq('order_id', ord.order_id);
+          }
+        }
+      } catch (err) { console.error("Sync exception:", err); }
+
+      if (newOrderReceived) {
+        playNotificationSound();
+      }
+
+      loadOrdersFromDevice();
+    }
+
+    function simulateOrder(type, paymentStatus) {
+      let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
+      const prefix = type === 'DINE_IN' ? 'AT' : (type === 'COUNTER' ? 'AC' : 'AU');
+      const orderId = prefix + Math.floor(10 + Math.random() * 90);
+      
+      const sampleOrder = {
+        order_id: orderId,
+        order_type: type,
+        store_page: storePageId.toLowerCase(),
+        branch: "Main Branch",
+        schedule: "Oct 18, 2026, 11:15 AM",
+        customer_name: "Juan Dela Cruz",
+        customer_phone: "09124356789",
+        landmark: type === 'COUNTER' ? "Counter" : "Malapit sa Panaderia",
+        orders_list: "Halo-Halo Special x1\nCoke Regular x1",
+        plus_code: type === 'COUNTER' ? "COUNTER" : "7Q53WJQ4+CG",
+        latitude: 13.93859,
+        longitude: 121.60636,
+        payment_status: paymentStatus,
+        status: "PENDING",
+        messenger_psid: "MESSENGER_WEB_USER",
+        received_at: new Date().toLocaleTimeString()
+      };
+
+      if (type === 'COUNTER') {
+        sampleOrder.raw_chat_output = `💳 OVER-THE-COUNTER ADVANCE ORDER\npsid: ${sampleOrder.messenger_psid}\n🔢 Order ID: #${sampleOrder.order_id}\n🏪 Store: ${sampleOrder.store_page}\n💰 Total: ₱85.00\n\n🛒 Orders:\nHalo-Halo Special x1\n\n👤 Name: ${sampleOrder.customer_name}\n📞 Contact: ${sampleOrder.customer_phone}`;
+      } else {
+        sampleOrder.raw_chat_output = `🏪 Store / Page: ${sampleOrder.store_page}\n🔢 Order ID: #${sampleOrder.order_id}\n💳 Payment: ${paymentStatus}\n⏰ Schedule: ${sampleOrder.schedule}\n\nClient Order List:\n${sampleOrder.orders_list}\n\nName: ${sampleOrder.customer_name}\nPhone: ${sampleOrder.customer_phone}`;
+      }
+
+      waitingOrders.unshift(sampleOrder);
+      localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
+      playNotificationSound();
+      loadOrdersFromDevice();
+      alert(`✅ May pumasok na test ${type} order!`);
+    }
+
+    function loadOrdersFromDevice() {
+      const container = document.getElementById("ordersContainer");
+      container.innerHTML = "";
+
+      const searchQuery = document.getElementById("searchInput").value.toLowerCase().trim();
+
+      let ordersList = [];
+      if (currentTab === 'waiting') ordersList = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
+      else if (currentTab === 'preparing') ordersList = JSON.parse(localStorage.getItem(STORAGE_PREPARING)) || [];
+      else if (currentTab === 'cancelled') ordersList = JSON.parse(localStorage.getItem(STORAGE_CANCELLED)) || [];
+      else ordersList = JSON.parse(localStorage.getItem(STORAGE_HISTORY)) || [];
+
+      const countTakeout = ordersList.filter(o => o.order_type === 'TAKEOUT').length;
+      const countDineIn = ordersList.filter(o => o.order_type === 'DINE_IN').length;
+      const countCounter = ordersList.filter(o => o.order_type === 'COUNTER').length;
+
+      const btnAll = document.getElementById('subTabAll');
+      const btnTakeout = document.getElementById('subTabTakeout');
+      const btnDineIn = document.getElementById('subTabDineIn');
+      const btnCounter = document.getElementById('subTabCounter');
+
+      btnAll.style.display = ordersList.length > 0 ? 'inline-block' : 'none';
+      
+      btnTakeout.style.display = countTakeout > 0 ? 'inline-block' : 'none';
+      btnTakeout.innerText = `🛵 Takeout (${countTakeout})`;
+
+      btnDineIn.style.display = countDineIn > 0 ? 'inline-block' : 'none';
+      btnDineIn.innerText = `🍽️ Dine-In (${countDineIn})`;
+
+      btnCounter.style.display = countCounter > 0 ? 'inline-block' : 'none';
+      btnCounter.innerText = `💳 Over-Counter (${countCounter})`;
+
+      btnAll.className = currentSubTab === 'ALL' ? 'sub-tab-btn active' : 'sub-tab-btn';
+      btnTakeout.className = currentSubTab === 'TAKEOUT' ? 'sub-tab-btn active' : 'sub-tab-btn';
+      btnDineIn.className = currentSubTab === 'DINE_IN' ? 'sub-tab-btn active' : 'sub-tab-btn';
+      btnCounter.className = currentSubTab === 'COUNTER' ? 'sub-tab-btn active' : 'sub-tab-btn';
+
+      if (currentSubTab !== 'ALL') {
+        ordersList = ordersList.filter(item => item.order_type === currentSubTab);
+      }
+
+      if (searchQuery) {
+        ordersList = ordersList.filter(item => 
+          (item.order_id && item.order_id.toLowerCase().includes(searchQuery)) ||
+          (item.customer_name && item.customer_name.toLowerCase().includes(searchQuery))
+        );
+      }
+
+      if (ordersList.length === 0) {
+        container.innerHTML = `<p style='text-align:center; width:100%; color:#64748b;'>Walang makitang order sa kategoryang ito.</p>`;
+        return;
+      }
+
+      ordersList.forEach(order => {
+        const card = document.createElement("div");
+        card.className = "order-card";
+        
+        let typeBadgeHtml = `<span class="type-badge-delivery">🛵 TAKEOUT</span>`;
+        if (order.order_type === "DINE_IN") typeBadgeHtml = `<span class="type-badge-dinein">🍽️ DINE-IN</span>`;
+        else if (order.order_type === "COUNTER") typeBadgeHtml = `<span class="type-badge-counter">💳 OVER-COUNTER</span>`;
+
+        const paymentBadgeHtml = order.payment_status === 'PAID' ? `<span class="payment-badge-paid">💳 PAID</span>` : `<span class="payment-badge-unpaid">🔴 UNPAID</span>`;
+
+        let statusClass = 'status-badge';
+        if (order.status === 'ACCEPTED') statusClass = 'status-badge accepted';
+        else if (order.status === 'PREPARING') statusClass = 'status-badge preparing';
+        else if (order.status === 'CANCELLED') statusClass = 'status-badge cancelled';
+
+        const displayFormattedText = order.raw_chat_output || "";
+        let actionButtonsHtml = "";
+
+        if (currentTab === 'waiting') {
+          actionButtonsHtml = `
+            <button class="btn btn-accept" onclick="openPaymentModal('${order.order_id}')">💰 Process Payment & Accept</button>
+            <button class="btn btn-cancel" onclick="cancelOrder('${order.order_id}')">❌ Cancel Order</button>
+          `;
+        } else if (currentTab === 'preparing') {
+          actionButtonsHtml = `
+            <button class="btn btn-print" onclick="printDualTickets('${order.order_id}', '${order.schedule}', \`${order.orders_list}\`, '${order.customer_name}', '${order.customer_phone}', '${order.order_type}', \`${displayFormattedText}\`)">🖨️ Print Tickets</button>
+            <button class="btn btn-copy" onclick="copyOrderDetails(\`${displayFormattedText}\`)">📋 Copy Receipt Details</button>
+            <button class="btn btn-finish" onclick="completeOrder('${order.order_id}')">✅ Complete & Move to History</button>
+            <button class="btn btn-cancel" onclick="cancelOrder('${order.order_id}')">❌ Cancel Order</button>
+          `;
+        } else {
+          actionButtonsHtml = `
+            <button class="btn btn-print" onclick="printDualTickets('${order.order_id}', '${order.schedule}', \`${order.orders_list}\`, '${order.customer_name}', '${order.customer_phone}', '${order.order_type}', \`${displayFormattedText}\`)">🖨️ Print Tickets</button>
+            <button class="btn btn-copy" onclick="copyOrderDetails(\`${displayFormattedText}\`)">📋 Copy Receipt Details</button>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="order-header">
+            <span class="order-id">#${order.order_id || 'N/A'}</span>
+            <div class="badge-container">
+              ${typeBadgeHtml}
+              ${paymentBadgeHtml}
+              <span class="${statusClass}">${order.status || 'PENDING'}</span>
+            </div>
+          </div>
+          
+          <div class="order-raw-view">${displayFormattedText}</div>
+          
+          <p style="font-size:11px; color:#0284c7; margin-bottom:12px;">📥 Pumasok: ${order.received_at || 'Kailan lang'}</p>
+
+          <div class="action-buttons">
+            ${actionButtonsHtml}
+          </div>
+        `;
+        container.appendChild(card);
       });
     }
-    function openPaymentModal(orderId){ selectedOrderIdForPayment=orderId; currentCashInput="250"; document.getElementById('cashDisplay').innerText="₱"+currentCashInput+".00"; document.getElementById('modalOrderInfo').innerText=`Order #${orderId}`; document.getElementById('paymentModal').style.display='flex'; }
-    function closePaymentModal(){ document.getElementById('paymentModal').style.display='none'; selectedOrderIdForPayment=null; }
-    function pressKey(val){ if(val==='DEL'){ currentCashInput=currentCashInput.slice(0,-1)||"0"; } else { if(currentCashInput==="0") currentCashInput=""; currentCashInput+=val; } document.getElementById('cashDisplay').innerText="₱"+currentCashInput+".00"; }
-    function confirmPayment(){
-      if(!selectedOrderIdForPayment) return; const method=document.getElementById('paymentMethodSelect').value;
-      let waitingOrders=JSON.parse(localStorage.getItem(STORAGE_WAITING))||[]; let preparingOrders=JSON.parse(localStorage.getItem(STORAGE_PREPARING))||[];
-      const index=waitingOrders.findIndex(item=>item.order_id===selectedOrderIdForPayment);
-      if(index>-1){ const item=waitingOrders.splice(index,1)[0]; item.status='PREPARING'; item.payment_status=(method==='COD')?'UNPAID_COD':'PAID'; item.payment_method=method; preparingOrders.unshift(item); localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders)); localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders)); sendApiNotification(item.customer_name, item.messenger_psid, `Salamat! Na-verify na ang bayad (${method}) para sa Order #${selectedOrderIdForPayment}.`); alert(`✅ Na-proseso ang bayad (${method})!`); closePaymentModal(); loadOrdersFromDevice(); }
+
+    function openPaymentModal(orderId) {
+      selectedOrderIdForPayment = orderId;
+      currentCashInput = "250";
+      document.getElementById('cashDisplay').innerText = "₱" + currentCashInput + ".00";
+      document.getElementById('modalOrderInfo').innerText = `Order #${orderId} - Total Amount Due`;
+      document.getElementById('paymentModal').style.display = 'flex';
     }
-    function cancelOrder(orderId){
-      const reason=prompt("Dahilan ng cancel:", "Out of stock"); if(!reason) return;
-      let waitingOrders=JSON.parse(localStorage.getItem(STORAGE_WAITING))||[]; let preparingOrders=JSON.parse(localStorage.getItem(STORAGE_PREPARING))||[]; let cancelledOrders=JSON.parse(localStorage.getItem(STORAGE_CANCELLED))||[];
-      let targetItem=null; let wIdx=waitingOrders.findIndex(i=>i.order_id===orderId); if(wIdx>-1){ targetItem=waitingOrders.splice(wIdx,1)[0]; } else { let pIdx=preparingOrders.findIndex(i=>i.order_id===orderId); if(pIdx>-1){ targetItem=preparingOrders.splice(pIdx,1)[0]; } }
-      if(targetItem){ targetItem.status='CANCELLED'; targetItem.cancel_reason=reason; targetItem.cancelled_at=new Date().toLocaleString(); cancelledOrders.unshift(targetItem); localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders)); localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders)); localStorage.setItem(STORAGE_CANCELLED, JSON.stringify(cancelledOrders)); sendApiNotification(targetItem.customer_name, targetItem.messenger_psid, `Paumanhin, kinansela Order #${orderId}. Dahilan: ${reason}`); alert(`❌ Nakansela #${orderId}.`); loadOrdersFromDevice(); }
+
+    function closePaymentModal() {
+      document.getElementById('paymentModal').style.display = 'none';
+      selectedOrderIdForPayment = null;
     }
-    function completeOrder(orderId){
-      let preparingOrders=JSON.parse(localStorage.getItem(STORAGE_PREPARING))||[]; let historyOrders=JSON.parse(localStorage.getItem(STORAGE_HISTORY))||[];
-      const index=preparingOrders.findIndex(item=>item.order_id===orderId);
-      if(index>-1){ const completedItem=preparingOrders.splice(index,1)[0]; completedItem.status='COMPLETED'; completedItem.completed_at=new Date().toLocaleString(); historyOrders.unshift(completedItem); localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders)); localStorage.setItem(STORAGE_HISTORY, JSON.stringify(historyOrders)); alert(`✅ Tapos na #${orderId}!`); loadOrdersFromDevice(); }
+
+    function pressKey(val) {
+      if (val === 'DEL') {
+        currentCashInput = currentCashInput.slice(0, -1) || "0";
+      } else {
+        if (currentCashInput === "0") currentCashInput = "";
+        currentCashInput += val;
+      }
+      document.getElementById('cashDisplay').innerText = "₱" + currentCashInput + ".00";
     }
-    function printDualTickets(orderId, schedule, ordersList, clientName, clientPhone, orderType, officialReceiptText){
-      const printArea=document.getElementById("printArea"); printArea.style.display="block";
-      printArea.innerHTML=`<div style="text-align: center; font-weight: bold; font-size: 18px;">${orderType==='DINE_IN'?'DINE-IN':'TAKEOUT'} TICKET</div><div style="text-align: center; font-size: 13px; margin-bottom: 12px;">ShareMap POS</div><hr style="border: 1px dashed #000;"><p><b>Order ID:</b> #${orderId}</p><p><b>Type:</b> ${orderType}</p><p><b>Schedule:</b> ${schedule}</p><p><b>Client:</b> ${clientName}</p><p><b>Contact:</b> ${clientPhone}</p><hr><p><b>ORDER LIST:</b></p><pre style="font-family: monospace; font-size: 15px; white-space: pre-wrap;">${ordersList}</pre><hr><div class="page-break"></div><div style="text-align: center; font-weight: bold; font-size: 18px; margin-top: 20px;">OFFICIAL RECEIPT</div><hr><pre style="font-family: monospace; font-size: 13px; white-space: pre-wrap;">${officialReceiptText}</pre><hr>`; window.print(); printArea.style.display="none";
+
+    function confirmPayment() {
+      if (!selectedOrderIdForPayment) return;
+      const method = document.getElementById('paymentMethodSelect').value;
+
+      let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
+      let preparingOrders = JSON.parse(localStorage.getItem(STORAGE_PREPARING)) || [];
+
+      const index = waitingOrders.findIndex(item => item.order_id === selectedOrderIdForPayment);
+      if (index > -1) {
+        const item = waitingOrders.splice(index, 1)[0];
+        item.status = 'PREPARING';
+        item.payment_status = (method === 'COD') ? 'UNPAID_COD' : 'PAID';
+        item.payment_method = method;
+        
+        preparingOrders.unshift(item);
+        
+        localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
+        localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders));
+        
+        sendApiNotification(item.customer_name, item.messenger_psid, `Salamat! Na-verify na ang bayad (${method}) para sa Order #${selectedOrderIdForPayment}. Inihahanda na ito sa kusina.`);
+        alert(`✅ Na-proseso ang bayad (${method}) para sa Order #${selectedOrderIdForPayment}! Nailipat na sa Preparing Room.`);
+        
+        closePaymentModal();
+        loadOrdersFromDevice();
+      }
     }
-    async function sendApiNotification(customerName, psid, messageText){
-      if(!currentStoreToken||!psid||psid==="MESSENGER_WEB_USER"||psid==="SMS_USER") return;
-      const url=`https://graph.facebook.com/v26.0/me/messages?access_token=${currentStoreToken}`;
-      const payload={ recipient:{ id: psid }, message:{ text: messageText } };
-      try{ await fetch(url,{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});}catch(err){}
+
+    function cancelOrder(orderId) {
+      const reason = prompt("Ilagay ang dahilan ng pagkansela:", "Out of stock / Nagbago ang isip");
+      if (!reason) return;
+
+      let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
+      let preparingOrders = JSON.parse(localStorage.getItem(STORAGE_PREPARING)) || [];
+      let cancelledOrders = JSON.parse(localStorage.getItem(STORAGE_CANCELLED)) || [];
+
+      let targetItem = null;
+      let wIdx = waitingOrders.findIndex(i => i.order_id === orderId);
+      if (wIdx > -1) {
+        targetItem = waitingOrders.splice(wIdx, 1)[0];
+      } else {
+        let pIdx = preparingOrders.findIndex(i => i.order_id === orderId);
+        if (pIdx > -1) {
+          targetItem = preparingOrders.splice(pIdx, 1)[0];
+        }
+      }
+
+      if (targetItem) {
+        targetItem.status = 'CANCELLED';
+        targetItem.cancel_reason = reason;
+        targetItem.cancelled_at = new Date().toLocaleString();
+
+        cancelledOrders.unshift(targetItem);
+
+        localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
+        localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders));
+        localStorage.setItem(STORAGE_CANCELLED, JSON.stringify(cancelledOrders));
+
+        sendApiNotification(targetItem.customer_name, targetItem.messenger_psid, `Paumanhin po, kinansela ang Order #${orderId}. Dahilan: ${reason}`);
+        alert(`❌ Nakansela ang Order #${orderId}.`);
+        loadOrdersFromDevice();
+      }
     }
-    function copyOrderDetails(text){ navigator.clipboard.writeText(text); alert("Nai-copy!"); }
-    window.addEventListener('DOMContentLoaded', async ()=>{ await fetchStoreToken(); syncAndFetchNewOrders(); setInterval(syncAndFetchNewOrders, 5000); });
+
+    function completeOrder(orderId) {
+      let preparingOrders = JSON.parse(localStorage.getItem(STORAGE_PREPARING)) || [];
+      let historyOrders = JSON.parse(localStorage.getItem(STORAGE_HISTORY)) || [];
+
+      const index = preparingOrders.findIndex(item => item.order_id === orderId);
+      if (index > -1) {
+        const completedItem = preparingOrders.splice(index, 1)[0];
+        completedItem.status = 'COMPLETED';
+        completedItem.completed_at = new Date().toLocaleString();
+        
+        historyOrders.unshift(completedItem);
+
+        localStorage.setItem(STORAGE_PREPARING, JSON.stringify(preparingOrders));
+        localStorage.setItem(STORAGE_HISTORY, JSON.stringify(historyOrders));
+        
+        alert(`✅ Tapos na ang transaksyon para sa Order #${orderId}! Nailipat na sa History.`);
+        loadOrdersFromDevice();
+      }
+    }
+
+    function printDualTickets(orderId, schedule, ordersList, clientName, clientPhone, orderType, officialReceiptText) {
+      const printArea = document.getElementById("printArea");
+      printArea.style.display = "block";
+      printArea.innerHTML = `
+        <div style="text-align: center; font-weight: bold; font-size: 18px;">${orderType === 'DINE_IN' ? 'DINE-IN KITCHEN TICKET' : (orderType === 'COUNTER' ? 'OVER-THE-COUNTER TICKET' : 'TAKEOUT KITCHEN TICKET')}</div>
+        <div style="text-align: center; font-size: 13px; margin-bottom: 12px;">ShareMap POS System</div>
+        <hr style="border: 1px dashed #000; margin-bottom: 10px;">
+        <p style="margin: 4px 0;"><b>Order ID:</b> #${orderId}</p>
+        <p style="margin: 4px 0;"><b>Type:</b> ${orderType}</p>
+        <p style="margin: 4px 0;"><b>Schedule:</b> ${schedule}</p>
+        <p style="margin: 4px 0;"><b>Client:</b> ${clientName}</p>
+        <p style="margin: 4px 0; margin-bottom: 12px;"><b>Contact:</b> ${clientPhone}</p>
+        <hr style="border: 1px dashed #000; margin-bottom: 10px;">
+        <p style="margin: 4px 0; font-weight: bold;">ORDER LIST:</p>
+        <pre style="font-family: monospace; font-size: 15px; white-space: pre-wrap; margin-top: 5px;">${ordersList}</pre>
+        <hr style="border: 1px dashed #000; margin-top: 15px;">
+
+        <div class="page-break"></div>
+
+        <div style="text-align: center; font-weight: bold; font-size: 18px; margin-top: 20px;">OFFICIAL ORDER RECEIPT</div>
+        <div style="text-align: center; font-size: 13px; margin-bottom: 12px;">ShareMap POS System</div>
+        <hr style="border: 1px dashed #000; margin-bottom: 10px;">
+        <pre style="font-family: monospace; font-size: 13px; white-space: pre-wrap;">${officialReceiptText}</pre>
+        <hr style="border: 1px dashed #000; margin-top: 15px;">
+      `;
+      window.print();
+      printArea.style.display = "none";
+    }
+
+    async function sendApiNotification(customerName, psid, messageText) {
+      if (!currentStoreToken || !psid || psid === "MESSENGER_WEB_USER" || psid === "SMS_USER") return;
+
+      const url = `https://graph.facebook.com/v26.0/me/messages?access_token=${currentStoreToken}`;
+      const payload = { recipient: { id: psid }, message: { text: messageText } };
+
+      try {
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) { console.error("API Exception:", err); }
+    }
+
+    function copyOrderDetails(text) {
+      navigator.clipboard.writeText(text);
+      alert("Nai-copy ang resibo sa clipboard!");
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await fetchStoreToken();
+      syncAndFetchNewOrders();
+      setInterval(syncAndFetchNewOrders, 5000);
+    });
   </script>
+
 </body>
-  </html>
+</html>
