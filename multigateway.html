@@ -200,11 +200,26 @@ function generateCounterQr(){ const qrCanvasContainer=document.getElementById("q
 // === ORIGINAL FUNCTIONS NA NAWALA - IBINALIK! ===
 async function saveOrderToSupabasePOS(orderData){
     try{
-        const { createClient } = supabase; const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const { data, error } = await client.from('orders').insert([orderData]);
-        if(error) console.error("Supabase Save Error:", error); else console.log("✅ Saved to POS!");
+        // SECURED: via Edge Function (SERVICE_ROLE) - gumagana kahit ENABLED RLS sa orders
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/create-order`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(orderData)
+        });
+        const result = await res.json();
+        if(result.error) console.error("Supabase Save Error via Edge:", result.error);
+        else console.log("✅ Saved to POS via Edge Function!");
+        return result;
     }catch(err){ console.error(err); }
 }
+
+// Alternative: kung gamit mo na yung bago mong pinagsama-samang pos-backend, gamitin to:
+// async function saveOrderToSupabasePOS(orderData){
+//   return fetch(`${SUPABASE_URL}/functions/v1/pos-backend`,{
+//     method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(orderData)
+//   });
+// }
+
 function downloadQrCodeImageWithDetails(){
     const qrContainer=document.getElementById("qrcodeCanvas"); const originalCanvas=qrContainer.querySelector("canvas"); const pageId=getPageId();
     if(!originalCanvas){ alert("⚠️ Re-generating QR..."); generateCounterQr(); return; }
