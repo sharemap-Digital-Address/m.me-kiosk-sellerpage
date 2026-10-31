@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Instant Delivery Location Share</title>
 
-  <!-- SUPABASE CLIENT LIBRARY & ACCESS CHECKER -->
+  <!-- SUPABASE CLIENT LIBRARY & ACCESS CHECKER VIA EDGE FUNCTION -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
+    const GET_CONFIG_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config";
     const CREATE_ORDER_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/create-order";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -23,28 +24,34 @@
         return;
       }
 
-      const { data, error } = await supabaseClient
-        .from('licenses')
-        .select('*')
-        .eq('username', pageId.toLowerCase())
-        .single();
+      try {
+        const res = await fetch(GET_CONFIG_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: pageId.toLowerCase(), page: pageId.toLowerCase() })
+        });
+        
+        const result = await res.json();
+        const data = result.data || result;
+        const today = new Date().toISOString().split('T')[0];
 
-      const today = new Date().toISOString().split('T')[0];
+        if (result.error || !data || data.status === "INACTIVE") {
+          showBlockScreen("⚠️ Walang Lisensya / Inactive Account", `Ang store username na "@${pageId}" ay wala pang lisensya sa ShareMap.`);
+          return;
+        }
 
-      if (error || !data || data.status === "INACTIVE") {
-        showBlockScreen("⚠️ Walang Lisensya / Inactive Account", "Ang store na ito ay wala pang lisensya sa ShareMap. Mangyaring makipag-ugnayan sa provider.");
-        return;
+        if (data.expiry && today > data.expiry && data.status !== "ACTIVE") {
+          showBlockScreen("🚫 Expired License", `Ang inyong subscription ay nag-expire noong ${data.expiry}. Paki-renew ang iyong access.`);
+          return;
+        }
+
+        console.log(`✅ Access Granted for ${pageId}`);
+      } catch (e) {
+        console.error("License check exception:", e);
+        showBlockScreen("⚠️ Connection Error", "Hindi makakonekta sa ShareMap Server para ma-verify ang lisensya.");
       }
-
-      if (data.expiry && today > data.expiry) {
-        showBlockScreen("🚫 Expired License", `Ang inyong access ay nag-expire noong ${data.expiry}. Paki-renew ang inyong subscription sa ShareMap.`);
-        return;
-      }
-
-      console.log(`✅ Access Granted for ${pageId} [Plan: ${data.plan}]`);
     }
 
-    // --- AKTIBONG BLOCK SCREEN FUNCTION (HINDI Naka-comment) ---
     function showBlockScreen(title, message) {
         const CONTACT_LINK = "https://m.me/sharemap.digital.address"; 
         document.body.innerHTML = `
@@ -345,7 +352,6 @@
       }
     }
     
-    // --- KINOPYA MULA SA ORIHINAL NA INDEX.HTML PARA SA POSITIBONG PAG-FORWARD AT CLIPBOARD ---
     async function executeLocationShare() {
       const statusEl = document.getElementById("status");
       statusEl.classList.remove("error");
@@ -386,7 +392,6 @@
 
           const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
 
-          // Sabay na i-save sa Supabase gamit ang Edge Function nang walang sagabal sa redirect
           fetch(CREATE_ORDER_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
