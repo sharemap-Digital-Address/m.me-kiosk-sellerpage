@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareMap Kiosk Visual Menu + Edit Order Mode</title>
+    <style>
+        :root { --primary: #0284c7; --bg: #0f172a; --card: #1e293b; --text: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; padding-bottom: 90px; }
+        .container { max-width: 480px; margin: 0 auto; }
+        .store-header { text-align: center; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .store-logo-circle { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.4); background: #334155; display: none; }
+        .store-header h2 { margin: 0; color: #38bdf8; font-size: 20px; font-weight: bold; }
+        .order-info-bar { background: #0f172a; border: 1px dashed #38bdf8; padding: 10px; border-radius: 8px; margin-bottom: 12px; text-align: left; font-size: 12px; }
+        .order-info-bar b { color: #38bdf8; }
+        .navigation-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; position: relative; height: 38px; }
+        .category-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex-grow: 1; align-items: center; }
+        .category-tabs::-webkit-scrollbar { display: none; }
+        .cat-tab { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; white-space: nowrap; cursor: pointer; }
+        .cat-tab.active { background: var(--primary) !important; color: #ffffff; }
+        .search-trigger-btn { background: #1e293b; color: #38bdf8; border: 1px solid #334155; width: 38px; height: 38px; min-width: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; }
+        .collapsible-search-box { display: none; width: 100%; height: 38px; background: #1e293b; border: 1px solid #38bdf8; border-radius: 20px; padding: 0 12px; align-items: center; gap: 8px; box-sizing: border-box; }
+        .collapsible-search-box input { background: transparent; border: none; outline: none; color: #ffffff; font-size: 13px; width: 100%; }
+        .search-close-btn { background: transparent; border: none; color: #ef4444; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .menu-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; }
+        .img-container { position: relative; width: 100%; height: 110px; background: #334155; cursor: pointer; }
+        .img-container img { width: 100%; height: 100%; object-fit: cover; }
+        .menu-details { padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .menu-title { font-weight: bold; font-size: 13px; margin-bottom: 2px; cursor:pointer; }
+        .menu-desc { font-size: 10px; color: #94a3b8; margin-bottom: 6px; }
+        .type-badge { font-size: 9px; padding: 2px 5px; border-radius: 4px; background: #d97706; color: #fff; display: inline-block; margin-bottom: 4px; font-weight: bold; }
+        .size-badge { font-size: 9px; padding: 2px 5px; border-radius: 4px; background: #8b5cf6; color: #fff; display: inline-block; margin-bottom: 4px; font-weight: bold; }
+        .rating-badge { font-size: 10px; color: #f59e0b; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+        .qty-control { display: flex; align-items: center; justify-content: space-between; background: #0f172a; border-radius: 6px; padding: 4px; border: 1px solid #475569; margin-top: 5px; }
+        .qty-btn { background: #334155; color: white; border: none; width: 28px; height: 28px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .qty-val { font-weight: bold; font-size: 13px; }
+        .cart-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); max-width: 450px; width: 90%; background: #16a34a; color: white; padding: 14px 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; cursor: pointer; z-index: 1000; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 15px; box-sizing: border-box; }
+        .modal-box { background: #1e293b; border-radius: 16px; padding: 20px; max-width: 420px; width: 100%; border: 1px solid #475569; max-height: 90vh; overflow-y: auto; box-sizing: border-box; text-align: left; }
+        .close-modal { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; float: right; font-size: 12px; }
+        .txn-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .txn-icon { font-size: 28px; background: #1e293b; border-radius: 10px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; }
+        .txn-title { font-weight: bold; font-size: 14px; color: #38bdf8; }
+        .txn-desc { font-size: 11px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="store-header">
+        <img id="storeLogoImg" src="" class="store-logo-circle">
+        <h2 id="storeTitle">🏪 Loading...</h2>
+        <p style="font-size:12px; color:#94a3b8;">Pumili ng category o mag-search:</p>
+    </div>
+
+    <div class="order-info-bar" id="orderInfoBar">
+        <div>📌 <b>Status:</b> <span id="previewStatus" style="color:#f59e0b; font-weight:bold;">Normal Order</span></div>
+        <div>🔢 <b>Order #:</b> <span id="previewOrderId">-</span></div>
+        <div>🔒 <b>PSID:</b> <span id="previewPsid">-</span></div>
+        <div>👤 <b>Fullname:</b> <span id="previewName">-</span></div>
+    </div>
+
+    <div class="navigation-row">
+        <button class="search-trigger-btn" id="searchTriggerBtn" onclick="openSearchBar()">🔍</button>
+        <div class="category-tabs" id="categoryTabsContainer"></div>
+        <div class="collapsible-search-box" id="searchBox">
+            <span>🔍</span>
+            <input type="text" id="searchInput" placeholder="Maghanap..." oninput="filterBySearch()">
+            <button class="search-close-btn" onclick="closeSearchBar()">✕</button>
+        </div>
+    </div>
+    <div class="menu-grid" id="kioskMenuGrid"><p style="text-align:center; grid-column:1/-1; color:#94a3b8;">Lino-load...</p></div>
+</div>
+
+<div class="cart-bar" id="cartBar" onclick="handleCartBarClick()" style="display:none;"><span id="cartSummaryText">🛒 0 Items</span><span id="cartBarActionText">Place Order ➔</span></div>
+
+<!-- CHECKOUT TYPE MODAL (Para sa Normal Order) -->
+<div id="checkoutTypeModal" class="modal-overlay"><div class="modal-box">
+<button class="close-modal" onclick="closeCheckoutTypeModal()">Isara ✕</button>
+<h3 style="color:#38bdf8;">Pumili ng Uri ng Order</h3>
+<div class="txn-card" onclick="proceedToGatewayWithType('delivery')"><div class="txn-icon">🛵</div><div><div class="txn-title">Book Delivery</div><div class="txn-desc">Padala sa bahay</div></div></div>
+<div class="txn-card" onclick="proceedToGatewayWithType('dinein')"><div class="txn-icon">🍽️</div><div><div class="txn-title">Dine-In</div><div class="txn-desc">Kakain sa store</div></div></div>
+<div class="txn-card" onclick="proceedToGatewayWithType('counter')"><div class="txn-icon">💳</div><div><div class="txn-title">Over-The-Counter</div><div class="txn-desc">QR Code sa Cashier</div></div></div>
+</div></div>
+
+<!-- PREVIEW EDIT ORDER LIST MODAL (Espesyal para sa Edit Order Mode) -->
+<div id="editPreviewModal" class="modal-overlay"><div class="modal-box">
+<button class="close-modal" onclick="closeEditPreviewModal()">Isara ✕</button>
+<h3 style="color:#f59e0b;">📝 In-Edit na Listahan ng Order</h3>
+<div id="editPreviewListContent" style="background:#0f172a; padding:12px; border-radius:8px; margin-bottom:15px; font-size:13px; font-family:monospace; max-height:200px; overflow-y:auto;"></div>
+<button style="background:#16a34a; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; width:100%; cursor:pointer;" onclick="placeEditOrder()">✅ I-save at I-sync ang Edit Order</button>
+</div></div>
+
+<script>
+    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
+    let storePage = ""; let currentPsid = "MESSENGER_WEB_USER"; let currentFullName = "";
+    let selectedCart = {}; let allFetchedItems = []; let activeCategory = "ALL";
+    let generatedOrderID = ""; let clickedAtTimestamp = 0;
+    let isEditMode = false;
+
+    window.onload = function(){
+        const urlParams = new URLSearchParams(window.location.search);
+        storePage = urlParams.get('page') || localStorage.getItem('sharemap_page');
+        const mode = urlParams.get('mode');
+
+        if(mode === 'edit') {
+            isEditMode = true;
+            document.getElementById('previewStatus').innerText = "Edit Order";
+            document.getElementById('previewStatus').style.color = "#ef4444";
+            document.getElementById('cartBarActionText').innerText = "Review & Place Edit ➔";
+
+            generatedOrderID = urlParams.get('oid') || "";
+            currentPsid = urlParams.get('psid') || "MESSENGER_WEB_USER";
+            currentFullName = urlParams.get('fn') ? decodeURIComponent(urlParams.get('fn')) : "";
+            clickedAtTimestamp = urlParams.get('clicked_at') ? parseInt(urlParams.get('clicked_at')) : Date.now();
+
+            const cartStr = urlParams.get('cart');
+            if(cartStr) {
+                try { selectedCart = JSON.parse(decodeURIComponent(cartStr)); } catch(e) { selectedCart = {}; }
+            }
+        } else {
+            generatedOrderID = generateSpreadsheetOrderID();
+            clickedAtTimestamp = Date.now();
+            currentPsid = urlParams.get('psid') || localStorage.getItem('sharemap_psid') || "MESSENGER_WEB_USER";
+            currentFullName = urlParams.get('fn') || localStorage.getItem('sharemap_fullname') || "";
+        }
+
+        document.getElementById('previewOrderId').innerText = generatedOrderID;
+        document.getElementById('previewPsid').innerText = currentPsid;
+        document.getElementById('previewName').innerText = currentFullName || "Customer";
+
+        if(!storePage){ document.getElementById('storeTitle').innerText = "⚠️ Invalid Store Link"; return; }
+        document.getElementById('storeTitle').innerText = "🏪 @" + storePage + " - Kiosk Menu";
+
+        loadKioskMenu();
+    };
+
+    function generateSpreadsheetOrderID(){
+        const now = new Date(); const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; const minute = now.getMinutes();
+        let letterCode = minute < 26 ? alphabet[minute] : (minute < 52 ? "A" + alphabet[minute - 26] : "B" + alphabet[minute - 52]);
+        return `${letterCode}${String(now.getSeconds()).padStart(2,'0')[0]}${String(now.getMilliseconds()).padStart(3,'0')[0]}`;
+    }
+
+    async function loadKioskMenu(){
+        try {
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ username: storePage.toLowerCase(), page: storePage.toLowerCase() })});
+            const result = await res.json();
+            const licenseData = result.data || result;
+            if(licenseData.menu_sheet_url && licenseData.menu_sheet_url.trim() !== ""){
+                const r = await fetch(licenseData.menu_sheet_url + "?action=GET_ITEMS");
+                const sheetItems = await r.json();
+                if(sheetItems && sheetItems.length > 0) {
+                    allFetchedItems = sheetItems.map(i=>({...i, rating: parseFloat(i.rating)||4.8, ratingCount: parseInt(i.ratingCount)||50}));
+                }
+            }
+        } catch(e) { allFetchedItems = []; }
+        buildCategoryTabs();
+        filterAndRenderGrid(activeCategory);
+        updateCartBar();
+    }
+
+    function openSearchBar(){ document.getElementById('searchTriggerBtn').style.display='none'; document.getElementById('categoryTabsContainer').style.display='none'; document.getElementById('searchBox').style.display='flex'; document.getElementById('searchInput').focus(); }
+    function closeSearchBar(){ document.getElementById('searchInput').value=""; document.getElementById('searchBox').style.display='none'; document.getElementById('searchTriggerBtn').style.display='flex'; document.getElementById('categoryTabsContainer').style.display='flex'; filterAndRenderGrid(activeCategory); }
+    function filterBySearch(){ const q = document.getElementById('searchInput').value.trim().toLowerCase(); if(!q){filterAndRenderGrid(activeCategory);return;} renderGrid(allFetchedItems.filter(i=>(i.name||"").toLowerCase().includes(q))); }
+    function buildCategoryTabs(){ const c = document.getElementById('categoryTabsContainer'); c.innerHTML=""; let cats=["ALL"]; allFetchedItems.forEach(i=>{let cat=i.category?i.category.trim():"General";if(!cats.includes(cat)) cats.push(cat);}); cats.forEach(cat=>{let tab=document.createElement('button');tab.className=`cat-tab ${cat===activeCategory?'active':''}`;tab.innerText=cat==="ALL"?"⭐ All Items":cat;tab.onclick=()=>{activeCategory=cat;document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');filterAndRenderGrid(cat);};c.appendChild(tab);}); }
+    function filterAndRenderGrid(cat){ let items=allFetchedItems; if(cat!=="ALL") items=allFetchedItems.filter(i=>(i.category?i.category.trim():"General")===cat); renderGrid(items); }
+    function parseVariants(s){ if(!s||s==="N/A") return[]; try{let p=JSON.parse(s);if(Array.isArray(p))return p;}catch(e){return s.split(',').map(s=>({name:s.trim(),price:"0",status:"Available",qty:""}));} return[]; }
+    function getProductTotalCartQty(name){ let c=0; for(let k in selectedCart){if(k===name||k.startsWith(`${name} (`)) c+=selectedCart[k];} return c; }
+    
+    function renderGrid(items){
+        const grid=document.getElementById('kioskMenuGrid'); grid.innerHTML="";
+        if(items.length===0){grid.innerHTML=`<p style="text-align:center; grid-column:1/-1; color:#94a3b8;">Walang item.</p>`;return;}
+        items.forEach(item=>{
+            let itemName=item.name; let variantsArr=parseVariants(item.size); let hasVariants=variantsArr.length>0; let totalQty=getProductTotalCartQty(itemName);
+            let card=document.createElement('div'); card.className="menu-card";
+            card.innerHTML=`<div class="img-container"><img src="${item.image||'https://via.placeholder.com/150'}"></div><div class="menu-details"><div><div class="menu-title">${itemName}</div>${hasVariants?`<span class="size-badge">${variantsArr.length} Variants</span>`:''}<div style="font-size:13px; font-weight:bold; color:var(--primary);">₱${item.price||"0"}</div><div class="menu-desc">${item.description||''}</div></div><div><div class="qty-control"><button type="button" class="qty-btn" onclick="updateQty('${escapeQuotes(itemName)}', -1)">-</button><span class="qty-val">${totalQty}</span><button type="button" class="qty-btn" onclick="updateQty('${escapeQuotes(itemName)}', 1)">+</button></div></div></div>`;
+            grid.appendChild(card);
+        });
+        updateCartBar();
+    }
+
+    function updateQty(k,d){
+        if(!selectedCart[k]) selectedCart[k]=0;
+        selectedCart[k]+=d;
+        if(selectedCart[k]<0) selectedCart[k]=0;
+        if(selectedCart[k]===0) delete selectedCart[k];
+        filterAndRenderGrid(activeCategory);
+    }
+
+    function updateCartBar(){
+        let totalCount=0; let totalPrice=0;
+        for(let key in selectedCart){let qty=selectedCart[key];if(qty>0){totalCount+=qty;totalPrice+=(100*qty);}} // Palitan ng tamang unit price computation kung kailangan
+        const bar=document.getElementById('cartBar');
+        if(totalCount>0){bar.style.display='flex';document.getElementById('cartSummaryText').innerText=`🛒 ${totalCount} Items`;}else{bar.style.display='none';}
+    }
+    function escapeQuotes(s){return s.replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+
+    function handleCartBarClick(){
+        if(isEditMode){
+            // Buksan ang preview modal para makita ang in-edit na order bago i-save
+            let orderArray=[]; let grandTotal=0;
+            for(let name in selectedCart){if(selectedCart[name]>0){orderArray.push(`${name} x${selectedCart[name]}`);}}
+            document.getElementById('editPreviewListContent').innerText = orderArray.join('\n') || "Walang laman ang tray";
+            document.getElementById('editPreviewModal').style.display='flex';
+        } else {
+            document.getElementById('checkoutTypeModal').style.display='flex';
+        }
+    }
+
+    function closeCheckoutTypeModal(){ document.getElementById('checkoutTypeModal').style.display='none'; }
+    function closeEditPreviewModal(){ document.getElementById('editPreviewModal').style.display='none'; }
+
+    function proceedToGatewayWithType(typeStr){
+        let orderArray=[]; let grandTotal=0;
+        for(let name in selectedCart){if(selectedCart[name]>0){orderArray.push(`${name} x${selectedCart[name]}`);}}
+        let orderString=orderArray.join(', ');
+        const cartJson = encodeURIComponent(JSON.stringify(selectedCart));
+        window.location.href=`./multigateway.html?page=${encodeURIComponent(storePage)}&oid=${encodeURIComponent(generatedOrderID)}&psid=${encodeURIComponent(currentPsid)}&fn=${encodeURIComponent(currentFullName)}&ord=${encodeURIComponent(orderString)}&total=${grandTotal.toFixed(2)}&type=${encodeURIComponent(typeStr)}&clicked_at=${clickedAtTimestamp}&cart=${cartJson}`;
+    }
+
+    // === ESPESYAL NA FUNCTION: Place Edit Order (Diretso sa Supabase at balik sa pos.html) ===
+    async function placeEditOrder(){
+        let orderArray=[]; let grandTotal=0;
+        for(let name in selectedCart){if(selectedCart[name]>0){orderArray.push(`${name} x${selectedCart[name]}`);}}
+        let orderString = orderArray.join(', ');
+
+        const updatedOrderPayload = {
+            order_id: generatedOrderID,
+            store_page: storePage.toLowerCase(),
+            customer_name: currentFullName,
+            customer_phone: "",
+            orders_list: orderString,
+            plus_code: "EDITED",
+            raw_chat_output: `✏️ EDITED ORDER FROM KIOSK\n🔢 Order ID: #${generatedOrderID}\n👤 Name: ${currentFullName}\n\nOrders:\n${orderString}`,
+            messenger_psid: currentPsid,
+            clicked_at: Date.now() // Bagong timestamp para ma-detect na ito ang pinakabago
+        };
+
+        try {
+            // Isulat ang bagong in-edit na order sa Supabase orders table gamit ang REST API / Supabase client
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': 'sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif',
+                    'Authorization': 'Bearer sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif',
+                    'Prefer': 'resolution=merge-duplicates'
+                },
+                body: JSON.stringify(updatedOrderPayload)
+            });
+
+            if(res.ok) {
+                alert("✅ Matagumpay na na-edit at nai-save ang order!");
+                // Bumalik sa pos.html at ilagay sa search bar ang OrderID para madaling makita
+                window.location.href = `./pos.html?page=${encodeURIComponent(storePage)}`;
+            } else {
+                alert("⚠️ May nangyaring error sa pag-save ng edit order.");
+            }
+        } catch(e) {
+            console.error("Edit order save error:", e);
+            alert("❌ Network error habang nagse-save.");
+        }
+    }
+</script>
+</body>
+</html>
