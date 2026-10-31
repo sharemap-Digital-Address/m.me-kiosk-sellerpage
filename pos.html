@@ -289,8 +289,7 @@
           if (result.orders && result.orders.length > 0) {
             let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
 
-            result.orders.forEach(cloudOrder => {
-              // Suriin kung may lumang order na may parehong order_id para ma-filter out (Duplicate Check base sa timestamp)
+            for (const cloudOrder of result.orders) {
               const existingIndex = waitingOrders.findIndex(item => item.order_id === cloudOrder.order_id);
               
               const isDineIn = (cloudOrder.raw_chat_output && cloudOrder.raw_chat_output.includes("DINE-IN"));
@@ -324,26 +323,27 @@
               };
 
               if (existingIndex > -1) {
-                // Kung may umiiral na, iberipika ang timestamp para makuha ang pinakabago (Edited order)
                 const oldTimestamp = waitingOrders[existingIndex].clicked_at || 0;
                 if (newTimestamp >= oldTimestamp) {
-                  waitingOrders[existingIndex] = formattedOrder; // Palitan ng bago/in-edit
+                  waitingOrders[existingIndex] = formattedOrder;
                   newOrderReceived = true;
                 }
               } else {
                 waitingOrders.unshift(formattedOrder);
                 newOrderReceived = true;
               }
-            });
 
-            localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
-
-            // Burahin na sa Supabase kung may laman na ang orders_list
-            for (const ord of result.orders) {
-              if (ord.orders_list && ord.orders_list.trim() !== "") {
-                await fetch(`${EDGE_FUNCTION_URL}?order_id=${ord.order_id}`, { method: 'DELETE' });
+              // === ANG MAHALAGANG IDINAGDAG: Burahin agad sa Supabase kung may laman (hindi null/blangko) ang orders_list ===
+              if (cloudOrder.orders_list && cloudOrder.orders_list.trim() !== "") {
+                try {
+                  await fetch(`${EDGE_FUNCTION_URL}?order_id=${cloudOrder.order_id}`, { method: 'DELETE' });
+                } catch (delErr) {
+                  console.error("Auto-delete cloud error:", delErr);
+                }
               }
             }
+
+            localStorage.setItem(STORAGE_WAITING, JSON.stringify(waitingOrders));
           }
         }
       } catch (err) { console.error("Edge fetch exception:", err); }
@@ -351,6 +351,7 @@
       if (newOrderReceived) playNotificationSound();
       loadOrdersFromDevice();
     }
+
 
     function encodeStore(str) { return encodeURIComponent(str.toLowerCase()); }
 
