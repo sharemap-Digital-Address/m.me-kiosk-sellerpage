@@ -438,20 +438,6 @@ function generateCounterQr(){
     document.getElementById("qrTextDetail").innerText = `Order ID: #${generatedOrderID} | Total: ₱${totalAmountPesos.toFixed(2)}`; 
 }
 
-// === GINAMIT NA ANG EDGE FUNCTION SA PAG-SAVE NG POS (Dine-In & Counter) ===
-async function saveOrderToSupabasePOS(orderData){
-    try {
-        await fetch(CREATE_ORDER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(orderData)
-        });
-        console.log("✅ Order successfully synced via Edge Function.");
-    } catch (err) {
-        console.error("Supabase Edge Function Sync Error:", err);
-    }
-}
-
 function downloadQrCodeImageWithDetails(){
     const qrContainer = document.getElementById("qrcodeCanvas"); 
     const originalCanvas = qrContainer.querySelector("canvas"); 
@@ -515,6 +501,7 @@ function copyTextToClipboard(text) {
     }
 }
 
+// === OVER-THE-COUNTER DIRECT FETCH (Sariling Format) ===
 async function handleCounterCheckoutSequence(){
     const nameVal = document.getElementById('fullName').value.trim(); 
     const phoneVal = document.getElementById('phone').value.trim();
@@ -536,28 +523,39 @@ async function handleCounterCheckoutSequence(){
     
     copyTextToClipboard(shareText);
 
-    await saveOrderToSupabasePOS({ 
-        order_id: generatedOrderID, 
-        store_page: pageId.toLowerCase(), 
-        branch: "Counter Pickup", 
-        schedule: "Over-the-Counter", 
-        customer_name: nameVal, 
-        customer_phone: phoneVal, 
-        landmark: "Counter", 
-        orders_list: formattedOrders, 
-        plus_code: "COUNTER", 
-        latitude: 0, 
-        longitude: 0, 
-        raw_chat_output: shareText, 
-        messenger_psid: activePsid, 
-        clicked_at: clickedAtTimestamp, 
-        status: 'PENDING' 
-    });
+    // Eksaktong format para sa Over-the-Counter
+    try {
+        await fetch(CREATE_ORDER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                order_id: generatedOrderID,
+                store_page: pageId.toLowerCase(),
+                branch: "Counter Pickup",
+                schedule: "Over-the-Counter",
+                customer_name: nameVal,
+                customer_phone: phoneVal,
+                landmark: `Counter Total: ₱${totalAmountPesos.toFixed(2)}`,
+                orders_list: formattedOrders,
+                plus_code: "COUNTER",
+                latitude: 0,
+                longitude: 0,
+                raw_chat_output: shareText,
+                messenger_psid: activePsid || "MESSENGER_WEB_USER",
+                clicked_at: clickedAtTimestamp || Date.now(),
+                status: 'PENDING'
+            })
+        });
+        console.log("✅ Counter order saved successfully.");
+    } catch (err) {
+        console.error("Counter order save error:", err);
+    }
     
     const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`; 
     setTimeout(()=>{ window.location.href = messengerUrl; }, 1000);
 }
 
+// === DINE-IN DIRECT FETCH (Sariling Format) ===
 async function handleProcessOrder(){
     const nameVal = document.getElementById('fullName').value.trim(); 
     const phoneVal = document.getElementById('phone').value.trim();
@@ -584,29 +582,40 @@ async function handleProcessOrder(){
         
         copyTextToClipboard(shareText);
 
-        await saveOrderToSupabasePOS({ 
-            order_id: generatedOrderID, 
-            store_page: pageId.toLowerCase(), 
-            branch: tableVal || "Dine-In Table", 
-            schedule: formattedSched, 
-            customer_name: nameVal, 
-            customer_phone: phoneVal, 
-            landmark: tableVal || "Dine-In", 
-            orders_list: ordersVal, 
-            plus_code: "DINE-IN", 
-            latitude: 0, 
-            longitude: 0, 
-            raw_chat_output: shareText, 
-            messenger_psid: activePsid, 
-            clicked_at: clickedAtTimestamp, 
-            status: 'PENDING' 
-        });
+        // Eksaktong format para sa Dine-In (Table at Pax)
+        try {
+            await fetch(CREATE_ORDER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_id: generatedOrderID,
+                    store_page: pageId.toLowerCase(),
+                    branch: `Table: ${tableVal || 'Not Specified'} (Pax: ${paxVal || '2'})`,
+                    schedule: formattedSched,
+                    customer_name: nameVal,
+                    customer_phone: phoneVal,
+                    landmark: `Dine-In Table ${tableVal || 'N/A'}`,
+                    orders_list: ordersVal,
+                    plus_code: "DINE-IN",
+                    latitude: 0,
+                    longitude: 0,
+                    raw_chat_output: shareText,
+                    messenger_psid: activePsid || "MESSENGER_WEB_USER",
+                    clicked_at: clickedAtTimestamp || Date.now(),
+                    status: 'PENDING'
+                })
+            });
+            console.log("✅ Dine-In order saved successfully.");
+        } catch (err) {
+            console.error("Dine-In order save error:", err);
+        }
         
         const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`; 
         window.location.href = messengerUrl; 
         return;
     }
     
+    // Delivery Flow (Ipasa sa index.html)
     localStorage.setItem('sharemap_page', pageId); 
     localStorage.setItem('sharemap_orderid', generatedOrderID); 
     localStorage.setItem('sharemap_fullname', nameVal);
