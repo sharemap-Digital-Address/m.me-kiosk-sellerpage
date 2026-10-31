@@ -323,7 +323,7 @@
       loadOrdersFromDevice();
     }
 
-    // === PINALIGTAS AT DINAGDAGAN NG AUTOMATIC DELETE SA SUPABASE PAGKA-FETCH ===
+    // === NA-UPDATE NA FETCH AT AUTOMATIC DELETE SA SUPABASE ===
     async function fetchStoreTokenAndOrders() {
       let newOrderReceived = false;
       try {
@@ -342,7 +342,7 @@
             `;
           }
 
-          // 2. Check Orders at Awtomatikong Pagbura sa Supabase
+          // 2. Check Orders at Awtomatikong Pagbura sa Supabase Gamit ang POST/DELETE payload o query
           if (result.orders && result.orders.length > 0) {
             let waitingOrders = JSON.parse(localStorage.getItem(STORAGE_WAITING)) || [];
 
@@ -378,9 +378,11 @@
                 });
               }
 
-              // DIREKTANG BURAHIN AGAD SA SUPABASE GAMIT ANG EDGE FUNCTION KUNG NA-FETCH NA
+              // DIREKTANG BURAHIN SA SUPABASE SA PAMAMAGITAN NG DELETE METHOD AT ORDER_ID PARAMETER
               try {
-                await fetch(`${EDGE_FUNCTION_URL}?order_id=${cloudOrder.order_id}`, { method: 'DELETE' });
+                await fetch(`${EDGE_FUNCTION_URL}?order_id=${encodeURIComponent(cloudOrder.order_id)}`, { 
+                  method: 'DELETE' 
+                });
               } catch (delErr) {
                 console.error("Cloud delete error para sa order:", cloudOrder.order_id, delErr);
               }
