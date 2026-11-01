@@ -24,7 +24,7 @@
         let clickedAtTimestamp = 0; 
         let currentFullNameFromKiosk = "";
         let selectedPaymentMethod = "GCash / QR Ph";
-        let uploadedReceiptUrl = ""; // Para sa OPR_image_receipt
+        let uploadedReceiptUrl = ""; 
 
         function updateSdkDebugToast(message, isError = false) {
             const toastEl = document.getElementById('debugSdkToast');
@@ -35,15 +35,10 @@
             console.log("[SDK LOG]:", message);
         }
 
-        // Tumpak na pagkuha ng Store Page ID galing sa URL parameter o localStorage
+        // Eksaktong orihinal na paraan ng pagkuha ng Page ID (Mabilis at walang sablay)
         function getPageId() {
             const urlParams = new URLSearchParams(window.location.search);
-            const pageParam = urlParams.get('page');
-            if (pageParam && pageParam.trim() !== "") {
-                localStorage.setItem('sharemap_page', pageParam.trim());
-                return pageParam.trim();
-            }
-            return localStorage.getItem('sharemap_page') || "sharemapdammystore";
+            return urlParams.get('page') || localStorage.getItem('sharemap_page') || "sharemapdammystore";
         }
 
         function generateSpreadsheetOrderID() {
@@ -265,6 +260,7 @@
 <body>
 
     <div class="card">
+        <!-- Agad na binabasa at ipinapakita ang store ID galing sa getPageId() -->
         <div id="storeUsernameDisplay" class="store-badge">@store</div>
         <h3 style="margin: 0 0 4px 0;">📍 ShareMap Ordering Gateway</h3>
         <div id="orderIdBadge" class="order-id-badge">🔢 Order ID: GENERATING...</div>
@@ -369,7 +365,7 @@
                 <div id="qrDisplayArea" style="display:none; margin-top:10px;">
                     <div style="font-size:12px; font-weight:bold; color:#38bdf8;" id="qrStoreLabel">@store</div>
                     <div id="drawerQrcodeCanvas" style="background:#fff; padding:10px; border-radius:8px; display:inline-block; margin-top:8px;"></div>
-                    <div style="font-size:11px; color:#cbd5e1; margin-top:6px;" id="qrAccountDetails">GCash - Jayrome P. | 0905494**** | ₱0.00</div>
+                    <div style="font-size:11px; color:#cbd5e1; margin-top:6px;" id="qrAccountDetails">GCash - Store | 0905494**** | ₱0.00</div>
 
                     <!-- UPLOAD PROOF & REFERENCE INPUT -->
                     <div style="margin-top:12px; text-align:left;">
@@ -473,7 +469,7 @@ function generateOnlineP2PQr(){
 
     const pageId = getPageId();
     document.getElementById('qrStoreLabel').innerText = `@${pageId.toLowerCase()}`;
-    document.getElementById('qrAccountDetails').innerText = `GCash - ShareMap Store | 0905494**** | ₱${totalAmountPesos.toFixed(2)}`;
+    document.getElementById('qrAccountDetails').innerText = `GCash - @${pageId.toLowerCase()} | 0905494**** | ₱${totalAmountPesos.toFixed(2)}`;
 
     const canvasContainer = document.getElementById('drawerQrcodeCanvas');
     canvasContainer.innerHTML = "";
@@ -570,6 +566,8 @@ function renderOrderUI(){
     
     let summaryText = currentOrdersList.map(i => `${i.name} x${i.qty}`).join(', ');
     localStorage.setItem('sharemap_orders', summaryText);
+
+    if(document.getElementById("typeCounter").checked) generateCounterQr();
 }
 
 function editOrderQty(index){ 
@@ -640,7 +638,7 @@ async function handleCounterCheckoutSequence(){
     const orderStatus = (selectedPaymentMethod === 'GCash / QR Ph') ? 'VERIFYING_PAYMENT' : 'PENDING';
     
     const formattedOrders = ordersVal.split(', ').join('\n'); 
-    const shareText = `💳 OVER-THE-COUNTER ORDER\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment: ${selectedPaymentMethod}\n🔢 Ref No: ${oprNumberVal || 'N/A'}\n📸 Receipt: ${uploadedReceiptUrl || 'None'}\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Orders:\n${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+    const shareText = `💳 OVER-THE-COUNTER ORDER\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment Method: ${selectedPaymentMethod}\n🔢 Ref No: ${oprNumberVal || 'N/A'}\n📸 Receipt: ${uploadedReceiptUrl || 'None'}\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Orders:\n${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
     
     copyTextToClipboard(shareText);
 
@@ -699,7 +697,7 @@ async function handleProcessOrder(){
     
     if(isDineIn){
         const formattedOrders = ordersVal.split(', ').join('\n• '); 
-        const shareText = `🍽️ DINE-IN RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment: ${selectedPaymentMethod}\n🔢 Ref No: ${oprNumberVal || 'N/A'}\n📸 Receipt: ${uploadedReceiptUrl || 'None'}\n🪑 Table: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Pax: ${paxVal || '2'}\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+        const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment Method: ${selectedPaymentMethod}\n🔢 Ref No: ${oprNumberVal || 'N/A'}\n📸 Receipt: ${uploadedReceiptUrl || 'None'}\n🪑 Table: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
         
         copyTextToClipboard(shareText);
 
@@ -734,7 +732,7 @@ async function handleProcessOrder(){
         return;
     }
     
-    // Delivery Flow (Ipasa sa index.html kasama ang OPR data)
+    // Delivery Flow (Ipasa sa index.html kasama ang payment method at OPR data)
     localStorage.setItem('sharemap_page', pageId); 
     localStorage.setItem('sharemap_orderid', generatedOrderID); 
     localStorage.setItem('sharemap_fullname', nameVal);
@@ -754,8 +752,8 @@ async function handleProcessOrder(){
     window.location.href = `./index.html${queryStr}`;
 }
 
+// Eksaktong orihinal na v5 DOMContentLoaded flow para sa mabilis na pag-load at pagsusuri ng lisensya
 window.addEventListener('DOMContentLoaded', () => {
-    // Agad na basahin at i-display ang Store ID mula sa URL parameter nang walang delay
     const pageId = getPageId(); 
     localStorage.setItem('sharemap_page', pageId); 
     document.getElementById("storeUsernameDisplay").innerText = `@${pageId.toLowerCase()}`;
@@ -802,7 +800,7 @@ window.addEventListener('DOMContentLoaded', () => {
     
     toggleServiceType(); 
     renderOrderUI(); 
-    checkShareMapAccess(pageId);
+    checkShareMapAccess(pageId); // Sinusuri agad ang Supabase gamit ang tamang Page ID
     setTimeout(setupBackButtonTrayReturn, 800);
 });
 
