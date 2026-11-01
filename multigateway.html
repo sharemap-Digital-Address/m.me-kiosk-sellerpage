@@ -24,7 +24,7 @@
         let clickedAtTimestamp = 0; 
         let currentFullNameFromKiosk = "";
         let selectedPaymentMethod = "GCash / QR Ph";
-        let uploadedReceiptUrl = ""; // Para sa OPR_image_receipt
+        let uploadedReceiptUrl = ""; 
 
         function updateSdkDebugToast(message, isError = false) {
             const toastEl = document.getElementById('debugSdkToast');
@@ -259,7 +259,7 @@
 <body>
 
     <div class="card">
-        <div id="storeUsernameDisplay" class="store-badge">@store</div>
+        <div id="storeUsernameDisplay" class="store-badge">@...</div>
         <h3 style="margin: 0 0 4px 0;">📍 ShareMap Ordering Gateway</h3>
         <div id="orderIdBadge" class="order-id-badge">🔢 Order ID: GENERATING...</div>
 
@@ -363,7 +363,7 @@
                 <div id="qrDisplayArea" style="display:none; margin-top:10px;">
                     <div style="font-size:12px; font-weight:bold; color:#38bdf8;" id="qrStoreLabel">@store</div>
                     <div id="drawerQrcodeCanvas" style="background:#fff; padding:10px; border-radius:8px; display:inline-block; margin-top:8px;"></div>
-                    <div style="font-size:11px; color:#cbd5e1; margin-top:6px;" id="qrAccountDetails">GCash - Jayrome P. | 0905494**** | ₱0.00</div>
+                    <div style="font-size:11px; color:#cbd5e1; margin-top:6px;" id="qrAccountDetails">GCash - ShareMap Store | 0905494**** | ₱0.00</div>
 
                     <!-- UPLOAD PROOF & REFERENCE INPUT -->
                     <div style="margin-top:12px; text-align:left;">
@@ -419,7 +419,6 @@ function openPaymentDrawer(){
     document.getElementById('errorMsg').style.display = "none";
     document.getElementById('drawerTotalText').innerText = totalAmountPesos.toFixed(2);
     
-    // Check kung online payment ang napili para ipakita ang QR checkout flow
     checkOnlinePaymentFlowUI();
     document.getElementById('paymentDrawer').style.display = 'flex';
 }
@@ -454,7 +453,7 @@ function checkOnlinePaymentFlowUI(){
         onlineSec.style.display = 'block';
         document.getElementById('checkoutPayNowBtnContainer').style.display = 'block';
         document.getElementById('qrDisplayArea').style.display = 'none';
-        finalBtn.style.display = 'none'; // Magpapakita lang pagka-click ng Pay Now
+        finalBtn.style.display = 'none'; 
     } else {
         onlineSec.style.display = 'none';
         finalBtn.style.display = 'block';
@@ -468,7 +467,7 @@ function generateOnlineP2PQr(){
 
     const pageId = getPageId();
     document.getElementById('qrStoreLabel').innerText = `@${pageId.toLowerCase()}`;
-    document.getElementById('qrAccountDetails').innerText = `GCash - ShareMap Store | 0905494**** | ₱${totalAmountPesos.toFixed(2)}`;
+    document.getElementById('qrAccountDetails').innerText = `GCash - @${pageId.toLowerCase()} | 0905494**** | ₱${totalAmountPesos.toFixed(2)}`;
 
     const canvasContainer = document.getElementById('drawerQrcodeCanvas');
     canvasContainer.innerHTML = "";
@@ -623,7 +622,6 @@ function copyTextToClipboard(text) {
     }
 }
 
-// === OVER-THE-COUNTER DIRECT FETCH (Status: Verifying kung Online, Pending kung Cash) ===
 async function handleCounterCheckoutSequence(){
     const nameVal = document.getElementById('fullName').value.trim(); 
     const phoneVal = document.getElementById('phone').value.trim();
@@ -669,7 +667,6 @@ async function handleCounterCheckoutSequence(){
     setTimeout(()=>{ window.location.href = messengerUrl; }, 1000);
 }
 
-// === DINE-IN / DELIVERY CHECKOUT ===
 async function handleProcessOrder(){
     const nameVal = document.getElementById('fullName').value.trim(); 
     const phoneVal = document.getElementById('phone').value.trim();
@@ -729,7 +726,6 @@ async function handleProcessOrder(){
         return;
     }
     
-    // Delivery Flow (Ipasa sa index.html kasama ang OPR data)
     localStorage.setItem('sharemap_page', pageId); 
     localStorage.setItem('sharemap_orderid', generatedOrderID); 
     localStorage.setItem('sharemap_fullname', nameVal);
@@ -752,6 +748,7 @@ async function handleProcessOrder(){
 window.addEventListener('DOMContentLoaded', () => {
     const pageId = getPageId(); 
     localStorage.setItem('sharemap_page', pageId); 
+    // AGAD NA INAASET ANG STORE USERNAME SA BADGE
     document.getElementById("storeUsernameDisplay").innerText = `@${pageId.toLowerCase()}`;
     
     const urlParams = new URLSearchParams(window.location.search); 
