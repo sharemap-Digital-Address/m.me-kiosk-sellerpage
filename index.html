@@ -114,6 +114,7 @@
       <h4>📋 Impormasyon sa Delivery:</h4>
       <div class="buyer-info-item">🏪 <b>Store Name / Page:</b> <span id="dispPage">-</span></div>
       <div class="buyer-info-item" id="branchDisplayRow">🏢 <b>Nearest Branch:</b> <span id="dispBranch">Pumili sa ibaba</span></div>
+      <div class="buyer-info-item">💳 <b>Payment Method:</b> <span id="dispPayment" style="color:#0369a1; font-weight:bold;">GCash / QR Ph</span></div>
       <div class="buyer-info-item">⏰ <b>Schedule Order:</b> <span id="dispSched">Now (Agad-agad)</span></div>
       <div class="buyer-info-item">🛒 <b>Orders:</b> <span id="dispOrders">-</span></div>
       <div class="buyer-info-item">👤 <b>Pangalan:</b> <span id="dispName">-</span></div>
@@ -184,6 +185,7 @@
     const buyerBranch = localStorage.getItem('sharemap_branch') || "Main Branch";
     const buyerSchedule = localStorage.getItem('sharemap_schedule') || "Now (Agad-agad)";
     const buyerOrderId = localStorage.getItem('sharemap_orderid') || "N/A";
+    const buyerPayment = localStorage.getItem('sharemap_payment') || "GCash / QR Ph";
 
     window.addEventListener("DOMContentLoaded", () => {
       const pageId = getPageId();
@@ -207,6 +209,13 @@
       } else {
         document.getElementById("dispBranch").innerText = buyerBranch;
         document.getElementById("branchInput").value = buyerBranch !== "Main Branch" ? buyerBranch : "";
+      }
+
+      if (urlParams.get('pay')) {
+        document.getElementById("dispPayment").innerText = urlParams.get('pay');
+        localStorage.setItem('sharemap_payment', urlParams.get('pay'));
+      } else {
+        document.getElementById("dispPayment").innerText = buyerPayment;
       }
 
       if (urlParams.get('sched')) {
@@ -363,6 +372,7 @@
       const finalBranch = localStorage.getItem('sharemap_branch') || buyerBranch;
       const finalSched = localStorage.getItem('sharemap_schedule') || buyerSchedule;
       const finalOrderId = localStorage.getItem('sharemap_orderid') || buyerOrderId;
+      const finalPayment = localStorage.getItem('sharemap_payment') || buyerPayment;
       const pageId = getPageId();
 
       const formattedOrders = finalOrders
@@ -388,7 +398,7 @@
           
           const textAddress = await getStreetAddress(lat, lng);
 
-          const shareText = `🏪 Store / Page: ${pageId}\n🔢 Order ID: #${finalOrderId}\n🏢 Nearest Branch: ${finalBranch}\n⏰ Schedule Order: ${finalSched}\n\nClient Order List:\n${formattedOrders}\n\nName: ${finalName}\nPhone: ${finalPhone}\nLandmark: ${finalLandmark}\n\n📍 Pin Location\nDigital Address (PlusCode): ${plusCode}\n\nMap link address: ${googleMapsUrl}\n\nGeo address: ${lat},${lng}\nText Address (OSM): ${textAddress}`;
+          const shareText = `🏪 Store / Page: ${pageId}\n🔢 Order ID: #${finalOrderId}\n🏢 Nearest Branch: ${finalBranch}\n💳 Payment Method: ${finalPayment}\n⏰ Schedule Order: ${finalSched}\n\nClient Order List:\n${formattedOrders}\n\nName: ${finalName}\nPhone: ${finalPhone}\nLandmark: ${finalLandmark}\n\n📍 Pin Location\nDigital Address (PlusCode): ${plusCode}\n\nMap link address: ${googleMapsUrl}\n\nGeo address: ${lat},${lng}\nText Address (OSM): ${textAddress}`;
 
           const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`;
 
@@ -398,11 +408,11 @@
             body: JSON.stringify({
               order_id: finalOrderId,
               store_page: pageId.toLowerCase(),
-              branch: finalBranch,
+              branch: `${finalBranch} (${finalPayment})`,
               schedule: finalSched,
               customer_name: finalName,
               customer_phone: finalPhone,
-              landmark: finalLandmark,
+              landmark: `${finalLandmark} | Pay: ${finalPayment}`,
               orders_list: formattedOrders,
               plus_code: plusCode,
               latitude: lat,
@@ -464,6 +474,7 @@
       const finalBranch = localStorage.getItem('sharemap_branch') || buyerBranch;
       const finalSched = localStorage.getItem('sharemap_schedule') || buyerSchedule;
       const finalOrderId = localStorage.getItem('sharemap_orderid') || buyerOrderId;
+      const finalPayment = localStorage.getItem('sharemap_payment') || buyerPayment;
       const pageId = getPageId();
 
       const formattedOrders = finalOrders
@@ -492,6 +503,7 @@
                               `🔢 Order ID: #${finalOrderId}\n` +
                               `🏪 Store: ${pageId}\n` +
                               `🏢 Branch: ${finalBranch}\n` +
+                              `💳 Payment: ${finalPayment}\n` +
                               `⏰ Schedule: ${finalSched}\n\n` +
                               `🛒 Orders:\n• ${formattedOrders}\n\n` +
                               `👤 Name: ${finalName}\n` +
@@ -506,11 +518,11 @@
             body: JSON.stringify({
               order_id: finalOrderId,
               store_page: pageId.toLowerCase(),
-              branch: finalBranch,
+              branch: `${finalBranch} (${finalPayment})`,
               schedule: finalSched,
               customer_name: finalName,
               customer_phone: finalPhone,
-              landmark: finalLandmark,
+              landmark: `${finalLandmark} | Pay: ${finalPayment}`,
               orders_list: formattedOrders,
               plus_code: plusCode,
               latitude: lat,
