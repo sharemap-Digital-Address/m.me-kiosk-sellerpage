@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShareMap - Order & Service Gateway v5 + Payment Bottom Drawer</title>
+    <title>ShareMap - Order & Service Gateway v6 + Online Payment Flow</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -23,6 +23,8 @@
         let generatedOrderID = "";
         let clickedAtTimestamp = 0; 
         let currentFullNameFromKiosk = "";
+        let selectedPaymentMethod = "GCash / QR Ph";
+        let uploadedReceiptUrl = ""; // Para sa OPR_image_receipt
 
         function updateSdkDebugToast(message, isError = false) {
             const toastEl = document.getElementById('debugSdkToast');
@@ -33,7 +35,7 @@
             console.log("[SDK LOG]:", message);
         }
 
-        // Orihinal at tiyak na pagkuha ng Store Page ID mula sa URL o localStorage
+        // Eksaktong orihinal na paraan ng pagkuha ng Store Page ID
         function getPageId() {
             const urlParams = new URLSearchParams(window.location.search);
             const pageParam = urlParams.get('page');
@@ -253,7 +255,7 @@
 
         /* Bottom Drawer para sa Payment Method */
         .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: flex-end; flex-direction: column; z-index: 2500; }
-        .bottom-drawer { background: #1e293b; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; border-top: 2px solid #38bdf8; box-sizing: border-box; width: 100%; max-width: 480px; margin: 0 auto; text-align: left; }
+        .bottom-drawer { background: #1e293b; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; max-height: 85vh; overflow-y: auto; border-top: 2px solid #38bdf8; box-sizing: border-box; width: 100%; max-width: 480px; margin: 0 auto; text-align: left; }
         .drawer-handle { width: 40px; height: 5px; background: #64748b; border-radius: 3px; margin: 0 auto 15px auto; }
         .payment-option-card { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; }
         .payment-option-card:hover { border-color: #38bdf8; background: #132238; }
@@ -324,7 +326,7 @@
         </div>
     </div>
 
-    <!-- PAYMENT METHOD BOTTOM DRAWER -->
+    <!-- PAYMENT METHOD BOTTOM DRAWER (May kasamang Online Payment Flow) -->
     <div id="paymentDrawer" class="drawer-overlay" onclick="closePaymentDrawer(event)">
         <div class="bottom-drawer" onclick="event.stopPropagation()">
             <div class="drawer-handle"></div>
@@ -357,7 +359,31 @@
                 </div>
             </div>
 
-            <button type="button" class="btn" style="background-color: #16a34a; margin-top: 15px;" onclick="confirmAndExecuteCheckout()">✅ Kumpirmahin at I-send ang Order ➔</button>
+            <!-- ONLINE PAYMENT SECTION (QR Code, Upload Resibo, at Reference Number Input) -->
+            <div id="onlinePaymentSection" style="display:none; margin-top:15px; background:#0f172a; padding:12px; border-radius:10px; border:1px dashed #38bdf8; text-align:center;">
+                <div id="checkoutPayNowBtnContainer">
+                    <div style="font-size:14px; font-weight:bold; color:#38bdf8; margin-bottom:8px;">Total: ₱<span id="drawerTotalText">0.00</span></div>
+                    <button type="button" class="btn" style="background:#2563eb; margin-top:0;" onclick="generateOnlineP2PQr()">Checkout - Pay Now</button>
+                </div>
+
+                <div id="qrDisplayArea" style="display:none; margin-top:10px;">
+                    <div style="font-size:12px; font-weight:bold; color:#38bdf8;" id="qrStoreLabel">@store</div>
+                    <div id="drawerQrcodeCanvas" style="background:#fff; padding:10px; border-radius:8px; display:inline-block; margin-top:8px;"></div>
+                    <div style="font-size:11px; color:#cbd5e1; margin-top:6px;" id="qrAccountDetails">GCash - Store | 0905494**** | ₱0.00</div>
+
+                    <!-- UPLOAD PROOF & REFERENCE INPUT -->
+                    <div style="margin-top:12px; text-align:left;">
+                        <button type="button" class="btn" style="background:#0d9488; padding:8px; font-size:13px; margin-bottom:8px;" onclick="document.getElementById('receiptFileInput').click()">📸 Upload Proof Of Payment</button>
+                        <input type="file" id="receiptFileInput" accept="image/*" style="display:none;" onchange="handleReceiptUpload(this)">
+                        <div id="uploadStatusText" style="font-size:11px; color:#34d399; margin-bottom:8px;"></div>
+
+                        <label style="font-size:11px; color:#cbd5e1; display:block; margin-bottom:3px;">Copy your Online payment Reference num# & paste here:</label>
+                        <input type="text" id="oprNumberInput" placeholder="Ilagay ang Reference Number..." style="width:100%; padding:8px; background:#1e293b; border:1px solid #475569; color:#fff; border-radius:6px; font-size:13px; box-sizing:border-box;">
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" id="finalConfirmBtn" class="btn" style="background-color: #16a34a; margin-top: 15px;" onclick="confirmAndExecuteCheckout()">✅ Kumpirmahin at I-send ang Order ➔</button>
         </div>
     </div>
 
@@ -397,19 +423,14 @@ function openPaymentDrawer(){
         return; 
     }
     document.getElementById('errorMsg').style.display = "none";
+    document.getElementById('drawerTotalText').innerText = totalAmountPesos.toFixed(2);
+    
+    checkOnlinePaymentFlowUI();
     document.getElementById('paymentDrawer').style.display = 'flex';
 }
 
 function openPaymentDrawerForCounter(){
-    const nameVal = document.getElementById('fullName').value.trim(); 
-    const phoneVal = document.getElementById('phone').value.trim();
-    if(!nameVal || !phoneVal){ 
-        document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy."; 
-        document.getElementById('errorMsg').style.display = "block"; 
-        return; 
-    }
-    document.getElementById('errorMsg').style.display = "none";
-    document.getElementById('paymentDrawer').style.display = 'flex';
+    openPaymentDrawer();
 }
 
 function closePaymentDrawer(e){
@@ -426,6 +447,66 @@ function selectPaymentOption(method){
     if(method === 'GCash / QR Ph') document.getElementById('pmGcash').checked = true;
     else if(method === 'Cash on Delivery') document.getElementById('pmCod').checked = true;
     else document.getElementById('pmCash').checked = true;
+
+    checkOnlinePaymentFlowUI();
+}
+
+function checkOnlinePaymentFlowUI(){
+    const onlineSec = document.getElementById('onlinePaymentSection');
+    const finalBtn = document.getElementById('finalConfirmBtn');
+    
+    if(selectedPaymentMethod === 'GCash / QR Ph'){
+        onlineSec.style.display = 'block';
+        document.getElementById('checkoutPayNowBtnContainer').style.display = 'block';
+        document.getElementById('qrDisplayArea').style.display = 'none';
+        finalBtn.style.display = 'none'; 
+    } else {
+        onlineSec.style.display = 'none';
+        finalBtn.style.display = 'block';
+    }
+}
+
+function generateOnlineP2PQr(){
+    document.getElementById('checkoutPayNowBtnContainer').style.display = 'none';
+    document.getElementById('qrDisplayArea').style.display = 'block';
+    document.getElementById('finalConfirmBtn').style.display = 'block';
+
+    const pageId = getPageId();
+    document.getElementById('qrStoreLabel').innerText = `@${pageId.toLowerCase()}`;
+    document.getElementById('qrAccountDetails').innerText = `GCash - @${pageId.toLowerCase()} | 0905494**** | ₱${totalAmountPesos.toFixed(2)}`;
+
+    const canvasContainer = document.getElementById('drawerQrcodeCanvas');
+    canvasContainer.innerHTML = "";
+    const qrPayload = JSON.stringify({store: pageId, oid: generatedOrderID, amount: totalAmountPesos, type: "P2P_DUMMY"});
+    new QRCode(canvasContainer, {text: qrPayload, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.H});
+}
+
+async function handleReceiptUpload(input){
+    if(input.files && input.files[0]){
+        const file = input.files[0];
+        document.getElementById('uploadStatusText').innerText = "⏳ Nag-a-upload ng resibo...";
+        
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `receipt_${generatedOrderID}_${Date.now()}.${fileExt}`;
+            
+            const { data, error } = await supabaseClient.storage
+                .from('receipts')
+                .upload(fileName, file);
+
+            if(error) throw error;
+
+            const { data: publicUrlData } = supabaseClient.storage
+                .from('receipts')
+                .getPublicUrl(fileName);
+
+            uploadedReceiptUrl = publicUrlData.publicUrl;
+            document.getElementById('uploadStatusText').innerText = "✅ Tagumpay na na-upload ang resibo!";
+        } catch(err) {
+            console.error("Upload error:", err);
+            document.getElementById('uploadStatusText').innerText = "⚠️ Nabigo ang upload. Subukan ulit.";
+        }
+    }
 }
 
 function confirmAndExecuteCheckout(){
@@ -525,7 +606,6 @@ function formatScheduleText(rawInput){
     return dt.toLocaleString('en-PH', {dateStyle:'medium', timeStyle:'short'}); 
 }
 
-// 🟢 Inalis na ang store username sa QR code payload para malinis at hindi magka-error
 function generateCounterQr(){ 
     const qrCanvasContainer = document.getElementById("qrcodeCanvas"); 
     qrCanvasContainer.innerHTML = ""; 
@@ -601,11 +681,14 @@ async function handleCounterCheckoutSequence(){
     const ordersVal = getFormattedOrdersText(); 
     const pageId = getPageId(); 
     const activePsid = document.getElementById('displayPsid').value;
+    const oprNumberVal = document.getElementById('oprNumberInput').value.trim();
+    
+    const orderStatus = (selectedPaymentMethod === 'GCash / QR Ph') ? 'VERIFYING_PAYMENT' : 'PENDING';
     
     downloadQrCodeImageWithDetails();
     
     const formattedOrders = ordersVal.split(', ').join('\n'); 
-    const shareText = `💳 OVER-THE-COUNTER ADVANCE ORDER\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment Method: ${selectedPaymentMethod}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Orders:\n${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+    const shareText = `💳 OVER-THE-COUNTER ADVANCE ORDER\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment Method: ${selectedPaymentMethod}\n🔢 Ref No: ${oprNumberVal || 'N/A'}\n📸 Receipt: ${uploadedReceiptUrl || 'None'}\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Orders:\n${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
     
     copyTextToClipboard(shareText);
 
@@ -620,7 +703,7 @@ async function handleCounterCheckoutSequence(){
                 schedule: "Over-the-Counter",
                 customer_name: nameVal,
                 customer_phone: phoneVal,
-                landmark: `Payment: ${selectedPaymentMethod} | Total: ₱${totalAmountPesos.toFixed(2)}`,
+                landmark: `Payment: ${selectedPaymentMethod} | Ref: ${oprNumberVal || 'N/A'}`,
                 orders_list: formattedOrders,
                 plus_code: "COUNTER",
                 latitude: 0,
@@ -628,7 +711,9 @@ async function handleCounterCheckoutSequence(){
                 raw_chat_output: shareText,
                 messenger_psid: activePsid || "MESSENGER_WEB_USER",
                 clicked_at: clickedAtTimestamp || Date.now(),
-                status: 'PENDING'
+                OPR_number: oprNumberVal || "N/A",
+                OPR_image_receipt: uploadedReceiptUrl || "",
+                status: orderStatus
             })
         });
     } catch (err) {}
@@ -649,6 +734,7 @@ async function handleProcessOrder(){
     const isDineIn = document.getElementById("typeDineIn").checked; 
     const pageId = getPageId(); 
     const activePsid = document.getElementById('displayPsid').value;
+    const oprNumberVal = document.getElementById('oprNumberInput').value.trim();
     
     if(!nameVal || !phoneVal){ 
         document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy."; 
@@ -657,10 +743,11 @@ async function handleProcessOrder(){
     }
     document.getElementById('errorMsg').style.display = "none"; 
     const formattedSched = formatScheduleText(schedVal);
+    const orderStatus = (selectedPaymentMethod === 'GCash / QR Ph') ? 'VERIFYING_PAYMENT' : 'PENDING';
     
     if(isDineIn){
         const formattedOrders = ordersVal.split(', ').join('\n• '); 
-        const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment Method: ${selectedPaymentMethod}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n🪑 Table: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+        const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment Method: ${selectedPaymentMethod}\n🔢 Ref No: ${oprNumberVal || 'N/A'}\n📸 Receipt: ${uploadedReceiptUrl || 'None'}\n🪑 Table: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
         
         copyTextToClipboard(shareText);
 
@@ -683,7 +770,9 @@ async function handleProcessOrder(){
                     raw_chat_output: shareText,
                     messenger_psid: activePsid || "MESSENGER_WEB_USER",
                     clicked_at: clickedAtTimestamp || Date.now(),
-                    status: 'PENDING'
+                    OPR_number: oprNumberVal || "N/A",
+                    OPR_image_receipt: uploadedReceiptUrl || "",
+                    status: orderStatus
                 })
             });
         } catch (err) {}
@@ -693,7 +782,7 @@ async function handleProcessOrder(){
         return;
     }
     
-    // Delivery Flow
+    // Delivery Flow (Ipasa sa index.html kasama ang OPR data)
     localStorage.setItem('sharemap_page', pageId); 
     localStorage.setItem('sharemap_orderid', generatedOrderID); 
     localStorage.setItem('sharemap_fullname', nameVal);
@@ -705,9 +794,11 @@ async function handleProcessOrder(){
     localStorage.setItem('sharemap_psid', activePsid);
     localStorage.setItem('sharemap_clicked_at', clickedAtTimestamp); 
     localStorage.setItem('sharemap_payment', selectedPaymentMethod);
+    localStorage.setItem('sharemap_opr_number', oprNumberVal);
+    localStorage.setItem('sharemap_opr_receipt', uploadedReceiptUrl);
     sessionStorage.setItem('access_granted', 'true');
     
-    const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&total=${totalAmountPesos.toFixed(2)}&psid=${encodeURIComponent(activePsid)}&clicked_at=${clickedAtTimestamp}&pay=${encodeURIComponent(selectedPaymentMethod)}`;
+    const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&total=${totalAmountPesos.toFixed(2)}&psid=${encodeURIComponent(activePsid)}&clicked_at=${clickedAtTimestamp}&pay=${encodeURIComponent(selectedPaymentMethod)}&opr_num=${encodeURIComponent(oprNumberVal)}&opr_rec=${encodeURIComponent(uploadedReceiptUrl)}`;
     window.location.href = `./index.html${queryStr}`;
 }
 
@@ -758,7 +849,7 @@ window.addEventListener('DOMContentLoaded', () => {
     
     toggleServiceType(); 
     renderOrderUI(); 
-    checkShareMapAccess(pageId);
+    checkShareMapAccess(pageId); // Garantisadong mababasa ang Supabase gamit ang tamang orihinal na `getPageId()`
     setTimeout(setupBackButtonTrayReturn, 800);
 });
 
