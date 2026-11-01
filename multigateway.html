@@ -35,12 +35,13 @@
             console.log("[SDK LOG]:", message);
         }
 
+        // DIREKTANG PAGBASA NG PAGE PARAMETER SA URL
         function getPageId() {
             const urlParams = new URLSearchParams(window.location.search);
             const pageParam = urlParams.get('page');
-            if (pageParam) {
-                localStorage.setItem('sharemap_page', pageParam);
-                return pageParam;
+            if (pageParam && pageParam.trim() !== "") {
+                localStorage.setItem('sharemap_page', pageParam.trim());
+                return pageParam.trim();
             }
             return localStorage.getItem('sharemap_page') || "sharemapdammystore";
         }
@@ -264,7 +265,8 @@
 <body>
 
     <div class="card">
-        <div id="storeUsernameDisplay" class="store-badge">@...</div>
+        <!-- BADGE DYNAMIC DISPLAY -->
+        <div id="storeUsernameDisplay" class="store-badge">@Loading...</div>
         <h3 style="margin: 0 0 4px 0;">📍 ShareMap Ordering Gateway</h3>
         <div id="orderIdBadge" class="order-id-badge">🔢 Order ID: GENERATING...</div>
 
@@ -781,7 +783,7 @@ async function handleProcessOrder(){
         return;
     }
     
-    // Delivery Flow (Ipasa sa index.html kasama ang payment method at OPR data)
+    // Delivery Flow (Ipasa sa index.html)
     localStorage.setItem('sharemap_page', pageId); 
     localStorage.setItem('sharemap_orderid', generatedOrderID); 
     localStorage.setItem('sharemap_fullname', nameVal);
@@ -802,9 +804,9 @@ async function handleProcessOrder(){
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    const pageId = getPageId(); 
-    localStorage.setItem('sharemap_page', pageId); 
-    document.getElementById("storeUsernameDisplay").innerText = `@${pageId.toLowerCase()}`;
+    // AGAD AT DIREKTANG PAG-SET NG URL PARAMETER SA BADGE
+    const detectedPageId = getPageId(); 
+    document.getElementById("storeUsernameDisplay").innerText = `@${detectedPageId.toLowerCase()}`;
     
     const urlParams = new URLSearchParams(window.location.search); 
     const passedOrders = urlParams.get('ord'); 
@@ -848,7 +850,7 @@ window.addEventListener('DOMContentLoaded', () => {
     
     toggleServiceType(); 
     renderOrderUI(); 
-    checkShareMapAccess(pageId);
+    checkShareMapAccess(detectedPageId);
     setTimeout(setupBackButtonTrayReturn, 800);
 });
 
