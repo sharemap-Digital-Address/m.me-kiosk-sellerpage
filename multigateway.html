@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShareMap - Order & Service Gateway v4 FINAL</title>
+    <title>ShareMap - Order & Service Gateway v5 + Payment Bottom Drawer</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -61,26 +61,17 @@
                 const today = new Date().toISOString().split('T')[0];
 
                 if (result.error || !data) {
-                    showBlockScreen(
-                        "⚠️ Walang Lisensya / Inactive Account", 
-                        `Ang store username na "@${pageId}" ay wala pang lisensya sa ShareMap.`
-                    );
+                    showBlockScreen("⚠️ Walang Lisensya / Inactive Account", `Ang store username na "@${pageId}" ay wala pang lisensya sa ShareMap.`);
                     return;
                 }
 
                 if (data.status === "INACTIVE") {
-                    showBlockScreen(
-                        "⚠️ Inactive Account", 
-                        "Ang store na ito ay kasalukuyang inactive sa ShareMap system."
-                    );
+                    showBlockScreen("⚠️ Inactive Account", "Ang store na ito ay kasalukuyang inactive sa ShareMap system.");
                     return;
                 }
 
                 if (data.expiry && today > data.expiry && data.status !== "ACTIVE") {
-                    showBlockScreen(
-                        "🚫 Expired License", 
-                        `Ang inyong subscription ay nag-expire noong ${data.expiry}. Paki-renew ang iyong access.`
-                    );
+                    showBlockScreen("🚫 Expired License", `Ang inyong subscription ay nag-expire noong ${data.expiry}. Paki-renew ang iyong access.`);
                     return;
                 }
 
@@ -118,10 +109,7 @@
             } catch (err) {
                 console.error("Verification error:", err);
                 updateSdkDebugToast("❌ Connection Error sa Server", true);
-                showBlockScreen(
-                    "⚠️ Connection Error", 
-                    "Hindi makakonekta sa ShareMap Server. Paki-check ang iyong internet connection."
-                );
+                showBlockScreen("⚠️ Connection Error", "Hindi makakonekta sa ShareMap Server. Paki-check ang iyong internet connection.");
             }
         }
 
@@ -256,6 +244,14 @@
         .error-msg { color: #f87171; font-size: 12px; margin-top: 6px; display: none; }
         .qr-display-box { background: #ffffff; padding: 15px; border-radius: 12px; display: inline-block; margin-top: 10px; }
         .total-amount-badge { background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }
+
+        /* Bottom Drawer para sa Payment Method */
+        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: flex-end; flex-direction: column; z-index: 2500; }
+        .bottom-drawer { background: #1e293b; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; border-top: 2px solid #38bdf8; box-sizing: border-box; width: 100%; max-width: 480px; margin: 0 auto; text-align: left; }
+        .drawer-handle { width: 40px; height: 5px; background: #64748b; border-radius: 3px; margin: 0 auto 15px auto; }
+        .payment-option-card { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; }
+        .payment-option-card:hover { border-color: #38bdf8; background: #132238; }
+        .payment-option-card input { accent-color: #0284c7; width: 18px; height: 18px; }
     </style>
 </head>
 <body>
@@ -313,16 +309,55 @@
         </div>
 
         <p id="errorMsg" class="error-msg"></p>
-        <button id="proceedBtn" class="btn">📍 Sunod: Kunin ang GPS Location ➔</button>
+        <button id="proceedBtn" class="btn">📍 Sunod: Pumili ng Payment & Kunin ang GPS ➔</button>
 
         <div id="counterQrContainer" style="display:none; margin-top:15px; background:#0f172a; padding:15px; border-radius:8px; border:1px solid #38bdf8;">
             <div class="qr-display-box" id="qrcodeCanvas"></div>
             <p id="qrTextDetail" style="font-size:13px; font-weight:bold; color:#38bdf8; margin-top:10px;"></p>
-            <button type="button" class="btn" style="background-color:#16a34a; margin-top:12px;" onclick="handleCounterCheckoutSequence()">📥 Download QR & Send to POS/Messenger ➔</button>
+            <button type="button" class="btn" style="background-color:#16a34a; margin-top:12px;" onclick="openPaymentDrawerForCounter()">💳 Pumili ng Payment & I-send sa POS ➔</button>
+        </div>
+    </div>
+
+    <!-- PAYMENT METHOD BOTTOM DRAWER -->
+    <div id="paymentDrawer" class="drawer-overlay" onclick="closePaymentDrawer(event)">
+        <div class="bottom-drawer" onclick="event.stopPropagation()">
+            <div class="drawer-handle"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #38bdf8; font-size: 16px;">💳 Pumili ng Paraan ng Pagbabayad</h3>
+                <button onclick="closePaymentDrawerDirect()" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">✕</button>
+            </div>
+            
+            <div class="payment-option-card" onclick="selectPaymentOption('GCash / QR Ph')">
+                <input type="radio" name="payMethod" id="pmGcash" value="GCash / QR Ph" checked>
+                <div>
+                    <div style="font-weight: bold; font-size: 14px; color: #fff;">📱 GCash / QR Ph (Online Transfer)</div>
+                    <div style="font-size: 11px; color: #94a3b8;">Magbayad gamit ang online wallet o QR code</div>
+                </div>
+            </div>
+
+            <div class="payment-option-card" id="codOptionCard" onclick="selectPaymentOption('Cash on Delivery')">
+                <input type="radio" name="payMethod" id="pmCod" value="Cash on Delivery">
+                <div>
+                    <div style="font-weight: bold; font-size: 14px; color: #fff;">🛵 Cash on Delivery (COD)</div>
+                    <div style="font-size: 11px; color: #94a3b8;">Magbayad sa rider pagdating sa bahay</div>
+                </div>
+            </div>
+
+            <div class="payment-option-card" id="cashPickupOptionCard" onclick="selectPaymentOption('Cash on Pickup / Counter')">
+                <input type="radio" name="payMethod" id="pmCash" value="Cash on Pickup / Counter">
+                <div>
+                    <div style="font-weight: bold; font-size: 14px; color: #fff;">💵 Cash sa Kahera / Counter</div>
+                    <div style="font-size: 11px; color: #94a3b8;">Magbayad diretso sa counter o store cashier</div>
+                </div>
+            </div>
+
+            <button type="button" class="btn" style="background-color: #16a34a; margin-top: 15px;" onclick="confirmAndExecuteCheckout()">✅ Kumpirmahin at I-send ang Order ➔</button>
         </div>
     </div>
 
 <script>
+let selectedPaymentMethod = "GCash / QR Ph";
+
 function toggleServiceType(){
     const isDelivery = document.getElementById("typeDelivery").checked; 
     const isDineIn = document.getElementById("typeDineIn").checked; 
@@ -335,13 +370,71 @@ function toggleServiceType(){
     document.getElementById("proceedBtn").style.display = isCounter ? "none" : "block"; 
     document.getElementById("counterQrContainer").style.display = isCounter ? "block" : "none";
     
+    // I-adjust ang visibility ng mga options sa drawer batay sa service type
+    document.getElementById("codOptionCard").style.display = isDelivery ? "flex" : "none";
+    document.getElementById("cashPickupOptionCard").style.display = (isDineIn || isCounter) ? "flex" : "block";
+
     if (isDelivery) {
-        proceedBtn.innerText = "📍 Sunod: Kunin ang GPS Location ➔";
+        proceedBtn.innerText = "📍 Sunod: Pumili ng Payment & Kunin ang GPS ➔";
     } else if (isDineIn) {
-        proceedBtn.innerText = "📩 I-send ang Dine-In Order sa POS & Messenger ➔";
+        proceedBtn.innerText = "📩 Pumili ng Payment & I-send ang Dine-In Order ➔";
     }
 
     if(isCounter) generateCounterQr();
+}
+
+function openPaymentDrawer(){
+    const nameVal = document.getElementById('fullName').value.trim(); 
+    const phoneVal = document.getElementById('phone').value.trim();
+    if(!nameVal || !phoneVal){ 
+        document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy."; 
+        document.getElementById('errorMsg').style.display = "block"; 
+        return; 
+    }
+    document.getElementById('errorMsg').style.display = "none";
+    document.getElementById('paymentDrawer').style.display = 'flex';
+}
+
+function openPaymentDrawerForCounter(){
+    const nameVal = document.getElementById('fullName').value.trim(); 
+    const phoneVal = document.getElementById('phone').value.trim();
+    if(!nameVal || !phoneVal){ 
+        document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy."; 
+        document.getElementById('errorMsg').style.display = "block"; 
+        return; 
+    }
+    document.getElementById('errorMsg').style.display = "none";
+    document.getElementById('paymentDrawer').style.display = 'flex';
+}
+
+function closePaymentDrawer(e){
+    if(!e || e.target.id === 'paymentDrawer'){
+        document.getElementById('paymentDrawer').style.display = 'none';
+    }
+}
+function closePaymentDrawerDirect(){
+    document.getElementById('paymentDrawer').style.display = 'none';
+}
+
+function selectPaymentOption(method){
+    selectedPaymentMethod = method;
+    if(method === 'GCash / QR Ph') document.getElementById('pmGcash').checked = true;
+    else if(method === 'Cash on Delivery') document.getElementById('pmCod').checked = true;
+    else document.getElementById('pmCash').checked = true;
+}
+
+function confirmAndExecuteCheckout(){
+    closePaymentDrawerDirect();
+    const isCounter = document.getElementById("typeCounter").checked;
+    const isDineIn = document.getElementById("typeDineIn").checked;
+
+    if(isCounter){
+        handleCounterCheckoutSequence();
+    } else if(isDineIn){
+        handleProcessOrder();
+    } else {
+        handleProcessOrder(); // Delivery papuntang index.html (GPS)
+    }
 }
 
 function openKioskMenu(){ 
@@ -433,9 +526,9 @@ function generateCounterQr(){
     const activePsid = document.getElementById('displayPsid').value; 
     const ordersVal = getFormattedOrdersText(); 
     const nameVal = document.getElementById('fullName').value.trim() || "Customer"; 
-    const qrPayload = JSON.stringify({oid: generatedOrderID, psid: activePsid, name: nameVal, orders: ordersVal, total: totalAmountPesos, clicked_at: clickedAtTimestamp}); 
+    const qrPayload = JSON.stringify({oid: generatedOrderID, psid: activePsid, name: nameVal, orders: ordersVal, total: totalAmountPesos, clicked_at: clickedAtTimestamp, payment: selectedPaymentMethod}); 
     new QRCode(qrCanvasContainer, {text: qrPayload, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H}); 
-    document.getElementById("qrTextDetail").innerText = `Order ID: #${generatedOrderID} | Total: ₱${totalAmountPesos.toFixed(2)}`; 
+    document.getElementById("qrTextDetail").innerText = `Order ID: #${generatedOrderID} | Pay: ${selectedPaymentMethod} | ₱${totalAmountPesos.toFixed(2)}`; 
 }
 
 function downloadQrCodeImageWithDetails(){
@@ -446,7 +539,7 @@ function downloadQrCodeImageWithDetails(){
     const exportCanvas = document.createElement("canvas"); 
     const ctx = exportCanvas.getContext("2d"); 
     const padding = 20; 
-    const textSpace = 100;
+    const textSpace = 120;
     exportCanvas.width = originalCanvas.width + (padding * 2); 
     exportCanvas.height = originalCanvas.height + (padding * 2) + textSpace;
     ctx.fillStyle = "#FFFFFF"; 
@@ -460,6 +553,9 @@ function downloadQrCodeImageWithDetails(){
     currentY += 20; 
     ctx.font = "bold 16px Arial"; 
     ctx.fillText(`Order ID: #${generatedOrderID}`, exportCanvas.width / 2, currentY);
+    currentY += 18; 
+    ctx.font = "12px Arial";
+    ctx.fillText(`Payment: ${selectedPaymentMethod}`, exportCanvas.width / 2, currentY);
     currentY += 18; 
     ctx.font = "11px Arial"; 
     ctx.fillStyle = "#475569"; 
@@ -481,27 +577,18 @@ function downloadQrCodeImageWithDetails(){
 
 function copyTextToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => {
-            console.log("📋 Nakopya na sa clipboard ang order details!");
-        }).catch(err => {
-            console.error("Clipboard error:", err);
-        });
+        navigator.clipboard.writeText(text).catch(err => {});
     } else {
         const textarea = document.createElement("textarea");
         textarea.value = text;
         document.body.appendChild(textarea);
         textarea.select();
-        try {
-            document.execCommand('copy');
-            console.log("📋 Nakopya na gamit ang fallback.");
-        } catch (err) {
-            console.error("Fallback copy failed:", err);
-        }
+        try { document.execCommand('copy'); } catch (err) {}
         document.body.removeChild(textarea);
     }
 }
 
-// === OVER-THE-COUNTER DIRECT FETCH (Sariling Format) ===
+// === OVER-THE-COUNTER DIRECT FETCH ===
 async function handleCounterCheckoutSequence(){
     const nameVal = document.getElementById('fullName').value.trim(); 
     const phoneVal = document.getElementById('phone').value.trim();
@@ -509,21 +596,13 @@ async function handleCounterCheckoutSequence(){
     const pageId = getPageId(); 
     const activePsid = document.getElementById('displayPsid').value;
     
-    if(!nameVal || !phoneVal){ 
-        document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy."; 
-        document.getElementById('errorMsg').style.display = "block"; 
-        return; 
-    }
-    document.getElementById('errorMsg').style.display = "none";
-    
     downloadQrCodeImageWithDetails();
     
     const formattedOrders = ordersVal.split(', ').join('\n'); 
-    const shareText = `💳 OVER-THE-COUNTER ADVANCE ORDER\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Orders:\n${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+    const shareText = `💳 OVER-THE-COUNTER ADVANCE ORDER\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment Method: ${selectedPaymentMethod}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Orders:\n${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
     
     copyTextToClipboard(shareText);
 
-    // Eksaktong format para sa Over-the-Counter
     try {
         await fetch(CREATE_ORDER_URL, {
             method: 'POST',
@@ -531,11 +610,11 @@ async function handleCounterCheckoutSequence(){
             body: JSON.stringify({
                 order_id: generatedOrderID,
                 store_page: pageId.toLowerCase(),
-                branch: "Counter Pickup",
+                branch: `Counter (${selectedPaymentMethod})`,
                 schedule: "Over-the-Counter",
                 customer_name: nameVal,
                 customer_phone: phoneVal,
-                landmark: `Counter Total: ₱${totalAmountPesos.toFixed(2)}`,
+                landmark: `Payment: ${selectedPaymentMethod} | Total: ₱${totalAmountPesos.toFixed(2)}`,
                 orders_list: formattedOrders,
                 plus_code: "COUNTER",
                 latitude: 0,
@@ -546,16 +625,13 @@ async function handleCounterCheckoutSequence(){
                 status: 'PENDING'
             })
         });
-        console.log("✅ Counter order saved successfully.");
-    } catch (err) {
-        console.error("Counter order save error:", err);
-    }
+    } catch (err) {}
     
     const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`; 
     setTimeout(()=>{ window.location.href = messengerUrl; }, 1000);
 }
 
-// === DINE-IN DIRECT FETCH (Sariling Format) ===
+// === DINE-IN / DELIVERY CHECKOUT ===
 async function handleProcessOrder(){
     const nameVal = document.getElementById('fullName').value.trim(); 
     const phoneVal = document.getElementById('phone').value.trim();
@@ -578,11 +654,10 @@ async function handleProcessOrder(){
     
     if(isDineIn){
         const formattedOrders = ordersVal.split(', ').join('\n• '); 
-        const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n🪑 Table: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+        const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment Method: ${selectedPaymentMethod}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n🪑 Table: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
         
         copyTextToClipboard(shareText);
 
-        // Eksaktong format para sa Dine-In (Table at Pax)
         try {
             await fetch(CREATE_ORDER_URL, {
                 method: 'POST',
@@ -590,11 +665,11 @@ async function handleProcessOrder(){
                 body: JSON.stringify({
                     order_id: generatedOrderID,
                     store_page: pageId.toLowerCase(),
-                    branch: `Table: ${tableVal || 'Not Specified'} (Pax: ${paxVal || '2'})`,
+                    branch: `Table: ${tableVal || 'Not Specified'} (${selectedPaymentMethod})`,
                     schedule: formattedSched,
                     customer_name: nameVal,
                     customer_phone: phoneVal,
-                    landmark: `Dine-In Table ${tableVal || 'N/A'}`,
+                    landmark: `Dine-In Table ${tableVal || 'N/A'} | Pay: ${selectedPaymentMethod}`,
                     orders_list: ordersVal,
                     plus_code: "DINE-IN",
                     latitude: 0,
@@ -605,17 +680,14 @@ async function handleProcessOrder(){
                     status: 'PENDING'
                 })
             });
-            console.log("✅ Dine-In order saved successfully.");
-        } catch (err) {
-            console.error("Dine-In order save error:", err);
-        }
+        } catch (err) {}
         
         const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`; 
         window.location.href = messengerUrl; 
         return;
     }
     
-    // Delivery Flow (Ipasa sa index.html)
+    // Delivery Flow (Ipasa sa index.html kasama ang payment method)
     localStorage.setItem('sharemap_page', pageId); 
     localStorage.setItem('sharemap_orderid', generatedOrderID); 
     localStorage.setItem('sharemap_fullname', nameVal);
@@ -626,9 +698,10 @@ async function handleProcessOrder(){
     localStorage.setItem('sharemap_total', totalAmountPesos.toFixed(2)); 
     localStorage.setItem('sharemap_psid', activePsid);
     localStorage.setItem('sharemap_clicked_at', clickedAtTimestamp); 
+    localStorage.setItem('sharemap_payment', selectedPaymentMethod);
     sessionStorage.setItem('access_granted', 'true');
     
-    const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&total=${totalAmountPesos.toFixed(2)}&psid=${encodeURIComponent(activePsid)}&clicked_at=${clickedAtTimestamp}`;
+    const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&total=${totalAmountPesos.toFixed(2)}&psid=${encodeURIComponent(activePsid)}&clicked_at=${clickedAtTimestamp}&pay=${encodeURIComponent(selectedPaymentMethod)}`;
     window.location.href = `./index.html${queryStr}`;
 }
 
@@ -679,13 +752,11 @@ window.addEventListener('DOMContentLoaded', () => {
     
     toggleServiceType(); 
     renderOrderUI(); 
-    
     checkShareMapAccess(pageId);
-    
     setTimeout(setupBackButtonTrayReturn, 800);
 });
 
-document.getElementById('proceedBtn').onclick = () => { handleProcessOrder(); };
+document.getElementById('proceedBtn').onclick = () => { openPaymentDrawer(); };
 </script>
 </body>
 </html>
