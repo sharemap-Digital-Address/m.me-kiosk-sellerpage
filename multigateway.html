@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShareMap - Order & Service Gateway v6 + Online Payment Flow</title>
+    <title>ShareMap - Order & Service Gateway v6 + Stable Store Page Parser</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -24,7 +24,7 @@
         let clickedAtTimestamp = 0; 
         let currentFullNameFromKiosk = "";
         let selectedPaymentMethod = "GCash / QR Ph";
-        let uploadedReceiptUrl = ""; // Para sa OPR_image_receipt
+        let uploadedReceiptUrl = ""; 
 
         function updateSdkDebugToast(message, isError = false) {
             const toastEl = document.getElementById('debugSdkToast');
@@ -35,14 +35,25 @@
             console.log("[SDK LOG]:", message);
         }
 
-        // Eksaktong orihinal na paraan ng pagkuha ng Store Page ID
+        // 🟢 PINAGBUTING PAGE ID PARSER: Sinisigurong nasasagap ang store mula sa URL, path, o localStorage nang walang palya
         function getPageId() {
             const urlParams = new URLSearchParams(window.location.search);
-            const pageParam = urlParams.get('page');
-            if (pageParam && pageParam.trim() !== "") {
-                localStorage.setItem('sharemap_page', pageParam.trim());
-                return pageParam.trim();
+            let storePage = urlParams.get('page') || urlParams.get('store') || urlParams.get('s');
+            
+            if (!storePage) {
+                // Sinusubukang basahin kung sakaling nasa URL path ang store (hal. /storename)
+                const pathSegments = window.location.pathname.split('/').filter(Boolean);
+                if (pathSegments.length > 0 && pathSegments[pathSegments.length - 1] !== 'index.html' && pathSegments[pathSegments.length - 1] !== '') {
+                    storePage = pathSegments[pathSegments.length - 1];
+                }
             }
+
+            if (storePage && storePage.trim() !== "" && storePage !== "store") {
+                const cleanPage = storePage.trim().toLowerCase();
+                localStorage.setItem('sharemap_page', cleanPage);
+                return cleanPage;
+            }
+
             return localStorage.getItem('sharemap_page') || "sharemapdammystore";
         }
 
@@ -56,7 +67,7 @@
 
         async function checkShareMapAccess(pageId) {
             try {
-                updateSdkDebugToast("⏳ Verifying store license via Edge Function...");
+                updateSdkDebugToast(`⏳ Verifying store license for "@${pageId}"...`);
                 
                 const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`, {
                     method: 'POST',
@@ -477,7 +488,7 @@ function generateOnlineP2PQr(){
 
     const canvasContainer = document.getElementById('drawerQrcodeCanvas');
     canvasContainer.innerHTML = "";
-    const qrPayload = JSON.stringify({store: pageId, oid: generatedOrderID, amount: totalAmountPesos, type: "P2P_DUMMY"});
+    const qrPayload = JSON.stringify({oid: generatedOrderID, amount: totalAmountPesos, type: "P2P_DUMMY"});
     new QRCode(canvasContainer, {text: qrPayload, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.H});
 }
 
@@ -782,7 +793,7 @@ async function handleProcessOrder(){
         return;
     }
     
-    // Delivery Flow (Ipasa sa index.html kasama ang OPR data)
+    // Delivery Flow
     localStorage.setItem('sharemap_page', pageId); 
     localStorage.setItem('sharemap_orderid', generatedOrderID); 
     localStorage.setItem('sharemap_fullname', nameVal);
@@ -849,7 +860,7 @@ window.addEventListener('DOMContentLoaded', () => {
     
     toggleServiceType(); 
     renderOrderUI(); 
-    checkShareMapAccess(pageId); // Garantisadong mababasa ang Supabase gamit ang tamang orihinal na `getPageId()`
+    checkShareMapAccess(pageId); 
     setTimeout(setupBackButtonTrayReturn, 800);
 });
 
