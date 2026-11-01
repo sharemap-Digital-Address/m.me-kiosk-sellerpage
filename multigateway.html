@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +11,7 @@
     <script>
         const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_KwWNvUe_KuZatiWB8nVvkQ_56JRPiif";
+        const GET_CONFIG_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config";
         const CREATE_ORDER_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/create-order";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -48,11 +49,23 @@
             return `${letterCode}${String(now.getSeconds()).padStart(2, '0')[0]}${String(now.getMilliseconds()).padStart(3, '0')[0]}`;
         }
 
-        async function checkShareMapAccess(pageId) {
+        async function checkShareMapAccess() {
+            const pageId = getPageId();
+            
+            // ITAMA AGAD ANG DISPLAY NG STORE USERNAME SA BADGE
+            document.getElementById("storeUsernameDisplay").innerText = `@${pageId.toLowerCase()}`;
+            localStorage.setItem('sharemap_page', pageId);
+
+            if (!pageId) {
+                alert("⚠️ Walang natagpung Store Page ID. Hindi maiproseso ang gateway.");
+                document.body.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>⚠️ Invalid Gateway Link</h2>";
+                return;
+            }
+
             try {
                 updateSdkDebugToast("⏳ Verifying store license via Edge Function...");
                 
-                const res = await fetch(`${SUPABASE_URL}/functions/v1/get-store-config`, {
+                const res = await fetch(GET_CONFIG_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: pageId.toLowerCase(), page: pageId.toLowerCase() })
@@ -62,13 +75,8 @@
                 const data = result.data || result;
                 const today = new Date().toISOString().split('T')[0];
 
-                if (result.error || !data) {
+                if (result.error || !data || data.status === "INACTIVE") {
                     showBlockScreen("⚠️ Walang Lisensya / Inactive Account", `Ang store username na "@${pageId}" ay wala pang lisensya sa ShareMap.`);
-                    return;
-                }
-
-                if (data.status === "INACTIVE") {
-                    showBlockScreen("⚠️ Inactive Account", "Ang store na ito ay kasalukuyang inactive sa ShareMap system.");
                     return;
                 }
 
@@ -83,15 +91,10 @@
                     updateSdkDebugToast("✅ Store license verified & token loaded.");
                     fetchMetaConversations();
                 } else {
-                    if (data.status === "ACTIVE" || data.username) {
-                        document.getElementById('debugToken').value = "WARNING: Active ang store pero walang page token.";
-                        updateSdkDebugToast("⚠️ Active ang store pero walang page token.");
-                        window.hasValidPageToken = false;
-                        isPsidVerifiedFromSuggestion = true;
-                        document.getElementById('displayPsid').value = "MESSENGER_WEB_USER";
-                    } else {
-                        showBlockScreen("⚠️ Error sa Token", "Walang active token o lisensya ang Store POS na ito.");
-                    }
+                    document.getElementById('debugToken').value = "WARNING: Active ang store pero walang page token.";
+                    updateSdkDebugToast("⚠️ Active ang store pero walang page token.");
+                    window.hasValidPageToken = false;
+                    document.getElementById('displayPsid').value = "MESSENGER_WEB_USER";
                 }
 
                 const urlParams = new URLSearchParams(window.location.search);
@@ -144,7 +147,6 @@
                 document.getElementById('psidStatus').innerText = `✅ Verified Account`; 
                 document.getElementById('fullName').value = currentFullNameFromKiosk || urlParams.get('fn') || document.getElementById('fullName').value;
                 actualLoggedInPsid = psidVal; 
-                isPsidVerifiedFromSuggestion = true;
             }
         }
 
@@ -169,20 +171,9 @@
             const notFoundInd = document.getElementById("notFoundIndicator");
             const cleanQuery = query.trim().toLowerCase();
             
-            if (activePageAccessToken && window.hasValidPageToken !== false) {
-                isPsidVerifiedFromSuggestion = false;
-            }
-
             if (!cleanQuery) {
                 container.style.display = "none";
                 notFoundInd.style.display = "none";
-                return;
-            }
-
-            if (!activePageAccessToken || window.hasValidPageToken === false) {
-                container.style.display = "none";
-                notFoundInd.innerHTML = "⚠️ Reminder: Ang store na ito ay offline o walang active POS ngayon. Ang iyong order ay diretso lamang sa chat.";
-                notFoundInd.style.display = "block";
                 return;
             }
 
@@ -207,7 +198,6 @@
             document.getElementById('fullName').value = name;
             document.getElementById('displayPsid').value = chosenPsid;
             localStorage.setItem('sharemap_psid', chosenPsid);
-            isPsidVerifiedFromSuggestion = true;
             document.getElementById("suggestionBox").style.display = "none";
             updatePreview();
         }
@@ -259,7 +249,7 @@
 <body>
 
     <div class="card">
-        <div id="storeUsernameDisplay" class="store-badge">@...</div>
+        <div id="storeUsernameDisplay" class="store-badge">@store</div>
         <h3 style="margin: 0 0 4px 0;">📍 ShareMap Ordering Gateway</h3>
         <div id="orderIdBadge" class="order-id-badge">🔢 Order ID: GENERATING...</div>
 
@@ -363,7 +353,7 @@
                 <div id="qrDisplayArea" style="display:none; margin-top:10px;">
                     <div style="font-size:12px; font-weight:bold; color:#38bdf8;" id="qrStoreLabel">@store</div>
                     <div id="drawerQrcodeCanvas" style="background:#fff; padding:10px; border-radius:8px; display:inline-block; margin-top:8px;"></div>
-                    <div style="font-size:11px; color:#cbd5e1; margin-top:6px;" id="qrAccountDetails">GCash - ShareMap Store | 0905494**** | ₱0.00</div>
+                    <div style="font-size:11px; color:#cbd5e1; margin-top:6px;" id="qrAccountDetails">GCash - Store | 0905494**** | ₱0.00</div>
 
                     <!-- UPLOAD PROOF & REFERENCE INPUT -->
                     <div style="margin-top:12px; text-align:left;">
@@ -746,11 +736,6 @@ async function handleProcessOrder(){
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    const pageId = getPageId(); 
-    localStorage.setItem('sharemap_page', pageId); 
-    // AGAD NA INAASET ANG STORE USERNAME SA BADGE
-    document.getElementById("storeUsernameDisplay").innerText = `@${pageId.toLowerCase()}`;
-    
     const urlParams = new URLSearchParams(window.location.search); 
     const passedOrders = urlParams.get('ord'); 
     const passedTotal = urlParams.get('total'); 
@@ -793,7 +778,9 @@ window.addEventListener('DOMContentLoaded', () => {
     
     toggleServiceType(); 
     renderOrderUI(); 
-    checkShareMapAccess(pageId);
+    
+    // TAWAGIN ANG SUPABASE ACCESS CHECK PARA LUMITAW ANG TOTOONG USERNAME GALING SA LISENSYA
+    checkShareMapAccess();
     setTimeout(setupBackButtonTrayReturn, 800);
 });
 
