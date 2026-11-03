@@ -818,6 +818,18 @@ function togglePaymongoSection() {
     }
 }
 
+function extractGoogleDriveFileId(url) {
+    try {
+        if (!url) return "";
+        url = url.trim();
+        const match = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
+        return match && match[1] ? match[1] : url;
+    } catch (e) {
+        showErrorDialog(e);
+        return url;
+    }
+}
+
 </script>
 </body>
 </html>
