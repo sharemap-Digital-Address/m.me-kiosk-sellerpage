@@ -800,37 +800,7 @@ function switchTab(tabName) {
     }
 }
 
-function toggleP2PSection() {
-    try {
-        const isChecked = document.getElementById("enableP2PToggle").checked;
-        document.getElementById("p2pSubContainer").style.display = isChecked ? "block" : "none";
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
 
-function togglePaymongoSection() {
-    try {
-        const isChecked = document.getElementById("enablePaymongoToggle").checked;
-        document.getElementById("paymongoSubContainer").style.display = isChecked ? "block" : "none";
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-// 1. Regex para makuha ang Google Drive File ID lamang
-function extractGoogleDriveFileId(url) {
-    try {
-        if (!url) return "";
-        url = url.trim();
-        const match = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
-        return match && match[1] ? match[1] : url;
-    } catch (e) {
-        showErrorDialog(e);
-        return url;
-    }
-}
-    
 
 </script>
 </body>
