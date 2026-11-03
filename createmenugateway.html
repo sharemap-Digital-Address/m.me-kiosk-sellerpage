@@ -941,27 +941,6 @@ async function toggleP2PStatus(p2pId) {
     }
 }
 
-// --- MGA HELPER FUNCTIONS PARA SA ERROR MODAL AT COPY BUTTON ---
-function showErrorDialog(errMessage) {
-    const modal = document.getElementById("errorLogModal");
-    const content = document.getElementById("errorLogContent");
-    let fullText = typeof errMessage === 'object' ? (errMessage.stack || errMessage.message || JSON.stringify(errMessage)) : errMessage;
-    content.innerText = fullText;
-    modal.style.display = "flex";
-}
-
-function closeErrorDialog() {
-    document.getElementById("errorLogModal").style.display = "none";
-}
-
-function copyErrorToClipboard() {
-    const errText = document.getElementById("errorLogContent").innerText;
-    navigator.clipboard.writeText(errText).then(() => {
-        alert("📋 Na-copy na sa Clipboard ang Error Log!");
-    }).catch(err => {
-        alert("Bigo sa pag-copy: " + err);
-    });
-}
 </script>
 </body>
 </html>
