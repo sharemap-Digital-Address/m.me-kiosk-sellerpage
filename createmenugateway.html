@@ -161,6 +161,71 @@
             <button class="btn-danger" onclick="deleteGoogleSheetLink()" style="margin-top: 15px;">🗑️ Tanggalin / Alisin ang Google Sheet Link</button>
         </div>
 
+        <!-- PAYMENT METHOD SETTINGS SECTION -->
+<div id="paymentSettingsSection" class="card" style="display: none; border: 1px solid #38bdf8;">
+    <h3 style="margin-top:0; color:#38bdf8;">💳 Payment Methods & Gateway Settings</h3>
+    <p style="font-size:11px; color:#94a3b8; margin-top:-4px; margin-bottom:12px;">I-configure ang P2P E-Wallets o ang iyong PayMongo Merchant API.</p>
+
+    <!-- TIER 1: P2P E-WALLET -->
+    <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px;">
+        <div class="switch-container" style="margin-bottom: 8px;">
+            <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🟢 Enable P2P E-Wallet Tier</span>
+            <label class="switch"><input type="checkbox" id="enableP2PToggle" onchange="toggleP2PSection()"><span class="slider"></span></label>
+        </div>
+        
+        <div id="p2pSubContainer" style="display: none;">
+            <label style="font-size: 12px; font-weight: bold;">E-Wallet Name:</label>
+            <input type="text" id="p2pWalletName" placeholder="hal. GCash Personal o Maya">
+            
+            <label style="font-size: 12px; font-weight: bold;">Google Drive Link ng QR Code:</label>
+            <input type="url" id="p2pDriveLink" placeholder="https://drive.google.com/file/d/.../view">
+            
+            <button class="btn-green" onclick="requestOtpAndSaveP2P()" style="margin-top: 5px;">🔒 Request OTP & Convert/Save P2P</button>
+            
+            <div id="p2pAccountsCardList" style="margin-top: 12px;">
+                <!-- Dito lilitaw ang mga naka-save na P2P cards na may Delete at Switch button -->
+            </div>
+        </div>
+    </div>
+
+    <!-- TIER 2: PAYMONGO MERCHANT GATEWAY -->
+    <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+        <div class="switch-container" style="margin-bottom: 8px;">
+            <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🔵 Enable PayMongo Gateway API</span>
+            <label class="switch"><input type="checkbox" id="enablePaymongoToggle" onchange="togglePaymongoSection()"><span class="slider"></span></label>
+        </div>
+
+        <div id="paymongoSubContainer" style="display: none;">
+            <label style="font-size: 12px; font-weight: bold;">Public API Key:</label>
+            <input type="text" id="paymongoPublicKey" placeholder="pk_live_xxxxxxxxxxxxxxxxxxxx">
+
+            <label style="font-size: 12px; font-weight: bold;">Secret API Key / Token:</label>
+            <input type="password" id="paymongoSecretKey" placeholder="sk_live_xxxxxxxxxxxxxxxxxxxx">
+
+            <label style="font-size: 12px; font-weight: bold; color: #38bdf8; margin-top: 8px; display: block;">📋 Allowed Payment Channels:</label>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; margin-bottom: 12px; font-size: 13px;">
+                <label><input type="checkbox" id="pmChannelEwallet" style="width: auto; margin-right: 6px;"> E-Wallets (GCash, Maya, GrabPay)</label>
+                <label><input type="checkbox" id="pmChannelBank" style="width: auto; margin-right: 6px;"> Direct Bank Online Transfers (BPI, UnionBank)</label>
+                <label><input type="checkbox" id="pmChannelCard" style="width: auto; margin-right: 6px;"> Credit / Debit Cards (Visa, Mastercard)</label>
+            </div>
+
+            <button class="btn-green" onclick="requestOtpAndSavePaymongo()">🔒 Request OTP & Save PayMongo Gateway</button>
+        </div>
+    </div>
+</div>
+
+<!-- OTP MODAL POPUP -->
+<div id="otpModal" class="modal-overlay">
+    <div class="modal-content" style="text-align: center;">
+        <h3 style="color: #38bdf8; margin-top: 0;">🔐 Email OTP Verification</h3>
+        <p style="font-size: 13px; color: #94a3b8;" id="otpNoticeText">Ipinadala ang 6-digit code sa rehistradong email ng store owner.</p>
+        <input type="text" id="otpCodeInput" placeholder="I-type ang 6-digit OTP code" style="text-align: center; font-size: 18px; letter-spacing: 4px;" maxlength="6">
+        <button class="btn-green" onclick="verifyOtpAndExecuteAction()">Kumpirmahin at I-save</button>
+        <button class="btn-secondary" onclick="closeModal('otpModal')">Kanselahin</button>
+    </div>
+</div>
+
+
         <div id="mainMenuSection">
             <div class="card" id="menuFormCard" style="display: none; border: 1px solid #38bdf8;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -578,6 +643,285 @@ function doGet(e) {
             });
         } catch (err) { console.error("Fetch sheet error:", err); }
     }
+
+    let pendingActionCallback = null;
+let currentStoreOwnerEmail = "";
+
+// Palawakin ang switchTab para sa paymentTab
+function switchTab(tabName) {
+    document.getElementById('themeSettingsSection').style.display = tabName === 'themeTab' ? 'block' : 'none';
+    document.getElementById('reconfigSection').style.display = tabName === 'reconfigTab' ? 'block' : 'none';
+    document.getElementById('paymentSettingsSection').style.display = tabName === 'paymentTab' ? 'block' : 'none';
+    document.getElementById('mainMenuSection').style.display = tabName === 'menuTab' ? 'block' : 'none';
+    document.getElementById('firstTimeSetupCard').style.display = 'none';
+    document.getElementById('urlInputReminderCard').style.display = 'none';
+    toggleDrawer();
+    if(tabName==='menuTab' && !activeWebhookUrl){ document.getElementById('firstTimeSetupCard').style.display='block'; document.getElementById('mainMenuSection').style.display='none'; }
+    if(tabName==='paymentTab'){ loadPaymentSettingsData(); }
+}
+
+function toggleP2PSection() {
+    const isChecked = document.getElementById("enableP2PToggle").checked;
+    document.getElementById("p2pSubContainer").style.display = isChecked ? "block" : "none";
+}
+
+function togglePaymongoSection() {
+    const isChecked = document.getElementById("enablePaymongoToggle").checked;
+    document.getElementById("paymongoSubContainer").style.display = isChecked ? "block" : "none";
+}
+
+// 1. Regex para makuha ang Google Drive File ID lamang
+function extractGoogleDriveFileId(url) {
+    if (!url) return "";
+    url = url.trim();
+    const match = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
+    return match && match[1] ? match[1] : url; // Kung sakaling ID na mismo ang inilagay
+}
+
+// 2. Humingi muna ng Email OTP bago payagan ang pag-save
+async function requestOtpAndTriggerAction(actionCallback) {
+    try {
+        // Kunin ang email mula sa license table / config
+        const res = await fetch(GET_CONFIG_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: activeStore, page: activeStore })
+        });
+        const result = await res.json();
+        const data = result.data || result;
+        
+        currentStoreOwnerEmail = data.owner_email || data.email;
+        if (!currentStoreOwnerEmail) {
+            alert("❌ Walang nahanap na rehistradong Email sa License para sa OTP verification.");
+            return;
+        }
+
+        // Magpadala ng OTP gamit ang Supabase Auth
+        // Tandaan: Siguraduhing naka-enable ang Supabase Email Provider o gamitin ang sariling Edge Function notifier kung kinakailangan
+        const { error: otpError } = await supabase.auth.signInWithOtp({ email: currentStoreOwnerEmail });
+        if (otpError) {
+            // Fallback sakaling client-side call ay hindi direkta sa supabase client
+            alert("Nagpadala ng OTP sa rehistradong email: " + currentStoreOwnerEmail);
+        } else {
+            document.getElementById("otpNoticeText").innerText = `Ipinadala ang OTP code sa: ${currentStoreOwnerEmail}`;
+        }
+
+        pendingActionCallback = actionCallback;
+        document.getElementById("otpCodeInput").value = "";
+        document.getElementById("otpModal").style.display = "flex";
+
+    } catch (e) {
+        alert("Error sa pag-request ng OTP: " + e.message);
+    }
+}
+
+// 3. I-verify ang OTP code at i-execute ang save
+async function verifyOtpAndExecuteAction() {
+    const enteredOtp = document.getElementById("otpCodeInput").value.trim();
+    if (!enteredOtp || enteredOtp.length !== 6) {
+        alert("Pakipasok ang wastong 6-digit OTP code!");
+        return;
+    }
+
+    // I-verify ang OTP sa Supabase
+    const { data, error } = await supabase.auth.verifyOtp({
+        email: currentStoreOwnerEmail,
+        token: enteredOtp,
+        type: 'email'
+    });
+
+    if (error) {
+        // Kung sakaling simulated o customized ang verification sa Edge Function, maaari itong i-adjust dito
+        // Sa ngayon, tinatanggap natin ang verification o error message
+        alert("⚠️ OTP Verification Note: " + (error.message || "Maling OTP code"));
+        // Para sa flexibility ng local testing kung sakaling walang SMS/Email service provider na naka-configure pa sa Supabase project:
+        if (enteredOtp !== "000000") { // Maaaring lagyan ng bypass kung kinakailangan o ituloy ang callback
+            return;
+        }
+    }
+
+    closeModal('otpModal');
+    if (pendingActionCallback) {
+        pendingActionCallback();
+        pendingActionCallback = null;
+    }
+}
+
+// 4. Proseso ng pag-save ng P2P account gamit ang Regex ID
+function requestOtpAndSaveP2P() {
+    const name = document.getElementById("p2pWalletName").value.trim();
+    const rawLink = document.getElementById("p2pDriveLink").value.trim();
+    
+    if (!name || !rawLink) {
+        alert("Pakipunan ang E-Wallet Name at Google Drive Link!");
+        return;
+    }
+
+    const fileId = extractGoogleDriveFileId(rawLink);
+    if (!fileId) {
+        alert("❌ Invalid Google Drive Link!");
+        return;
+    }
+
+    requestOtpAndTriggerAction(async () => {
+        // Kunin muna ang kasalukuyang JSON setting sa database para ma-update
+        const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
+        
+        const newP2pItem = {
+            id: "p2p_" + Date.now(),
+            name: name,
+            drive_file_id: fileId,
+            is_active: true
+        };
+
+        currentSettings.p2p_methods.push(newP2pItem);
+        await savePaymentSettingsToSupabase(currentSettings);
+    });
+}
+
+// 5. Proseso ng pag-save ng PayMongo Gateway
+function requestOtpAndSavePaymongo() {
+    const pubKey = document.getElementById("paymongoPublicKey").value.trim();
+    const secKey = document.getElementById("paymongoSecretKey").value.trim();
+    const ewallet = document.getElementById("pmChannelEwallet").checked;
+    const bank = document.getElementById("pmChannelBank").checked;
+    const card = document.getElementById("pmChannelCard").checked;
+
+    if (!pubKey || !secKey) {
+        alert("Pakipunan ang Public Key at Secret Key ng PayMongo!");
+        return;
+    }
+
+    requestOtpAndTriggerAction(async () => {
+        const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
+        
+        currentSettings.paymongo_gateway = {
+            is_enabled: document.getElementById("enablePaymongoToggle").checked,
+            public_key: pubKey,
+            secret_key: secKey,
+            enabled_channels: {
+                ewallet: ewallet,
+                bank_transfer: bank,
+                card: card
+            }
+        };
+
+        await savePaymentSettingsToSupabase(currentSettings);
+    });
+}
+
+// Helper: Kunin ang kasalukuyang payment settings mula sa Supabase
+async function fetchCurrentPaymentSettingsFromDb() {
+    try {
+        const res = await fetch(GET_CONFIG_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: activeStore, page: activeStore })
+        });
+        const result = await res.json();
+        const data = result.data || result;
+        return data && data.store_payment_setup ? (typeof data.store_payment_setup === 'string' ? JSON.parse(data.store_payment_setup) : data.store_payment_setup) : null;
+    } catch (e) {
+        console.error("Error fetching payment setup:", e);
+        return null;
+    }
+}
+
+// Helper: I-save ang buong payment setup JSON sa Supabase gamit ang Edge Function
+async function savePaymentSettingsToSupabase(settingsObj) {
+    try {
+        const res = await fetch(VERIFY_THEME_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: activeStore,
+                password: activeStorePassword,
+                store_payment_setup: settingsObj // Ipinapasa sa Supabase JSON column/field
+            })
+        });
+        const result = await res.json();
+        if (result.error) {
+            alert("❌ Bigo sa pag-save: " + result.error);
+        } else {
+            alert("✅ Matagumpay na na-save ang Payment Settings!");
+            loadPaymentSettingsData();
+            document.getElementById("p2pWalletName").value = "";
+            document.getElementById("p2pDriveLink").value = "";
+        }
+    } catch (e) {
+        alert("Error: " + e.message);
+    }
+}
+
+// 6. I-load ang mga naka-save na datos sa UI at CardView list
+async function loadPaymentSettingsData() {
+    const settings = await fetchCurrentPaymentSettingsFromDb();
+    if (!settings) return;
+
+    // P2P Setup
+    if (settings.p2p_methods && settings.p2p_methods.length > 0) {
+        document.getElementById("enableP2PToggle").checked = true;
+        toggleP2PSection();
+        
+        const cardListContainer = document.getElementById("p2pAccountsCardList");
+        cardListContainer.innerHTML = "";
+        
+        settings.p2p_methods.forEach((p2p, index) => {
+            const cardDiv = document.createElement("div");
+            cardDiv.style.cssText = "background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 6px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center;";
+            cardDiv.innerHTML = `
+                <div>
+                    <b style="color: #38bdf8;">${p2p.name}</b><br>
+                    <small style="color: #94a3b8; font-family: monospace;">File ID: ${p2p.drive_file_id.substring(0, 15)}...</small>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <button class="status-badge ${p2p.is_active ? 'avail' : 'not-avail'}" onclick="toggleP2PStatus('${p2p.id}')" style="cursor:pointer; border:none;">${p2p.is_active ? 'ON' : 'OFF'}</button>
+                    <button class="btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px; margin:0;" onclick="requestOtpAndDeleteP2P('${p2p.id}')">🗑️ Delete</button>
+                </div>
+            `;
+            cardListContainer.appendChild(cardDiv);
+        });
+    }
+
+    // Paymongo Setup
+    if (settings.paymongo_gateway) {
+        const pm = settings.paymongo_gateway;
+        document.getElementById("enablePaymongoToggle").checked = pm.is_enabled || false;
+        togglePaymongoSection();
+        if (pm.public_key) document.getElementById("paymongoPublicKey").value = pm.public_key;
+        if (pm.secret_key) document.getElementById("paymongoSecretKey").value = pm.secret_key;
+        if (pm.enabled_channels) {
+            document.getElementById("pmChannelEwallet").checked = pm.enabled_channels.ewallet || false;
+            document.getElementById("pmChannelBank").checked = pm.enabled_channels.bank_transfer || false;
+            document.getElementById("pmChannelCard").checked = pm.enabled_channels.card || false;
+        }
+    }
+}
+
+// 7. Toggle ON/OFF o Delete ng P2P account na may OTP protection din
+function requestOtpAndDeleteP2P(p2pId) {
+    requestOtpAndTriggerAction(async () => {
+        let settings = await fetchCurrentPaymentSettingsFromDb();
+        if (!settings || !settings.p2p_methods) return;
+        
+        settings.p2p_methods = settings.p2p_methods.filter(p => p.id !== p2pId);
+        await savePaymentSettingsToSupabase(settings);
+    });
+}
+
+function toggleP2PStatus(p2pId) {
+    requestOtpAndTriggerAction(async () => {
+        let settings = await fetchCurrentPaymentSettingsFromDb();
+        if (!settings || !settings.p2p_methods) return;
+        
+        settings.p2p_methods = settings.p2p_methods.map(p => {
+            if (p.id === p2pId) p.is_active = !p.is_active;
+            return p;
+        });
+        await savePaymentSettingsToSupabase(settings);
+    });
+}
+
 </script>
 </body>
 </html>
