@@ -205,6 +205,72 @@
             <!-- DELETE GOOGLE SHEET LINK BUTTON WITH PASSWORD CONFIRM -->
             <button class="btn-danger" onclick="deleteGoogleSheetLink()" style="margin-top: 15px;">🗑️ Tanggalin / Alisin ang Google Sheet Link</button>
         </div>
+<!------------------------------------------->
+<!-- PAYMENT METHOD SETTINGS SECTION -->
+<!-------------------------------------------->        
+<div id="paymentSettingsSection" class="card" style="display: none; border: 1px solid #38bdf8;">
+    <h3 style="margin-top:0; color:#38bdf8;">💳 Payment Methods & Gateway Settings</h3>
+    <p style="font-size:11px; color:#94a3b8; margin-top:-4px; margin-bottom:12px;">I-configure ang P2P E-Wallets o ang iyong PayMongo Merchant API.</p>
+
+    <!-- TIER 1: P2P E-WALLET -->
+    <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px;">
+        <div class="switch-container" style="margin-bottom: 8px;">
+            <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🟢 Enable P2P E-Wallet Tier</span>
+            <label class="switch"><input type="checkbox" id="enableP2PToggle" onchange="toggleP2PSection()"><span class="slider"></span></label>
+        </div>
+        
+        <div id="p2pSubContainer" style="display: none;">
+            <label style="font-size: 12px; font-weight: bold;">E-Wallet Name:</label>
+            <input type="text" id="p2pWalletName" placeholder="hal. GCash Personal o Maya">
+            
+            <label style="font-size: 12px; font-weight: bold;">Google Drive Link ng QR Code:</label>
+            <input type="url" id="p2pDriveLink" placeholder="https://drive.google.com/file/d/.../view">
+            
+            <button class="btn-green" onclick="requestOtpAndSaveP2P()" style="margin-top: 5px;">🔒 Request OTP & Convert/Save P2P</button>
+            
+            <div id="p2pAccountsCardList" style="margin-top: 12px;">
+                <!-- Dito lilitaw ang mga naka-save na P2P cards na may Delete at Switch button -->
+            </div>
+        </div>
+    </div>
+
+    <!-- TIER 2: PAYMONGO MERCHANT GATEWAY -->
+    <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+        <div class="switch-container" style="margin-bottom: 8px;">
+            <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🔵 Enable PayMongo Gateway API</span>
+            <label class="switch"><input type="checkbox" id="enablePaymongoToggle" onchange="togglePaymongoSection()"><span class="slider"></span></label>
+        </div>
+
+        <div id="paymongoSubContainer" style="display: none;">
+            <label style="font-size: 12px; font-weight: bold;">Public API Key:</label>
+            <input type="text" id="paymongoPublicKey" placeholder="pk_live_xxxxxxxxxxxxxxxxxxxx">
+
+            <label style="font-size: 12px; font-weight: bold;">Secret API Key / Token:</label>
+            <input type="password" id="paymongoSecretKey" placeholder="sk_live_xxxxxxxxxxxxxxxxxxxx">
+
+            <label style="font-size: 12px; font-weight: bold; color: #38bdf8; margin-top: 8px; display: block;">📋 Allowed Payment Channels:</label>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; margin-bottom: 12px; font-size: 13px;">
+                <label><input type="checkbox" id="pmChannelEwallet" style="width: auto; margin-right: 6px;"> E-Wallets (GCash, Maya, GrabPay)</label>
+                <label><input type="checkbox" id="pmChannelBank" style="width: auto; margin-right: 6px;"> Direct Bank Online Transfers (BPI, UnionBank)</label>
+                <label><input type="checkbox" id="pmChannelCard" style="width: auto; margin-right: 6px;"> Credit / Debit Cards (Visa, Mastercard)</label>
+            </div>
+
+            <button class="btn-green" onclick="requestOtpAndSavePaymongo()">🔒 Request OTP & Save PayMongo Gateway</button>
+        </div>
+    </div>
+</div>
+
+<!-- OTP MODAL POPUP -->
+<div id="otpModal" class="modal-overlay">
+    <div class="modal-content" style="text-align: center;">
+        <h3 style="color: #38bdf8; margin-top: 0;">🔐 Email OTP Verification</h3>
+        <p style="font-size: 13px; color: #94a3b8;" id="otpNoticeText">Ipinadala ang 6-digit code sa rehistradong email ng store owner.</p>
+        <input type="text" id="otpCodeInput" placeholder="I-type ang 6-digit OTP code" style="text-align: center; font-size: 18px; letter-spacing: 4px;" maxlength="6">
+        <button class="btn-green" onclick="verifyOtpAndExecuteAction()">Kumpirmahin at I-save</button>
+        <button class="btn-secondary" onclick="closeModal('otpModal')">Kanselahin</button>
+    </div>
+</div>
+
 
         <div id="mainMenuSection">
             <div class="card" id="menuFormCard" style="display: none; border: 1px solid #38bdf8;">
