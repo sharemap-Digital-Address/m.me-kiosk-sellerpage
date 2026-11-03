@@ -57,7 +57,7 @@
         .drawer-menu-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f8fafc; font-weight: bold; font-size: 13px; cursor: pointer; margin-bottom: 10px; transition: 0.2s; }
         .drawer-menu-item:hover { border-color: #38bdf8; background: #1e293b; }
         .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: 20px; }
-
+    
 /* Custom Error Dialog Modal */
 .error-modal-overlay { 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
@@ -82,6 +82,28 @@
     </style>
 </head>
 <body>
+
+<!-- ERROR LOG DIALOG MODAL WITH COPY BUTTON -->
+<div id="errorLogModal" class="error-modal-overlay">
+    <div class="error-modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; color: #ef4444; font-size: 16px;">⚠️ May Naganap na Error!</h3>
+            <button onclick="closeErrorDialog()" style="width: auto; padding: 2px 8px; background: #64748b; font-size: 11px; margin: 0;">✕</button>
+        </div>
+        <p style="font-size: 12px; color: #cbd5e1; margin: 8px 0 4px 0;">Detalye ng Error / Stack Trace:</p>
+        
+        <!-- Dito ipapakita ang error text -->
+        <div id="errorLogContent" class="error-code-box">Wala pang nakatalang error.</div>
+        
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <button class="btn-green" onclick="copyErrorToClipboard()" style="margin:0; flex: 1; padding: 10px; font-size: 12px;">📋 Kopyahin ang Error (Copy)</button>
+            <button class="btn-secondary" onclick="closeErrorDialog()" style="margin:0; flex: 0.5; padding: 10px; font-size: 12px;">Isara</button>
+        </div>
+    </div>
+</div>
+
+
+    
 <div class="container">
     <h2>🍔 Store Menu Manager</h2>
     <div class="card" id="loginCard">
@@ -111,7 +133,6 @@
                 <div class="drawer-menu-item" onclick="switchTab('menuTab')"><span>🛒</span> Menu Items List</div>
                 <div class="drawer-menu-item" onclick="protectedAction('themeTab')"><span>🎨</span> Kiosk Theme Customizer</div>
                 <div class="drawer-menu-item" onclick="protectedAction('reconfigTab')"><span>⚙️</span> Re-config Google Sheet</div>
-                <div class="drawer-menu-item" onclick="protectedAction('paymentTab')"><span>💳</span> Payment Methods & Gateway</div>
             </div>
             <button onclick="logoutStore()" style="background: #dc2626; color: white; padding: 10px; font-size: 12px; margin:0;">🚪 Log Out Store</button>
         </div>
@@ -275,28 +296,10 @@ function doGet(e) {
         <button class="btn-secondary" onclick="closeModal('codeModal')" style="margin-top: 5px;">Isara</button>
     </div>
 </div>
-
-    <!-- ERROR LOG DIALOG MODAL WITH COPY BUTTON -->
-<div id="errorLogModal" class="error-modal-overlay">
-    <div class="error-modal-card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; color: #ef4444; font-size: 16px;">⚠️ May Naganap na Error!</h3>
-            <button onclick="closeErrorDialog()" style="width: auto; padding: 2px 8px; background: #64748b; font-size: 11px; margin: 0;">✕</button>
-        </div>
-        <p style="font-size: 12px; color: #cbd5e1; margin: 8px 0 4px 0;">Detalye ng Error / Stack Trace:</p>
-        
-        <!-- Dito ipapakita ang error text -->
-        <div id="errorLogContent" class="error-code-box">Wala pang nakatalang error.</div>
-        
-        <div style="display: flex; gap: 8px; margin-top: 10px;">
-            <button class="btn-green" onclick="copyErrorToClipboard()" style="margin:0; flex: 1; padding: 10px; font-size: 12px;">📋 Kopyahin ang Error (Copy)</button>
-            <button class="btn-secondary" onclick="closeErrorDialog()" style="margin:0; flex: 0.5; padding: 10px; font-size: 12px;">Isara</button>
-        </div>
-    </div>
-</div>    
-    
 <script>
+//-----------------------------------------------
 // Function para ipakita ang Error Dialog
+//-------------------------------------------------    
 function showErrorDialog(errMessage) {
     const modal = document.getElementById("errorLogModal");
     const content = document.getElementById("errorLogContent");
@@ -322,6 +325,7 @@ function copyErrorToClipboard() {
         alert("Bigo sa pag-copy: " + err);
     });
 }
+
 
 
     
@@ -443,7 +447,8 @@ function copyErrorToClipboard() {
             btn.innerText="Log In & Load Menu"; btn.disabled=false;
             await loadStoreSheetUrl();
             await loadStoreThemeSettings();
-        }catch(e){ alert("Error: "+e.message); btn.innerText="Log In & Load Menu"; btn.disabled=false; }
+        }catch(e){ alert("Error: "+e.message); showErrorDialog(e);
+        btn.innerText="Log In & Load Menu"; btn.disabled=false; }
     }
 
     function logoutStore() { window.location.reload(); }
@@ -649,142 +654,6 @@ function copyErrorToClipboard() {
             });
         } catch (err) { console.error("Fetch sheet error:", err); }
     }
-
-let pendingActionCallback = null;
-let currentStoreOwnerEmail = "";
-
-// Palawakin ang switchTab para sa paymentTab
-function switchTab(tabName) {
-    document.getElementById('themeSettingsSection').style.display = tabName === 'themeTab' ? 'block' : 'none';
-    document.getElementById('reconfigSection').style.display = tabName === 'reconfigTab' ? 'block' : 'none';
-    document.getElementById('paymentSettingsSection').style.display = tabName === 'paymentTab' ? 'block' : 'none';
-    document.getElementById('mainMenuSection').style.display = tabName === 'menuTab' ? 'block' : 'none';
-    document.getElementById('firstTimeSetupCard').style.display = 'none';
-    document.getElementById('urlInputReminderCard').style.display = 'none';
-    toggleDrawer();
-    if(tabName==='menuTab' && !activeWebhookUrl){ document.getElementById('firstTimeSetupCard').style.display='block'; document.getElementById('mainMenuSection').style.display='none'; }
-    if(tabName==='paymentTab'){ loadPaymentSettingsData(); }
-}
-
-function toggleP2PSection() {
-    const isChecked = document.getElementById("enableP2PToggle").checked;
-    document.getElementById("p2pSubContainer").style.display = isChecked ? "block" : "none";
-}
-
-function togglePaymongoSection() {
-    const isChecked = document.getElementById("enablePaymongoToggle").checked;
-    document.getElementById("paymongoSubContainer").style.display = isChecked ? "block" : "none";
-}
-
-// 1. Regex para makuha ang Google Drive File ID lamang
-function extractGoogleDriveFileId(url) {
-    if (!url) return "";
-    url = url.trim();
-    const match = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
-    return match && match[1] ? match[1] : url; // Kung sakaling ID na mismo ang inilagay
-}
-
-// 2. Humingi muna ng Email OTP bago payagan ang pag-save
-async function requestOtpAndTriggerAction(actionCallback) {
-    try {
-        // Kunin ang email mula sa license table / config
-        const res = await fetch(GET_CONFIG_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: activeStore, page: activeStore })
-        });
-        const result = await res.json();
-        const data = result.data || result;
-        
-        currentStoreOwnerEmail = data.owner_email || data.email;
-        if (!currentStoreOwnerEmail) {
-            alert("❌ Walang nahanap na rehistradong Email sa License para sa OTP verification.");
-            return;
-        }
-
-        // Magpadala ng OTP gamit ang Supabase Auth
-        // Tandaan: Siguraduhing naka-enable ang Supabase Email Provider o gamitin ang sariling Edge Function notifier kung kinakailangan
-        const { error: otpError } = await supabase.auth.signInWithOtp({ email: currentStoreOwnerEmail });
-        if (otpError) {
-            // Fallback sakaling client-side call ay hindi direkta sa supabase client
-            alert("Nagpadala ng OTP sa rehistradong email: " + currentStoreOwnerEmail);
-        } else {
-            document.getElementById("otpNoticeText").innerText = `Ipinadala ang OTP code sa: ${currentStoreOwnerEmail}`;
-        }
-
-        pendingActionCallback = actionCallback;
-        document.getElementById("otpCodeInput").value = "";
-        document.getElementById("otpModal").style.display = "flex";
-
-    } catch (e) {
-        alert("Error sa pag-request ng OTP: " + e.message);
-    }
-}
-
-// 3. I-verify ang OTP code at i-execute ang save
-async function verifyOtpAndExecuteAction() {
-    const enteredOtp = document.getElementById("otpCodeInput").value.trim();
-    if (!enteredOtp || enteredOtp.length !== 6) {
-        alert("Pakipasok ang wastong 6-digit OTP code!");
-        return;
-    }
-
-    // I-verify ang OTP sa Supabase
-    const { data, error } = await supabase.auth.verifyOtp({
-        email: currentStoreOwnerEmail,
-        token: enteredOtp,
-        type: 'email'
-    });
-
-    if (error) {
-        // Kung sakaling simulated o customized ang verification sa Edge Function, maaari itong i-adjust dito
-        // Sa ngayon, tinatanggap natin ang verification o error message
-        alert("⚠️ OTP Verification Note: " + (error.message || "Maling OTP code"));
-        // Para sa flexibility ng local testing kung sakaling walang SMS/Email service provider na naka-configure pa sa Supabase project:
-        if (enteredOtp !== "000000") { // Maaaring lagyan ng bypass kung kinakailangan o ituloy ang callback
-            return;
-        }
-    }
-
-    closeModal('otpModal');
-    if (pendingActionCallback) {
-        pendingActionCallback();
-        pendingActionCallback = null;
-    }
-}
-
-// 4. Proseso ng pag-save ng P2P account gamit ang Regex ID
-function requestOtpAndSaveP2P() {
-    const name = document.getElementById("p2pWalletName").value.trim();
-    const rawLink = document.getElementById("p2pDriveLink").value.trim();
-    
-    if (!name || !rawLink) {
-        alert("Pakipunan ang E-Wallet Name at Google Drive Link!");
-        return;
-    }
-
-    const fileId = extractGoogleDriveFileId(rawLink);
-    if (!fileId) {
-        alert("❌ Invalid Google Drive Link!");
-        return;
-    }
-
-    requestOtpAndTriggerAction(async () => {
-        // Kunin muna ang kasalukuyang JSON setting sa database para ma-update
-        const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
-        
-        const newP2pItem = {
-            id: "p2p_" + Date.now(),
-            name: name,
-            drive_file_id: fileId,
-            is_active: true
-        };
-
-        currentSettings.p2p_methods.push(newP2pItem);
-        await savePaymentSettingsToSupabase(currentSettings);
-    });
-}
-
 </script>
 </body>
 </html>
