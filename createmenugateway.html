@@ -836,7 +836,7 @@ async function verifyOtpAndExecuteAction() {
     }
 }
 
-// 4. Proseso ng pag-save ng P2P account gamit ang Regex ID
+// Proseso ng pag-save ng P2P account gamit ang existing conversion logic
 function requestOtpAndSaveP2P() {
     try {
         const name = document.getElementById("p2pWalletName").value.trim();
@@ -847,7 +847,11 @@ function requestOtpAndSaveP2P() {
             return;
         }
 
-        const fileId = extractGoogleDriveFileId(rawLink);
+        // Kunin ang File ID gamit ang regular expression nang hindi nag-aagawan sa pangalan
+        const driveRegex = /(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
+        const match = rawLink.match(driveRegex);
+        const fileId = (match && match[1]) ? match[1] : rawLink;
+
         if (!fileId) {
             alert("❌ Invalid Google Drive Link!");
             return;
@@ -872,6 +876,7 @@ function requestOtpAndSaveP2P() {
         showErrorDialog(e);
     }
 }
+
 
 // 5. Proseso ng pag-save ng PayMongo Gateway
 function requestOtpAndSavePaymongo() {
