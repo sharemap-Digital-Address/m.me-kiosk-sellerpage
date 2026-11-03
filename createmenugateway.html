@@ -753,7 +753,7 @@ function doGet(e) {
         }
     }
 
-    async function requestOtpAndTriggerAction(actionCallback) {
+   /* async function requestOtpAndTriggerAction(actionCallback) {
         try {
             const res = await fetch(GET_CONFIG_URL, {
                 method: 'POST',
@@ -882,7 +882,7 @@ function doGet(e) {
         } catch (e) {
             showErrorDialog(e);
         }
-    }
+    }*/
 
     async function fetchCurrentPaymentSettingsFromDb() {
         try {
@@ -969,7 +969,7 @@ function doGet(e) {
         }
     }
 
-    function requestOtpAndDeleteP2P(p2pId) {
+    /*function requestOtpAndDeleteP2P(p2pId) {
         try {
             requestOtpAndTriggerAction(async () => {
                 try {
@@ -984,7 +984,7 @@ function doGet(e) {
         } catch (e) {
             showErrorDialog(e);
         }
-    }
+    }*/
 
     function toggleP2PStatus(p2pId) {
         try {
