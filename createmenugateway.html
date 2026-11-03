@@ -769,7 +769,7 @@ function extractGoogleDriveFileId(url) {
 }
 
 // 2. Direktang proseso ng pag-save ng P2P account gamit ang Regex ID (Wala nang OTP)
-async function saveP2PAccount() {
+/*async function saveP2PAccount() {
     try {
         const name = document.getElementById("p2pWalletName").value.trim();
         const rawLink = document.getElementById("p2pDriveLink").value.trim();
@@ -870,7 +870,7 @@ async function savePaymentSettingsToSupabase(settingsObj) {
 }
 
 // 4. I-load ang mga naka-save na datos sa UI at CardView list
-/*async function loadPaymentSettingsData() {
+async function loadPaymentSettingsData() {
     try {
         const settings = await fetchCurrentPaymentSettingsFromDb();
         if (!settings) return;
@@ -939,7 +939,7 @@ async function toggleP2PStatus(p2pId) {
     } catch (e) {
         showErrorDialog(e);
     }
-}
+}/*
 
 </script>
 </body>
