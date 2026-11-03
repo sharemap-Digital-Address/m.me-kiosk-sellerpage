@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShareMap - Kiosk Menu Manager & Theme Customizer</title>
-    <!-- I-load ang Supabase JS Client library -->
+    <!-- I-load ang Supabase JS Client library para sa authentication at database requests -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #0284c7; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
@@ -71,7 +71,7 @@
         <div id="statusNotice" style="display:none;" class="alert-box"></div>
         <div id="passwordWrapper">
             <label>Password:</label>
-            <!-- Ginawang type="password" para nka-unshow (dots) ang pagta-type -->
+            <!-- Naka-unshow / naka-dots ang pag-type ng password -->
             <input type="password" id="storePassword" placeholder="I-type ang iyong password">
         </div>
         <button id="loginActionBtn" onclick="loginAndLoadMenu()">Log In & Load Menu</button>
@@ -104,7 +104,8 @@
             <p style="color:#94a3b8; font-size: 13px; text-align: center;">Ikabit ang iyong Google Sheet storage para sa iyong menu.</p>
             <div class="warning-box"><b>📱 PAALALA SA CELLPHONE / TABLET USERS:</b><br>Pumunta sa Phone Settings > <b>Apps > Google Sheets > Open by default</b> at i-<b>OFF</b> ito.</div>
             <label style="font-size: 12px; font-weight: bold; color: #38bdf8;">1. I-paste ang Link ng Blank Google Sheet Mo:</label>
-            <input type="text" id="blankSheetLinkInput" placeholder="https://docs.google.com/spreadsheets/d/...">
+            <!-- Naka-password type para di nakalantad ang link -->
+            <input type="password" id="blankSheetLinkInput" placeholder="https://docs.google.com/spreadsheets/d/...">
             <button class="btn-blue" onclick="processCopyAndOpenSheet('blankSheetLinkInput')">🚀 Copy Code & Open Google Sheet sa Browser</button>
         </div>
         <div id="urlInputReminderCard" class="card" style="display: none;">
@@ -114,7 +115,7 @@
             </div>
             <div class="notice-box">1. I-click ang <b>Extensions > Apps Script</b> sa Google Sheet.<br>2. Burahin ang luma at i-paste ang code.<br>3. I-deploy bilang <b>Web app</b> (Anyone).<br>4. Kopyahin ang <b>Web App URL (/exec)</b> at i-paste sa ibaba:</div>
             <label style="font-size: 12px; font-weight: bold;">2. I-paste ang Web App URL (/exec):</label>
-            <!-- Ginawang type="password" para naka-unshow / naka-mask ang Web App URL -->
+            <!-- Naka-password type para di nakalantad ang Webhook URL / API -->
             <input type="password" id="sheetWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
             <button class="btn-green" onclick="saveSheetUrlToSupabase()">💾 Save Google Sheet Link</button>
             <button class="btn-secondary" onclick="openCodeModal()" style="margin-top: 8px;">📜 Tignan Uli ang Code</button>
@@ -126,7 +127,7 @@
             </div>
             <p style="font-size:11px; color:#94a3b8; margin-top:-4px; margin-bottom:12px;">I-set ang logo at kulay ng inyong Kiosk Store:</p>
             <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">Store Circle Logo Image Link:</label>
-            <input type="url" id="themeStoreLogo" placeholder="I-paste ang Google Drive / ImgBB image link">
+            <input type="password" id="themeStoreLogo" placeholder="I-paste ang Google Drive / ImgBB image link">
             <label style="font-size: 12px; font-weight: bold;">Primary Accent Color:</label>
             <div class="color-picker-row">
                 <input type="color" id="themePrimaryColor" value="#0284c7" onchange="document.getElementById('themePrimaryHex').value = this.value">
@@ -148,7 +149,7 @@
             </div>
             <div id="themeImageBox" style="display:none;">
                 <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">Google Drive Wallpaper Image Link:</label>
-                <input type="url" id="themeDriveImage" placeholder="Google Drive share link para sa wallpaper">
+                <input type="password" id="themeDriveImage" placeholder="Google Drive share link para sa wallpaper">
             </div>
             <button class="btn-blue" onclick="saveStoreThemeSettings()" style="margin-bottom:0;">💾 I-save ang Theme Settings</button>
         </div>
@@ -157,21 +158,18 @@
         <div id="reconfigSection" class="card" style="display: none;">
             <h3 style="margin-top:0; color:#38bdf8;">⚙️ Re-config Google Sheet Link</h3>
             <label style="font-size: 12px; font-weight: bold;">Web App URL (/exec):</label>
-            <!-- Ginawang type="password" para naka-unshow / naka-mask -->
             <input type="password" id="reconfigWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
             <button class="btn-green" onclick="saveReconfigSheetUrl()">💾 Save Google Sheet Link</button>
             <button class="btn-secondary" onclick="openCodeModal()" style="margin-top: 4px;">📜 Tignan ang Apps Script Code</button>
             
-            <!-- DELETE GOOGLE SHEET LINK BUTTON WITH PASSWORD CONFIRM -->
             <button class="btn-danger" onclick="deleteGoogleSheetLink()" style="margin-top: 15px;">🗑️ Tanggalin / Alisin ang Google Sheet Link</button>
         </div>
 
-        <!-- PAYMENT METHOD SETTINGS SECTION (TIER 1 & TIER 2) -->
+        <!-- PAYMENT METHOD SETTINGS SECTION -->
         <div id="paymentSettingsSection" class="card" style="display: none; border: 1px solid #38bdf8;">
             <h3 style="margin-top:0; color:#38bdf8;">💳 Payment Methods & Gateway Settings</h3>
             <p style="font-size:11px; color:#94a3b8; margin-top:-4px; margin-bottom:12px;">I-configure ang P2P E-Wallets o ang iyong PayMongo Merchant API.</p>
 
-            <!-- TIER 1: P2P E-WALLET -->
             <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px;">
                 <div class="switch-container" style="margin-bottom: 8px;">
                     <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🟢 Enable P2P E-Wallet Tier</span>
@@ -183,18 +181,14 @@
                     <input type="text" id="p2pWalletName" placeholder="hal. GCash Personal o Maya">
                     
                     <label style="font-size: 12px; font-weight: bold;">Google Drive Link ng QR Code:</label>
-                    <!-- Ginawang type="password" para naka-unshow / naka-mask ang Drive link -->
                     <input type="password" id="p2pDriveLink" placeholder="https://drive.google.com/file/d/.../view">
                     
                     <button class="btn-green" onclick="requestOtpAndSaveP2P()" style="margin-top: 5px;">🔒 Request OTP & Convert/Save P2P</button>
                     
-                    <div id="p2pAccountsCardList" style="margin-top: 12px;">
-                        <!-- Dito lilitaw ang mga naka-save na P2P cards na may Delete at Switch button -->
-                    </div>
+                    <div id="p2pAccountsCardList" style="margin-top: 12px;"></div>
                 </div>
             </div>
 
-            <!-- TIER 2: PAYMONGO MERCHANT GATEWAY -->
             <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
                 <div class="switch-container" style="margin-bottom: 8px;">
                     <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🔵 Enable PayMongo Gateway API</span>
@@ -203,7 +197,6 @@
 
                 <div id="paymongoSubContainer" style="display: none;">
                     <label style="font-size: 12px; font-weight: bold;">Public API Key:</label>
-                    <!-- Ginawang type="password" para naka-unshow / naka-mask ang Public API Key -->
                     <input type="password" id="paymongoPublicKey" placeholder="pk_live_xxxxxxxxxxxxxxxxxxxx">
 
                     <label style="font-size: 12px; font-weight: bold;">Secret API Key / Token:</label>
@@ -266,8 +259,10 @@
                 </div>
                 <label style="font-size: 12px; font-weight: bold;">Description:</label><textarea id="prodDesc" rows="2" placeholder="Paglalarawan ng produkto"></textarea>
                 <label style="font-size: 12px; font-weight: bold;">Special Description / Tagline:</label><textarea id="prodSpecialDesc" rows="2" placeholder="Promo tagline..."></textarea>
-                <label style="font-size: 12px; font-weight: bold;">Main Image Link URL (Google Drive / ImgBB):</label><input type="url" id="prodImage" placeholder="Google Drive Share Link">
-                <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">🎬 YouTube Short / Video Reel Link (Opsyonal):</label><input type="url" id="prodYoutubeLink" placeholder="hal. https://www.youtube.com/shorts/...">
+                <label style="font-size: 12px; font-weight: bold;">Main Image Link URL (Google Drive / ImgBB):</label>
+                <input type="password" id="prodImage" placeholder="Google Drive Share Link">
+                <label style="font-size: 12px; font-weight: bold; color:#38bdf8;">🎬 YouTube Short / Video Reel Link (Opsyonal):</label>
+                <input type="password" id="prodYoutubeLink" placeholder="hal. https://www.youtube.com/shorts/...">
                 <button class="btn-green" onclick="addMenuItemToSheet()">💾 I-save ang Item sa Google Sheet</button>
             </div>
             <div class="card">
@@ -328,9 +323,7 @@ function doGet(e) {
 </div>
 
 <script>
-    // Supabase client initialization
     const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlcWJuaHB2YXJzY2RyZHpyY3NyIiwicm9sZSI6ImFub24iLCJpiatI6MTc3MjQ2NTQ2OSwiZXhwIjoyMDg4MDQxNDY5fQ.qR5qYv3... (sample-key-placeholder)"; // Siguraduhing naka-set kung kinakailangan
     const supabase = window.supabase.createClient("https://qeqbnhpvarsdcrdzpycr.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlcWJuaHB2YXJzY2RyZHpyY3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NjU0NjksImV4cCI6MjA4ODA0MTQ2OX0.dummy_key_to_prevent_blank");
 
     const VERIFY_THEME_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/verify-and-update-theme";
@@ -644,7 +637,7 @@ function doGet(e) {
         const container = document.getElementById("variantChipsContainer"); container.innerHTML = "";
         currentVariantsList.forEach((v, idx) => {
             const card = document.createElement("div"); card.className = "variant-chip-card";
-            card.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:12px; color:#38bdf8; font-weight:bold;">Variant #${idx + 1}</span><button type="button" class="btn-remove-var" onclick="removeVariantCard(${idx})">Alisin ✕</button></div><div class="variant-row-flex"><div style="flex:1;"><label style="font-size:10px; color:#94a3b8;">Qty Available:</label><input type="number" placeholder="Qty" value="${v.qty || ''}" onchange="updateVariantField(${idx}, 'qty', this.value)"></div><div style="flex:1.5;"><label style="font-size:10px; color:#94a3b8;">Status:</label><select onchange="updateVariantField(${idx}, 'status', this.value)"><option value="Available" ${v.status === 'Available' ? 'selected':''}>Available</option><option value="In Stock" ${v.status === 'In Stock' ? 'selected':''}>In Stock</option><option value="Out of Stock" ${v.status === 'Out of Stock' ? 'selected':''}>Out of Stock</option></select></div></div><div class="variant-row-flex"><div style="flex:2;"><label style="font-size:10px; color:#94a3b8;">Variant Name:</label><input type="text" placeholder="hal. Large" value="${v.name || ''}" onchange="updateVariantField(${idx}, 'name', this.value)"></div><div style="flex:1;"><label style="font-size:10px; color:#94a3b8;">Price (₱):</label><input type="number" placeholder="₱" value="${v.price || ''}" onchange="updateVariantField(${idx}, 'price', this.value)"></div><div style="flex:1;"><label style="font-size:10px; color:#94a3b8;">Discount (₱):</label><input type="number" placeholder="Disc" value="${v.discount || '0'}" onchange="updateVariantField(${idx}, 'discount', this.value)"></div></div><div><label style="font-size:10px; color:#94a3b8;">Variant Image Link:</label><input type="url" placeholder="I-paste ang link dito" value="${v.image || ''}" onchange="updateVariantField(${idx}, 'image', this.value)"></div>`;
+            card.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:12px; color:#38bdf8; font-weight:bold;">Variant #${idx + 1}</span><button type="button" class="btn-remove-var" onclick="removeVariantCard(${idx})">Alisin ✕</button></div><div class="variant-row-flex"><div style="flex:1;"><label style="font-size:10px; color:#94a3b8;">Qty Available:</label><input type="number" placeholder="Qty" value="${v.qty || ''}" onchange="updateVariantField(${idx}, 'qty', this.value)"></div><div style="flex:1.5;"><label style="font-size:10px; color:#94a3b8;">Status:</label><select onchange="updateVariantField(${idx}, 'status', this.value)"><option value="Available" ${v.status === 'Available' ? 'selected':''}>Available</option><option value="In Stock" ${v.status === 'In Stock' ? 'selected':''}>In Stock</option><option value="Out of Stock" ${v.status === 'Out of Stock' ? 'selected':''}>Out of Stock</option></select></div></div><div class="variant-row-flex"><div style="flex:2;"><label style="font-size:10px; color:#94a3b8;">Variant Name:</label><input type="text" placeholder="hal. Large" value="${v.name || ''}" onchange="updateVariantField(${idx}, 'name', this.value)"></div><div style="flex:1;"><label style="font-size:10px; color:#94a3b8;">Price (₱):</label><input type="number" placeholder="₱" value="${v.price || ''}" onchange="updateVariantField(${idx}, 'price', this.value)"></div><div style="flex:1;"><label style="font-size:10px; color:#94a3b8;">Discount (₱):</label><input type="number" placeholder="Disc" value="${v.discount || '0'}" onchange="updateVariantField(${idx}, 'discount', this.value)"></div></div><div><label style="font-size:10px; color:#94a3b8;">Variant Image Link:</label><input type="password" placeholder="I-paste ang link dito" value="${v.image || ''}" onchange="updateVariantField(${idx}, 'image', this.value)"></div>`;
             container.appendChild(card);
         });
     }
