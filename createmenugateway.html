@@ -766,6 +766,22 @@ async function loadPaymentSettingsData() {
     }
 }
 
+// Helper: Kunin ang kasalukuyang payment settings mula sa Supabase
+async function fetchCurrentPaymentSettingsFromDb() {
+    try {
+        const res = await fetch(GET_CONFIG_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: activeStore, page: activeStore })
+        });
+        const result = await res.json();
+        const data = result.data || result;
+        return data && data.store_payment_setup ? (typeof data.store_payment_setup === 'string' ? JSON.parse(data.store_payment_setup) : data.store_payment_setup) : null;
+    } catch (e) {
+        showErrorDialog(e);
+        return null;
+    }
+}
 
 
 </script>
