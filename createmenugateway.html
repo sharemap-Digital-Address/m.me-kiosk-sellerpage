@@ -57,6 +57,28 @@
         .drawer-menu-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f8fafc; font-weight: bold; font-size: 13px; cursor: pointer; margin-bottom: 10px; transition: 0.2s; }
         .drawer-menu-item:hover { border-color: #38bdf8; background: #1e293b; }
         .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: 20px; }
+
+/* Custom Error Dialog Modal */
+.error-modal-overlay { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0, 0, 0, 0.85); display: none; 
+    justify-content: center; align-items: center; z-index: 99999; 
+    padding: 15px; box-sizing: border-box; 
+}
+.error-modal-card { 
+    background: #1e293b; border-radius: 12px; padding: 18px; 
+    max-width: 450px; width: 100%; border: 1px solid #ef4444; 
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2); 
+    box-sizing: border-box; text-align: left; 
+}
+.error-code-box { 
+    background: #090d16; border: 1px solid #334155; border-radius: 6px; 
+    padding: 10px; font-family: monospace; font-size: 11px; color: #fca5a5; 
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all; 
+    max-height: 180px; margin: 10px 0; user-select: all; 
+}
+
+        
     </style>
 </head>
 <body>
@@ -318,7 +340,56 @@ function doGet(e) {
         <button class="btn-secondary" onclick="closeModal('codeModal')" style="margin-top: 5px;">Isara</button>
     </div>
 </div>
+
+    <!-- ERROR LOG DIALOG MODAL WITH COPY BUTTON -->
+<div id="errorLogModal" class="error-modal-overlay">
+    <div class="error-modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; color: #ef4444; font-size: 16px;">⚠️ May Naganap na Error!</h3>
+            <button onclick="closeErrorDialog()" style="width: auto; padding: 2px 8px; background: #64748b; font-size: 11px; margin: 0;">✕</button>
+        </div>
+        <p style="font-size: 12px; color: #cbd5e1; margin: 8px 0 4px 0;">Detalye ng Error / Stack Trace:</p>
+        
+        <!-- Dito ipapakita ang error text -->
+        <div id="errorLogContent" class="error-code-box">Wala pang nakatalang error.</div>
+        
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <button class="btn-green" onclick="copyErrorToClipboard()" style="margin:0; flex: 1; padding: 10px; font-size: 12px;">📋 Kopyahin ang Error (Copy)</button>
+            <button class="btn-secondary" onclick="closeErrorDialog()" style="margin:0; flex: 0.5; padding: 10px; font-size: 12px;">Isara</button>
+        </div>
+    </div>
+</div>    
+    
 <script>
+// Function para ipakita ang Error Dialog
+function showErrorDialog(errMessage) {
+    const modal = document.getElementById("errorLogModal");
+    const content = document.getElementById("errorLogContent");
+    
+    // Kung Error object ang ipinasa, kunin ang message o stack trace
+    let fullText = typeof errMessage === 'object' ? (errMessage.stack || errMessage.message || JSON.stringify(errMessage)) : errMessage;
+    
+    content.innerText = fullText;
+    modal.style.display = "flex";
+}
+
+// Function para isara ang Dialog
+function closeErrorDialog() {
+    document.getElementById("errorLogModal").style.display = "none";
+}
+
+// Function para kopyahin sa Clipboard
+function copyErrorToClipboard() {
+    const errText = document.getElementById("errorLogContent").innerText;
+    navigator.clipboard.writeText(errText).then(() => {
+        alert("📋 Na-copy na sa Clipboard ang Error Log!");
+    }).catch(err => {
+        alert("Bigo sa pag-copy: " + err);
+    });
+}
+
+
+    
     const VERIFY_THEME_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/verify-and-update-theme";
     const GET_CONFIG_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config";
 
@@ -644,7 +715,7 @@ function doGet(e) {
         } catch (err) { console.error("Fetch sheet error:", err); }
     }
 
-    let pendingActionCallback = null;
+let pendingActionCallback = null;
 let currentStoreOwnerEmail = "";
 
 // Palawakin ang switchTab para sa paymentTab
@@ -776,149 +847,6 @@ function requestOtpAndSaveP2P() {
 
         currentSettings.p2p_methods.push(newP2pItem);
         await savePaymentSettingsToSupabase(currentSettings);
-    });
-}
-
-// 5. Proseso ng pag-save ng PayMongo Gateway
-function requestOtpAndSavePaymongo() {
-    const pubKey = document.getElementById("paymongoPublicKey").value.trim();
-    const secKey = document.getElementById("paymongoSecretKey").value.trim();
-    const ewallet = document.getElementById("pmChannelEwallet").checked;
-    const bank = document.getElementById("pmChannelBank").checked;
-    const card = document.getElementById("pmChannelCard").checked;
-
-    if (!pubKey || !secKey) {
-        alert("Pakipunan ang Public Key at Secret Key ng PayMongo!");
-        return;
-    }
-
-    requestOtpAndTriggerAction(async () => {
-        const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
-        
-        currentSettings.paymongo_gateway = {
-            is_enabled: document.getElementById("enablePaymongoToggle").checked,
-            public_key: pubKey,
-            secret_key: secKey,
-            enabled_channels: {
-                ewallet: ewallet,
-                bank_transfer: bank,
-                card: card
-            }
-        };
-
-        await savePaymentSettingsToSupabase(currentSettings);
-    });
-}
-
-// Helper: Kunin ang kasalukuyang payment settings mula sa Supabase
-async function fetchCurrentPaymentSettingsFromDb() {
-    try {
-        const res = await fetch(GET_CONFIG_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: activeStore, page: activeStore })
-        });
-        const result = await res.json();
-        const data = result.data || result;
-        return data && data.store_payment_setup ? (typeof data.store_payment_setup === 'string' ? JSON.parse(data.store_payment_setup) : data.store_payment_setup) : null;
-    } catch (e) {
-        console.error("Error fetching payment setup:", e);
-        return null;
-    }
-}
-
-// Helper: I-save ang buong payment setup JSON sa Supabase gamit ang Edge Function
-async function savePaymentSettingsToSupabase(settingsObj) {
-    try {
-        const res = await fetch(VERIFY_THEME_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username: activeStore,
-                password: activeStorePassword,
-                store_payment_setup: settingsObj // Ipinapasa sa Supabase JSON column/field
-            })
-        });
-        const result = await res.json();
-        if (result.error) {
-            alert("❌ Bigo sa pag-save: " + result.error);
-        } else {
-            alert("✅ Matagumpay na na-save ang Payment Settings!");
-            loadPaymentSettingsData();
-            document.getElementById("p2pWalletName").value = "";
-            document.getElementById("p2pDriveLink").value = "";
-        }
-    } catch (e) {
-        alert("Error: " + e.message);
-    }
-}
-
-// 6. I-load ang mga naka-save na datos sa UI at CardView list
-async function loadPaymentSettingsData() {
-    const settings = await fetchCurrentPaymentSettingsFromDb();
-    if (!settings) return;
-
-    // P2P Setup
-    if (settings.p2p_methods && settings.p2p_methods.length > 0) {
-        document.getElementById("enableP2PToggle").checked = true;
-        toggleP2PSection();
-        
-        const cardListContainer = document.getElementById("p2pAccountsCardList");
-        cardListContainer.innerHTML = "";
-        
-        settings.p2p_methods.forEach((p2p, index) => {
-            const cardDiv = document.createElement("div");
-            cardDiv.style.cssText = "background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 6px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center;";
-            cardDiv.innerHTML = `
-                <div>
-                    <b style="color: #38bdf8;">${p2p.name}</b><br>
-                    <small style="color: #94a3b8; font-family: monospace;">File ID: ${p2p.drive_file_id.substring(0, 15)}...</small>
-                </div>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                    <button class="status-badge ${p2p.is_active ? 'avail' : 'not-avail'}" onclick="toggleP2PStatus('${p2p.id}')" style="cursor:pointer; border:none;">${p2p.is_active ? 'ON' : 'OFF'}</button>
-                    <button class="btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px; margin:0;" onclick="requestOtpAndDeleteP2P('${p2p.id}')">🗑️ Delete</button>
-                </div>
-            `;
-            cardListContainer.appendChild(cardDiv);
-        });
-    }
-
-    // Paymongo Setup
-    if (settings.paymongo_gateway) {
-        const pm = settings.paymongo_gateway;
-        document.getElementById("enablePaymongoToggle").checked = pm.is_enabled || false;
-        togglePaymongoSection();
-        if (pm.public_key) document.getElementById("paymongoPublicKey").value = pm.public_key;
-        if (pm.secret_key) document.getElementById("paymongoSecretKey").value = pm.secret_key;
-        if (pm.enabled_channels) {
-            document.getElementById("pmChannelEwallet").checked = pm.enabled_channels.ewallet || false;
-            document.getElementById("pmChannelBank").checked = pm.enabled_channels.bank_transfer || false;
-            document.getElementById("pmChannelCard").checked = pm.enabled_channels.card || false;
-        }
-    }
-}
-
-// 7. Toggle ON/OFF o Delete ng P2P account na may OTP protection din
-function requestOtpAndDeleteP2P(p2pId) {
-    requestOtpAndTriggerAction(async () => {
-        let settings = await fetchCurrentPaymentSettingsFromDb();
-        if (!settings || !settings.p2p_methods) return;
-        
-        settings.p2p_methods = settings.p2p_methods.filter(p => p.id !== p2pId);
-        await savePaymentSettingsToSupabase(settings);
-    });
-}
-
-function toggleP2PStatus(p2pId) {
-    requestOtpAndTriggerAction(async () => {
-        let settings = await fetchCurrentPaymentSettingsFromDb();
-        if (!settings || !settings.p2p_methods) return;
-        
-        settings.p2p_methods = settings.p2p_methods.map(p => {
-            if (p.id === p2pId) p.is_active = !p.is_active;
-            return p;
-        });
-        await savePaymentSettingsToSupabase(settings);
     });
 }
 
