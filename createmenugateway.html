@@ -820,15 +820,18 @@ function togglePaymongoSection() {
 
 function extractGoogleDriveFileId(url) {
     try {
-        if (!url) return "";
+        // Siguraduhing may laman at isa itong valid string bago i-trim o i-regex
+        if (!url || typeof url !== 'string') return "";
+        
         url = url.trim();
         const match = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
         return match && match[1] ? match[1] : url;
     } catch (e) {
         showErrorDialog(e);
-        return url;
+        return ""; // Safe fallback sakaling magka-error
     }
 }
+
 
 </script>
 </body>
