@@ -58,27 +58,25 @@
         .drawer-menu-item:hover { border-color: #38bdf8; background: #1e293b; }
         .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: 20px; }
     
-/* Custom Error Dialog Modal */
-.error-modal-overlay { 
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(0, 0, 0, 0.85); display: none; 
-    justify-content: center; align-items: center; z-index: 99999; 
-    padding: 15px; box-sizing: border-box; 
-}
-.error-modal-card { 
-    background: #1e293b; border-radius: 12px; padding: 18px; 
-    max-width: 450px; width: 100%; border: 1px solid #ef4444; 
-    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2); 
-    box-sizing: border-box; text-align: left; 
-}
-.error-code-box { 
-    background: #090d16; border: 1px solid #334155; border-radius: 6px; 
-    padding: 10px; font-family: monospace; font-size: 11px; color: #fca5a5; 
-    overflow-x: auto; white-space: pre-wrap; word-break: break-all; 
-    max-height: 180px; margin: 10px 0; user-select: all; 
-}
-
-        
+        /* Custom Error Dialog Modal */
+        .error-modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0, 0, 0, 0.85); display: none; 
+            justify-content: center; align-items: center; z-index: 99999; 
+            padding: 15px; box-sizing: border-box; 
+        }
+        .error-modal-card { 
+            background: #1e293b; border-radius: 12px; padding: 18px; 
+            max-width: 450px; width: 100%; border: 1px solid #ef4444; 
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2); 
+            box-sizing: border-box; text-align: left; 
+        }
+        .error-code-box { 
+            background: #090d16; border: 1px solid #334155; border-radius: 6px; 
+            padding: 10px; font-family: monospace; font-size: 11px; color: #fca5a5; 
+            overflow-x: auto; white-space: pre-wrap; word-break: break-all; 
+            max-height: 180px; margin: 10px 0; user-select: all; 
+        }
     </style>
 </head>
 <body>
@@ -92,7 +90,6 @@
         </div>
         <p style="font-size: 12px; color: #cbd5e1; margin: 8px 0 4px 0;">Detalye ng Error / Stack Trace:</p>
         
-        <!-- Dito ipapakita ang error text -->
         <div id="errorLogContent" class="error-code-box">Wala pang nakatalang error.</div>
         
         <div style="display: flex; gap: 8px; margin-top: 10px;">
@@ -102,8 +99,6 @@
     </div>
 </div>
 
-
-    
 <div class="container">
     <h2>🍔 Store Menu Manager</h2>
     <div class="card" id="loginCard">
@@ -118,6 +113,7 @@
         <button id="loginActionBtn" onclick="loginAndLoadMenu()">Log In & Load Menu</button>
         <p style="font-size:9px; color:#64748b; text-align:center;">SECURED via verify-and-update-theme Edge Function</p>
     </div>
+    
     <div id="managerSection" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #1e293b; padding: 10px 14px; border-radius: 8px; border: 1px solid #334155;">
             <button onclick="toggleDrawer()" style="width: auto; padding: 6px 12px; font-size: 13px; background: #0284c7; margin:0; display: flex; align-items: center; gap: 6px;">☰🛠 Store Settings</button>
@@ -134,10 +130,10 @@
                 <div class="drawer-menu-item" onclick="protectedAction('themeTab')"><span>🎨</span> Kiosk Theme Customizer</div>
                 <div class="drawer-menu-item" onclick="protectedAction('reconfigTab')"><span>⚙️</span> Re-config Google Sheet</div>
                 <div class="drawer-menu-item" onclick="protectedAction('paymentTab')"><span>💳</span> Payment Methods & Gateway</div>
-
             </div>
             <button onclick="logoutStore()" style="background: #dc2626; color: white; padding: 10px; font-size: 12px; margin:0;">🚪 Log Out Store</button>
         </div>
+        
         <div id="firstTimeSetupCard" class="card" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <h3 style="margin: 0; color:#38bdf8;">📌 Setup Your Menu Storage</h3>
@@ -149,6 +145,7 @@
             <input type="text" id="blankSheetLinkInput" placeholder="https://docs.google.com/spreadsheets/d/...">
             <button class="btn-blue" onclick="processCopyAndOpenSheet('blankSheetLinkInput')">🚀 Copy Code & Open Google Sheet sa Browser</button>
         </div>
+        
         <div id="urlInputReminderCard" class="card" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <h3 style="margin: 0; color: #38bdf8;">⚙️ Huling Hakbang sa Web Browser</h3>
@@ -160,6 +157,7 @@
             <button class="btn-green" onclick="saveSheetUrlToSupabase()">💾 Save Google Sheet Link</button>
             <button class="btn-secondary" onclick="openCodeModal()" style="margin-top: 8px;">📜 Tignan Uli ang Code</button>
         </div>
+        
         <div id="themeSettingsSection" class="card" style="display: none; border: 1px solid #8b5cf6;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 style="margin-top:0; color:#c084fc;">🎨 Kiosk Theme Customizer</h3>
@@ -194,81 +192,64 @@
             <button class="btn-blue" onclick="saveStoreThemeSettings()" style="margin-bottom:0;">💾 I-save ang Theme Settings</button>
         </div>
         
-        <!-- RECONFIG GOOGLE SHEET SECTION -->
         <div id="reconfigSection" class="card" style="display: none;">
             <h3 style="margin-top:0; color:#38bdf8;">⚙️ Re-config Google Sheet Link</h3>
             <label style="font-size: 12px; font-weight: bold;">Web App URL (/exec):</label>
             <input type="text" id="reconfigWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
             <button class="btn-green" onclick="saveReconfigSheetUrl()">💾 Save Google Sheet Link</button>
             <button class="btn-secondary" onclick="openCodeModal()" style="margin-top: 4px;">📜 Tignan ang Apps Script Code</button>
-            
-            <!-- DELETE GOOGLE SHEET LINK BUTTON WITH PASSWORD CONFIRM -->
             <button class="btn-danger" onclick="deleteGoogleSheetLink()" style="margin-top: 15px;">🗑️ Tanggalin / Alisin ang Google Sheet Link</button>
         </div>
-<!-- PAYMENT METHOD SETTINGS SECTION -->      
-<div id="paymentSettingsSection" class="card" style="display: none; border: 1px solid #38bdf8;">
-    <h3 style="margin-top:0; color:#38bdf8;">💳 Payment Methods & Gateway Settings</h3>
-    <p style="font-size:11px; color:#94a3b8; margin-top:-4px; margin-bottom:12px;">I-configure ang P2P E-Wallets o ang iyong PayMongo Merchant API.</p>
 
-    <!-- TIER 1: P2P E-WALLET -->
-    <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px;">
-        <div class="switch-container" style="margin-bottom: 8px;">
-            <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🟢 Enable P2P E-Wallet Tier</span>
-            <label class="switch"><input type="checkbox" id="enableP2PToggle" onchange="toggleP2PSection()"><span class="slider"></span></label>
-        </div>
-        
-        <div id="p2pSubContainer" style="display: none;">
-            <label style="font-size: 12px; font-weight: bold;">E-Wallet Name:</label>
-            <input type="text" id="p2pWalletName" placeholder="hal. GCash Personal o Maya">
-            
-            <label style="font-size: 12px; font-weight: bold;">Google Drive Link ng QR Code:</label>
-            <input type="url" id="p2pDriveLink" placeholder="https://drive.google.com/file/d/.../view">
-            
-            <button class="btn-green" onclick="requestOtpAndSaveP2P()" style="margin-top: 5px;">🔒 Request OTP & Convert/Save P2P</button>
-            
-            <div id="p2pAccountsCardList" style="margin-top: 12px;">
-                <!-- Dito lilitaw ang mga naka-save na P2P cards na may Delete at Switch button -->
-            </div>
-        </div>
-    </div>
+        <div id="paymentSettingsSection" class="card" style="display: none; border: 1px solid #38bdf8;">
+            <h3 style="margin-top:0; color:#38bdf8;">💳 Payment Methods & Gateway Settings</h3>
+            <p style="font-size:11px; color:#94a3b8; margin-top:-4px; margin-bottom:12px;">I-configure ang P2P E-Wallets o ang iyong PayMongo Merchant API.</p>
 
-    <!-- TIER 2: PAYMONGO MERCHANT GATEWAY -->
-    <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
-        <div class="switch-container" style="margin-bottom: 8px;">
-            <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🔵 Enable PayMongo Gateway API</span>
-            <label class="switch"><input type="checkbox" id="enablePaymongoToggle" onchange="togglePaymongoSection()"><span class="slider"></span></label>
-        </div>
-
-        <div id="paymongoSubContainer" style="display: none;">
-            <label style="font-size: 12px; font-weight: bold;">Public API Key:</label>
-            <input type="text" id="paymongoPublicKey" placeholder="pk_live_xxxxxxxxxxxxxxxxxxxx">
-
-            <label style="font-size: 12px; font-weight: bold;">Secret API Key / Token:</label>
-            <input type="password" id="paymongoSecretKey" placeholder="sk_live_xxxxxxxxxxxxxxxxxxxx">
-
-            <label style="font-size: 12px; font-weight: bold; color: #38bdf8; margin-top: 8px; display: block;">📋 Allowed Payment Channels:</label>
-            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; margin-bottom: 12px; font-size: 13px;">
-                <label><input type="checkbox" id="pmChannelEwallet" style="width: auto; margin-right: 6px;"> E-Wallets (GCash, Maya, GrabPay)</label>
-                <label><input type="checkbox" id="pmChannelBank" style="width: auto; margin-right: 6px;"> Direct Bank Online Transfers (BPI, UnionBank)</label>
-                <label><input type="checkbox" id="pmChannelCard" style="width: auto; margin-right: 6px;"> Credit / Debit Cards (Visa, Mastercard)</label>
+            <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px;">
+                <div class="switch-container" style="margin-bottom: 8px;">
+                    <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🟢 Enable P2P E-Wallet Tier</span>
+                    <label class="switch"><input type="checkbox" id="enableP2PToggle" onchange="toggleP2PSection()"><span class="slider"></span></label>
+                </div>
+                <div id="p2pSubContainer" style="display: none;">
+                    <label style="font-size: 12px; font-weight: bold;">E-Wallet Name:</label>
+                    <input type="text" id="p2pWalletName" placeholder="hal. GCash Personal o Maya">
+                    <label style="font-size: 12px; font-weight: bold;">Google Drive Link ng QR Code:</label>
+                    <input type="url" id="p2pDriveLink" placeholder="https://drive.google.com/file/d/.../view">
+                    <button class="btn-green" onclick="requestOtpAndSaveP2P()" style="margin-top: 5px;">🔒 Request OTP & Convert/Save P2P</button>
+                    <div id="p2pAccountsCardList" style="margin-top: 12px;"></div>
+                </div>
             </div>
 
-            <button class="btn-green" onclick="requestOtpAndSavePaymongo()">🔒 Request OTP & Save PayMongo Gateway</button>
+            <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+                <div class="switch-container" style="margin-bottom: 8px;">
+                    <span style="font-size: 13px; font-weight: bold; color: #38bdf8;">🔵 Enable PayMongo Gateway API</span>
+                    <label class="switch"><input type="checkbox" id="enablePaymongoToggle" onchange="togglePaymongoSection()"><span class="slider"></span></label>
+                </div>
+                <div id="paymongoSubContainer" style="display: none;">
+                    <label style="font-size: 12px; font-weight: bold;">Public API Key:</label>
+                    <input type="text" id="paymongoPublicKey" placeholder="pk_live_xxxxxxxxxxxxxxxxxxxx">
+                    <label style="font-size: 12px; font-weight: bold;">Secret API Key / Token:</label>
+                    <input type="password" id="paymongoSecretKey" placeholder="sk_live_xxxxxxxxxxxxxxxxxxxx">
+                    <label style="font-size: 12px; font-weight: bold; color: #38bdf8; margin-top: 8px; display: block;">📋 Allowed Payment Channels:</label>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; margin-bottom: 12px; font-size: 13px;">
+                        <label><input type="checkbox" id="pmChannelEwallet" style="width: auto; margin-right: 6px;"> E-Wallets (GCash, Maya, GrabPay)</label>
+                        <label><input type="checkbox" id="pmChannelBank" style="width: auto; margin-right: 6px;"> Direct Bank Online Transfers (BPI, UnionBank)</label>
+                        <label><input type="checkbox" id="pmChannelCard" style="width: auto; margin-right: 6px;"> Credit / Debit Cards (Visa, Mastercard)</label>
+                    </div>
+                    <button class="btn-green" onclick="requestOtpAndSavePaymongo()">🔒 Request OTP & Save PayMongo Gateway</button>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
 
-<!-- OTP MODAL POPUP -->
-<div id="otpModal" class="modal-overlay">
-    <div class="modal-content" style="text-align: center;">
-        <h3 style="color: #38bdf8; margin-top: 0;">🔐 Email OTP Verification</h3>
-        <p style="font-size: 13px; color: #94a3b8;" id="otpNoticeText">Ipinadala ang 6-digit code sa rehistradong email ng store owner.</p>
-        <input type="text" id="otpCodeInput" placeholder="I-type ang 6-digit OTP code" style="text-align: center; font-size: 18px; letter-spacing: 4px;" maxlength="6">
-        <button class="btn-green" onclick="verifyOtpAndExecuteAction()">Kumpirmahin at I-save</button>
-        <button class="btn-secondary" onclick="closeModal('otpModal')">Kanselahin</button>
-    </div>
-</div>
-
+        <div id="otpModal" class="modal-overlay">
+            <div class="modal-content" style="text-align: center;">
+                <h3 style="color: #38bdf8; margin-top: 0;">🔐 Email OTP Verification</h3>
+                <p style="font-size: 13px; color: #94a3b8;" id="otpNoticeText">Ipinadala ang 6-digit code sa rehistradong email ng store owner.</p>
+                <input type="text" id="otpCodeInput" placeholder="I-type ang 6-digit OTP code" style="text-align: center; font-size: 18px; letter-spacing: 4px;" maxlength="6">
+                <button class="btn-green" onclick="verifyOtpAndExecuteAction()">Kumpirmahin at I-save</button>
+                <button class="btn-secondary" onclick="closeModal('otpModal')">Kanselahin</button>
+            </div>
+        </div>
 
         <div id="mainMenuSection">
             <div class="card" id="menuFormCard" style="display: none; border: 1px solid #38bdf8;">
@@ -327,6 +308,7 @@
         </div>
     </div>
 </div>
+
 <div id="codeModal" class="modal-overlay">
     <div class="modal-content">
         <h3 style="margin-top: 0; color: #38bdf8;">📜 Apps Script Webhook Code</h3>
@@ -362,39 +344,34 @@ function doGet(e) {
         <button class="btn-secondary" onclick="closeModal('codeModal')" style="margin-top: 5px;">Isara</button>
     </div>
 </div>
+
 <script>
-//-----------------------------------------------
-// Function para ipakita ang Error Dialog
-//-------------------------------------------------    
-function showErrorDialog(errMessage) {
-    const modal = document.getElementById("errorLogModal");
-    const content = document.getElementById("errorLogContent");
-    
-    // Kung Error object ang ipinasa, kunin ang message o stack trace
-    let fullText = typeof errMessage === 'object' ? (errMessage.stack || errMessage.message || JSON.stringify(errMessage)) : errMessage;
-    
-    content.innerText = fullText;
-    modal.style.display = "flex";
-}
+    //-----------------------------------------------
+    // Function para ipakita ang Error Dialog
+    //-----------------------------------------------    
+    function showErrorDialog(errMessage) {
+        const modal = document.getElementById("errorLogModal");
+        const content = document.getElementById("errorLogContent");
+        let fullText = typeof errMessage === 'object' ? (errMessage.stack || errMessage.message || JSON.stringify(errMessage)) : errMessage;
+        content.innerText = fullText;
+        modal.style.display = "flex";
+    }
 
-// Function para isara ang Dialog
-function closeErrorDialog() {
-    document.getElementById("errorLogModal").style.display = "none";
-}
+    // Function para isara ang Dialog
+    function closeErrorDialog() {
+        document.getElementById("errorLogModal").style.display = "none";
+    }
 
-// Function para kopyahin sa Clipboard
-function copyErrorToClipboard() {
-    const errText = document.getElementById("errorLogContent").innerText;
-    navigator.clipboard.writeText(errText).then(() => {
-        alert("📋 Na-copy na sa Clipboard ang Error Log!");
-    }).catch(err => {
-        alert("Bigo sa pag-copy: " + err);
-    });
-}
+    // Function para kopyahin sa Clipboard
+    function copyErrorToClipboard() {
+        const errText = document.getElementById("errorLogContent").innerText;
+        navigator.clipboard.writeText(errText).then(() => {
+            alert("📋 Na-copy na sa Clipboard ang Error Log!");
+        }).catch(err => {
+            alert("Bigo sa pag-copy: " + err);
+        });
+    }
 
-
-
-    
     const VERIFY_THEME_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/verify-and-update-theme";
     const GET_CONFIG_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config";
 
@@ -415,14 +392,21 @@ function copyErrorToClipboard() {
 
     function toggleDrawer() { document.body.classList.toggle('drawer-open'); }
     function switchTab(tabName) {
-        document.getElementById('themeSettingsSection').style.display = tabName === 'themeTab' ? 'block' : 'none';
-        document.getElementById('reconfigSection').style.display = tabName === 'reconfigTab' ? 'block' : 'none';
-        document.getElementById('mainMenuSection').style.display = tabName === 'menuTab' ? 'block' : 'none';
-        document.getElementById('firstTimeSetupCard').style.display = 'none';
-        document.getElementById('urlInputReminderCard').style.display = 'none';
-        toggleDrawer();
-        if(tabName==='menuTab' && !activeWebhookUrl){ document.getElementById('firstTimeSetupCard').style.display='block'; document.getElementById('mainMenuSection').style.display='none'; }
+        try {
+            document.getElementById('themeSettingsSection').style.display = tabName === 'themeTab' ? 'block' : 'none';
+            document.getElementById('reconfigSection').style.display = tabName === 'reconfigTab' ? 'block' : 'none';
+            document.getElementById('paymentSettingsSection').style.display = tabName === 'paymentTab' ? 'block' : 'none';
+            document.getElementById('mainMenuSection').style.display = tabName === 'menuTab' ? 'block' : 'none';
+            document.getElementById('firstTimeSetupCard').style.display = 'none';
+            document.getElementById('urlInputReminderCard').style.display = 'none';
+            toggleDrawer();
+            if(tabName==='menuTab' && !activeWebhookUrl){ document.getElementById('firstTimeSetupCard').style.display='block'; document.getElementById('mainMenuSection').style.display='none'; }
+            if(tabName==='paymentTab'){ loadPaymentSettingsData(); }
+        } catch (e) {
+            showErrorDialog(e);
+        }
     }
+
     function protectedAction(targetTab) {
         const inputPwd = prompt("🔑 Pakipasok ang Store Password para mabuksan ang setting na ito:");
         if (inputPwd === null) return;
@@ -460,13 +444,14 @@ function copyErrorToClipboard() {
     }
 
     async function checkStorePasswordStatus() {
-        const username = document.getElementById('storeUsername').value.trim().toLowerCase();
-        const pwdWrapper = document.getElementById('passwordWrapper');
-        const actionBtn = document.getElementById('loginActionBtn');
-        const notice = document.getElementById('statusNotice');
-        if(!username) return;
-        notice.style.display="block"; notice.style.background="#0284c7"; notice.innerText="⏳ Checking store...";
-        try{
+        try {
+            const username = document.getElementById('storeUsername').value.trim().toLowerCase();
+            const pwdWrapper = document.getElementById('passwordWrapper');
+            const actionBtn = document.getElementById('loginActionBtn');
+            const notice = document.getElementById('statusNotice');
+            if(!username) return;
+            notice.style.display="block"; notice.style.background="#0284c7"; notice.innerText="⏳ Checking store...";
+            
             const res = await fetch(GET_CONFIG_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: username, page: username }) });
             const result = await res.json();
             const data = result.data || result;
@@ -484,37 +469,58 @@ function copyErrorToClipboard() {
                 pwdWrapper.style.display = "block"; notice.style.display = "none"; actionBtn.style.display = "block";
                 actionBtn.innerText = "Log In & Load Menu"; actionBtn.onclick = loginAndLoadMenu;
             }
-        }catch(e){
-            notice.style.display="none";
-            pwdWrapper.style.display = "block"; actionBtn.style.display = "block"; actionBtn.innerText = "Log In & Load Menu"; actionBtn.onclick = loginAndLoadMenu;
+        } catch(e) {
+            showErrorDialog(e);
+            document.getElementById('statusNotice').style.display = "none";
         }
     }
 
+    // --- DITO NILAGAY ANG TRY...CATCH PARA SA LOGIN BUTTON CLICK ---
     async function loginAndLoadMenu() {
-        const username = document.getElementById('storeUsername').value.trim().toLowerCase();
-        const pwd = document.getElementById('storePassword').value.trim();
-        if(!username || !pwd) { alert("Pakipunan ang Username at Password!"); return; }
-        const btn = document.getElementById('loginActionBtn'); btn.innerText = "⏳ Verifying..."; btn.disabled=true;
-        try{
+        const btn = document.getElementById('loginActionBtn');
+        try {
+            const username = document.getElementById('storeUsername').value.trim().toLowerCase();
+            const pwd = document.getElementById('storePassword').value.trim();
+            if(!username || !pwd) { alert("Pakipunan ang Username at Password!"); return; }
+            
+            btn.innerText = "⏳ Verifying..."; 
+            btn.disabled = true;
+
             const res = await fetch(VERIFY_THEME_URL, {
                 method:'POST', headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({ username: username, password: pwd, action: "verify" })
             });
             const result = await res.json();
-            if(result.error){ alert("❌ "+result.error); btn.innerText="Log In & Load Menu"; btn.disabled=false; return; }
+            if(result.error){ 
+                alert("❌ "+result.error); 
+                btn.innerText="Log In & Load Menu"; 
+                btn.disabled=false; 
+                return; 
+            }
             if(result.expiry){
                 const today=new Date().toISOString().split('T')[0];
-                if(today>result.expiry && result.status!=="ACTIVE"){ alert("❌ Expired na! Contact admin."); btn.innerText="Log In & Load Menu"; btn.disabled=false; return; }
+                if(today>result.expiry && result.status!=="ACTIVE"){ 
+                    alert("❌ Expired na! Contact admin."); 
+                    btn.innerText="Log In & Load Menu"; 
+                    btn.disabled=false; 
+                    return; 
+                }
             }
             activeStore = username; activeStorePassword = pwd;
             document.getElementById('activeStoreLabel').innerText = "@" + username;
             document.getElementById('loginCard').style.display = 'none';
             document.getElementById('managerSection').style.display = 'block';
-            btn.innerText="Log In & Load Menu"; btn.disabled=false;
+            btn.innerText="Log In & Load Menu"; 
+            btn.disabled=false;
             await loadStoreSheetUrl();
             await loadStoreThemeSettings();
-        }catch(e){ alert("Error: "+e.message); showErrorDialog(e);
-        btn.innerText="Log In & Load Menu"; btn.disabled=false; }
+
+        } catch(e) {
+            // Sasalo sa anumang Error o crash sa login process at ipapakita sa Error Modal na may Copy Button
+            showErrorDialog(e);
+            btn.innerText = "Log In & Load Menu"; 
+            btn.disabled = false; 
+        }
     }
 
     function logoutStore() { window.location.reload(); }
@@ -601,25 +607,18 @@ function copyErrorToClipboard() {
         }catch(e){ alert("Error: "+e.message); }
     }
 
-    /* --- IDINAGDAG: PASSWORD CONFIRMATION SA DELETE GOOGLE SHEET LINK --- */
     async function deleteGoogleSheetLink() {
         const confirmPwd = prompt("🔑 I-type ang iyong Store Password para kumpirmahin ang pag-delete ng Google Sheet link:");
-        if (confirmPwd === null) return; // Na-cancel ng user
-
+        if (confirmPwd === null) return;
         if (confirmPwd !== activeStorePassword) {
             alert("❌ Mali ang password! Hindi natanggal ang Google Sheet link.");
             return;
         }
-
         try {
             const res = await fetch(VERIFY_THEME_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: activeStore,
-                    password: activeStorePassword,
-                    menu_sheet_url: "" // Ginagawang blangko sa database
-                })
+                body: JSON.stringify({ username: activeStore, password: activeStorePassword, menu_sheet_url: "" })
             });
             const result = await res.json();
             if (result.error) {
@@ -628,7 +627,6 @@ function copyErrorToClipboard() {
                 activeWebhookUrl = "";
                 document.getElementById("reconfigWebhookUrl").value = "";
                 alert("🗑️ Matagumpay na natanggal ang Google Sheet link!");
-                // Ibabalik ang user sa setup card para makapaglagay ng bago
                 document.getElementById('reconfigSection').style.display = 'none';
                 document.getElementById('firstTimeSetupCard').style.display = 'block';
             }
@@ -721,320 +719,292 @@ function copyErrorToClipboard() {
         } catch (err) { console.error("Fetch sheet error:", err); }
     }
 
-/*----------------payment methods-----------------------*/
- let pendingActionCallback = null;
-let currentStoreOwnerEmail = "";
+    /*----------------payment methods-----------------------*/
+    let pendingActionCallback = null;
+    let currentStoreOwnerEmail = "";
 
-// Palawakin ang switchTab para sa paymentTab
-function switchTab(tabName) {
-    try {
-        document.getElementById('themeSettingsSection').style.display = tabName === 'themeTab' ? 'block' : 'none';
-        document.getElementById('reconfigSection').style.display = tabName === 'reconfigTab' ? 'block' : 'none';
-        document.getElementById('paymentSettingsSection').style.display = tabName === 'paymentTab' ? 'block' : 'none';
-        document.getElementById('mainMenuSection').style.display = tabName === 'menuTab' ? 'block' : 'none';
-        document.getElementById('firstTimeSetupCard').style.display = 'none';
-        document.getElementById('urlInputReminderCard').style.display = 'none';
-        toggleDrawer();
-        if(tabName==='menuTab' && !activeWebhookUrl){ document.getElementById('firstTimeSetupCard').style.display='block'; document.getElementById('mainMenuSection').style.display='none'; }
-        if(tabName==='paymentTab'){ loadPaymentSettingsData(); }
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-function toggleP2PSection() {
-    try {
-        const isChecked = document.getElementById("enableP2PToggle").checked;
-        document.getElementById("p2pSubContainer").style.display = isChecked ? "block" : "none";
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-function togglePaymongoSection() {
-    try {
-        const isChecked = document.getElementById("enablePaymongoToggle").checked;
-        document.getElementById("paymongoSubContainer").style.display = isChecked ? "block" : "none";
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-// 1. Regex para makuha ang Google Drive File ID lamang
-function extractGoogleDriveFileId(url) {
-    try {
-        if (!url) return "";
-        url = url.trim();
-        const match = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
-        return match && match[1] ? match[1] : url;
-    } catch (e) {
-        showErrorDialog(e);
-        return url;
-    }
-}
-
-// 2. Humingi muna ng Email OTP bago payagan ang pag-save
-async function requestOtpAndTriggerAction(actionCallback) {
-    try {
-        const res = await fetch(GET_CONFIG_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: activeStore, page: activeStore })
-        });
-        const result = await res.json();
-        const data = result.data || result;
-        
-        currentStoreOwnerEmail = data.owner_email || data.email;
-        if (!currentStoreOwnerEmail) {
-            alert("❌ Walang nahanap na rehistradong Email sa License para sa OTP verification.");
-            return;
+    function toggleP2PSection() {
+        try {
+            const isChecked = document.getElementById("enableP2PToggle").checked;
+            document.getElementById("p2pSubContainer").style.display = isChecked ? "block" : "none";
+        } catch (e) {
+            showErrorDialog(e);
         }
-
-        const { error: otpError } = await supabase.auth.signInWithOtp({ email: currentStoreOwnerEmail });
-        if (otpError) {
-            alert("Nagpadala ng OTP sa rehistradong email: " + currentStoreOwnerEmail);
-        } else {
-            document.getElementById("otpNoticeText").innerText = `Ipinadala ang OTP code sa: ${currentStoreOwnerEmail}`;
-        }
-
-        pendingActionCallback = actionCallback;
-        document.getElementById("otpCodeInput").value = "";
-        document.getElementById("otpModal").style.display = "flex";
-
-    } catch (e) {
-        showErrorDialog(e);
     }
-}
 
-// 3. I-verify ang OTP code at i-execute ang save
-async function verifyOtpAndExecuteAction() {
-    try {
-        const enteredOtp = document.getElementById("otpCodeInput").value.trim();
-        if (!enteredOtp || enteredOtp.length !== 6) {
-            alert("Pakipasok ang wastong 6-digit OTP code!");
-            return;
+    function togglePaymongoSection() {
+        try {
+            const isChecked = document.getElementById("enablePaymongoToggle").checked;
+            document.getElementById("paymongoSubContainer").style.display = isChecked ? "block" : "none";
+        } catch (e) {
+            showErrorDialog(e);
         }
+    }
 
-        const { data, error } = await supabase.auth.verifyOtp({
-            email: currentStoreOwnerEmail,
-            token: enteredOtp,
-            type: 'email'
-        });
+    function extractGoogleDriveFileId(url) {
+        try {
+            if (!url) return "";
+            url = url.trim();
+            const match = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
+            return match && match[1] ? match[1] : url;
+        } catch (e) {
+            showErrorDialog(e);
+            return url;
+        }
+    }
 
-        if (error) {
-            alert("⚠️ OTP Verification Note: " + (error.message || "Maling OTP code"));
-            if (enteredOtp !== "000000") {
+    async function requestOtpAndTriggerAction(actionCallback) {
+        try {
+            const res = await fetch(GET_CONFIG_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: activeStore, page: activeStore })
+            });
+            const result = await res.json();
+            const data = result.data || result;
+            
+            currentStoreOwnerEmail = data.owner_email || data.email;
+            if (!currentStoreOwnerEmail) {
+                alert("❌ Walang nahanap na rehistradong Email sa License para sa OTP verification.");
                 return;
             }
-        }
 
-        closeModal('otpModal');
-        if (pendingActionCallback) {
-            pendingActionCallback();
-            pendingActionCallback = null;
-        }
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-// 4. Proseso ng pag-save ng P2P account gamit ang Regex ID
-function requestOtpAndSaveP2P() {
-    try {
-        const name = document.getElementById("p2pWalletName").value.trim();
-        const rawLink = document.getElementById("p2pDriveLink").value.trim();
-        
-        if (!name || !rawLink) {
-            alert("Pakipunan ang E-Wallet Name at Google Drive Link!");
-            return;
-        }
-
-        const fileId = extractGoogleDriveFileId(rawLink);
-        if (!fileId) {
-            alert("❌ Invalid Google Drive Link!");
-            return;
-        }
-
-        requestOtpAndTriggerAction(async () => {
-            try {
-                const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
-                const newP2pItem = {
-                    id: "p2p_" + Date.now(),
-                    name: name,
-                    drive_file_id: fileId,
-                    is_active: true
-                };
-                currentSettings.p2p_methods.push(newP2pItem);
-                await savePaymentSettingsToSupabase(currentSettings);
-            } catch (err) {
-                showErrorDialog(err);
+            const { error: otpError } = await supabase.auth.signInWithOtp({ email: currentStoreOwnerEmail });
+            if (otpError) {
+                alert("Nagpadala ng OTP sa rehistradong email: " + currentStoreOwnerEmail);
+            } else {
+                document.getElementById("otpNoticeText").innerText = `Ipinadala ang OTP code sa: ${currentStoreOwnerEmail}`;
             }
-        });
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
 
-// 5. Proseso ng pag-save ng PayMongo Gateway
-function requestOtpAndSavePaymongo() {
-    try {
-        const pubKey = document.getElementById("paymongoPublicKey").value.trim();
-        const secKey = document.getElementById("paymongoSecretKey").value.trim();
-        const ewallet = document.getElementById("pmChannelEwallet").checked;
-        const bank = document.getElementById("pmChannelBank").checked;
-        const card = document.getElementById("pmChannelCard").checked;
+            pendingActionCallback = actionCallback;
+            document.getElementById("otpCodeInput").value = "";
+            document.getElementById("otpModal").style.display = "flex";
 
-        if (!pubKey || !secKey) {
-            alert("Pakipunan ang Public Key at Secret Key ng PayMongo!");
-            return;
+        } catch (e) {
+            showErrorDialog(e);
         }
+    }
 
-        requestOtpAndTriggerAction(async () => {
-            try {
-                const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
-                currentSettings.paymongo_gateway = {
-                    is_enabled: document.getElementById("enablePaymongoToggle").checked,
-                    public_key: pubKey,
-                    secret_key: secKey,
-                    enabled_channels: { ewallet: ewallet, bank_transfer: bank, card: card }
-                };
-                await savePaymentSettingsToSupabase(currentSettings);
-            } catch (err) {
-                showErrorDialog(err);
+    async function verifyOtpAndExecuteAction() {
+        try {
+            const enteredOtp = document.getElementById("otpCodeInput").value.trim();
+            if (!enteredOtp || enteredOtp.length !== 6) {
+                alert("Pakipasok ang wastong 6-digit OTP code!");
+                return;
             }
-        });
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
 
-// Helper: Kunin ang kasalukuyang payment settings mula sa Supabase
-async function fetchCurrentPaymentSettingsFromDb() {
-    try {
-        const res = await fetch(GET_CONFIG_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: activeStore, page: activeStore })
-        });
-        const result = await res.json();
-        const data = result.data || result;
-        return data && data.store_payment_setup ? (typeof data.store_payment_setup === 'string' ? JSON.parse(data.store_payment_setup) : data.store_payment_setup) : null;
-    } catch (e) {
-        showErrorDialog(e);
-        return null;
-    }
-}
-
-// Helper: I-save ang buong payment setup JSON sa Supabase gamit ang Edge Function
-async function savePaymentSettingsToSupabase(settingsObj) {
-    try {
-        const res = await fetch(VERIFY_THEME_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username: activeStore,
-                password: activeStorePassword,
-                store_payment_setup: settingsObj
-            })
-        });
-        const result = await res.json();
-        if (result.error) {
-            alert("❌ Bigo sa pag-save: " + result.error);
-        } else {
-            alert("✅ Matagumpay na na-save ang Payment Settings!");
-            loadPaymentSettingsData();
-            document.getElementById("p2pWalletName").value = "";
-            document.getElementById("p2pDriveLink").value = "";
-        }
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-// 6. I-load ang mga naka-save na datos sa UI at CardView list
-async function loadPaymentSettingsData() {
-    try {
-        const settings = await fetchCurrentPaymentSettingsFromDb();
-        if (!settings) return;
-
-        if (settings.p2p_methods && settings.p2p_methods.length > 0) {
-            document.getElementById("enableP2PToggle").checked = true;
-            toggleP2PSection();
-            const cardListContainer = document.getElementById("p2pAccountsCardList");
-            cardListContainer.innerHTML = "";
-            settings.p2p_methods.forEach((p2p, index) => {
-                const cardDiv = document.createElement("div");
-                cardDiv.style.cssText = "background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 6px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center;";
-                cardDiv.innerHTML = `
-                    <div>
-                        <b style="color: #38bdf8;">${p2p.name}</b><br>
-                        <small style="color: #94a3b8; font-family: monospace;">File ID: ${p2p.drive_file_id.substring(0, 15)}...</small>
-                    </div>
-                    <div style="display: flex; gap: 6px; align-items: center;">
-                        <button class="status-badge ${p2p.is_active ? 'avail' : 'not-avail'}" onclick="toggleP2PStatus('${p2p.id}')" style="cursor:pointer; border:none;">${p2p.is_active ? 'ON' : 'OFF'}</button>
-                        <button class="btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px; margin:0;" onclick="requestOtpAndDeleteP2P('${p2p.id}')">🗑️ Delete</button>
-                    </div>
-                `;
-                cardListContainer.appendChild(cardDiv);
+            const { data, error } = await supabase.auth.verifyOtp({
+                email: currentStoreOwnerEmail,
+                token: enteredOtp,
+                type: 'email'
             });
-        }
 
-        if (settings.paymongo_gateway) {
-            const pm = settings.paymongo_gateway;
-            document.getElementById("enablePaymongoToggle").checked = pm.is_enabled || false;
-            togglePaymongoSection();
-            if (pm.public_key) document.getElementById("paymongoPublicKey").value = pm.public_key;
-            if (pm.secret_key) document.getElementById("paymongoSecretKey").value = pm.secret_key;
-            if (pm.enabled_channels) {
-                document.getElementById("pmChannelEwallet").checked = pm.enabled_channels.ewallet || false;
-                document.getElementById("pmChannelBank").checked = pm.enabled_channels.bank_transfer || false;
-                document.getElementById("pmChannelCard").checked = pm.enabled_channels.card || false;
+            if (error) {
+                alert("⚠️ OTP Verification Note: " + (error.message || "Maling OTP code"));
+                if (enteredOtp !== "000000") {
+                    return;
+                }
             }
-        }
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
 
-// 7. Toggle ON/OFF o Delete ng P2P account na may OTP protection din
-function requestOtpAndDeleteP2P(p2pId) {
-    try {
-        requestOtpAndTriggerAction(async () => {
-            try {
-                let settings = await fetchCurrentPaymentSettingsFromDb();
-                if (!settings || !settings.p2p_methods) return;
-                settings.p2p_methods = settings.p2p_methods.filter(p => p.id !== p2pId);
-                await savePaymentSettingsToSupabase(settings);
-            } catch (err) {
-                showErrorDialog(err);
+            closeModal('otpModal');
+            if (pendingActionCallback) {
+                pendingActionCallback();
+                pendingActionCallback = null;
             }
-        });
-    } catch (e) {
-        showErrorDialog(e);
+        } catch (e) {
+            showErrorDialog(e);
+        }
     }
-}
 
-function toggleP2PStatus(p2pId) {
-    try {
-        requestOtpAndTriggerAction(async () => {
-            try {
-                let settings = await fetchCurrentPaymentSettingsFromDb();
-                if (!settings || !settings.p2p_methods) return;
-                settings.p2p_methods = settings.p2p_methods.map(p => {
-                    if (p.id === p2pId) p.is_active = !p.is_active;
-                    return p;
+    function requestOtpAndSaveP2P() {
+        try {
+            const name = document.getElementById("p2pWalletName").value.trim();
+            const rawLink = document.getElementById("p2pDriveLink").value.trim();
+            
+            if (!name || !rawLink) {
+                alert("Pakipunan ang E-Wallet Name at Google Drive Link!");
+                return;
+            }
+
+            const fileId = extractGoogleDriveFileId(rawLink);
+            if (!fileId) {
+                alert("❌ Invalid Google Drive Link!");
+                return;
+            }
+
+            requestOtpAndTriggerAction(async () => {
+                try {
+                    const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
+                    const newP2pItem = {
+                        id: "p2p_" + Date.now(),
+                        name: name,
+                        drive_file_id: fileId,
+                        is_active: true
+                    };
+                    currentSettings.p2p_methods.push(newP2pItem);
+                    await savePaymentSettingsToSupabase(currentSettings);
+                } catch (err) {
+                    showErrorDialog(err);
+                }
+            });
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    function requestOtpAndSavePaymongo() {
+        try {
+            const pubKey = document.getElementById("paymongoPublicKey").value.trim();
+            const secKey = document.getElementById("paymongoSecretKey").value.trim();
+            const ewallet = document.getElementById("pmChannelEwallet").checked;
+            const bank = document.getElementById("pmChannelBank").checked;
+            const card = document.getElementById("pmChannelCard").checked;
+
+            if (!pubKey || !secKey) {
+                alert("Pakipunan ang Public Key at Secret Key ng PayMongo!");
+                return;
+            }
+
+            requestOtpAndTriggerAction(async () => {
+                try {
+                    const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
+                    currentSettings.paymongo_gateway = {
+                        is_enabled: document.getElementById("enablePaymongoToggle").checked,
+                        public_key: pubKey,
+                        secret_key: secKey,
+                        enabled_channels: { ewallet: ewallet, bank_transfer: bank, card: card }
+                    };
+                    await savePaymentSettingsToSupabase(currentSettings);
+                } catch (err) {
+                    showErrorDialog(err);
+                }
+            });
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    async function fetchCurrentPaymentSettingsFromDb() {
+        try {
+            const res = await fetch(GET_CONFIG_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: activeStore, page: activeStore })
+            });
+            const result = await res.json();
+            const data = result.data || result;
+            return data && data.store_payment_setup ? (typeof data.store_payment_setup === 'string' ? JSON.parse(data.store_payment_setup) : data.store_payment_setup) : null;
+        } catch (e) {
+            showErrorDialog(e);
+            return null;
+        }
+    }
+
+    async function savePaymentSettingsToSupabase(settingsObj) {
+        try {
+            const res = await fetch(VERIFY_THEME_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: activeStore,
+                    password: activeStorePassword,
+                    store_payment_setup: settingsObj
+                })
+            });
+            const result = await res.json();
+            if (result.error) {
+                alert("❌ Bigo sa pag-save: " + result.error);
+            } else {
+                alert("✅ Matagumpay na na-save ang Payment Settings!");
+                loadPaymentSettingsData();
+                document.getElementById("p2pWalletName").value = "";
+                document.getElementById("p2pDriveLink").value = "";
+            }
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    async function loadPaymentSettingsData() {
+        try {
+            const settings = await fetchCurrentPaymentSettingsFromDb();
+            if (!settings) return;
+
+            if (settings.p2p_methods && settings.p2p_methods.length > 0) {
+                document.getElementById("enableP2PToggle").checked = true;
+                toggleP2PSection();
+                const cardListContainer = document.getElementById("p2pAccountsCardList");
+                cardListContainer.innerHTML = "";
+                settings.p2p_methods.forEach((p2p, index) => {
+                    const cardDiv = document.createElement("div");
+                    cardDiv.style.cssText = "background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 6px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center;";
+                    cardDiv.innerHTML = `
+                        <div>
+                            <b style="color: #38bdf8;">${p2p.name}</b><br>
+                            <small style="color: #94a3b8; font-family: monospace;">File ID: ${p2p.drive_file_id.substring(0, 15)}...</small>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <button class="status-badge ${p2p.is_active ? 'avail' : 'not-avail'}" onclick="toggleP2PStatus('${p2p.id}')" style="cursor:pointer; border:none;">${p2p.is_active ? 'ON' : 'OFF'}</button>
+                            <button class="btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px; margin:0;" onclick="requestOtpAndDeleteP2P('${p2p.id}')">🗑️ Delete</button>
+                        </div>
+                    `;
+                    cardListContainer.appendChild(cardDiv);
                 });
-                await savePaymentSettingsToSupabase(settings);
-            } catch (err) {
-                showErrorDialog(err);
             }
-        });
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
 
-    
+            if (settings.paymongo_gateway) {
+                const pm = settings.paymongo_gateway;
+                document.getElementById("enablePaymongoToggle").checked = pm.is_enabled || false;
+                togglePaymongoSection();
+                if (pm.public_key) document.getElementById("paymongoPublicKey").value = pm.public_key;
+                if (pm.secret_key) document.getElementById("paymongoSecretKey").value = pm.secret_key;
+                if (pm.enabled_channels) {
+                    document.getElementById("pmChannelEwallet").checked = pm.enabled_channels.ewallet || false;
+                    document.getElementById("pmChannelBank").checked = pm.enabled_channels.bank_transfer || false;
+                    document.getElementById("pmChannelCard").checked = pm.enabled_channels.card || false;
+                }
+            }
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    function requestOtpAndDeleteP2P(p2pId) {
+        try {
+            requestOtpAndTriggerAction(async () => {
+                try {
+                    let settings = await fetchCurrentPaymentSettingsFromDb();
+                    if (!settings || !settings.p2p_methods) return;
+                    settings.p2p_methods = settings.p2p_methods.filter(p => p.id !== p2pId);
+                    await savePaymentSettingsToSupabase(settings);
+                } catch (err) {
+                    showErrorDialog(err);
+                }
+            });
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    function toggleP2PStatus(p2pId) {
+        try {
+            requestOtpAndTriggerAction(async () => {
+                try {
+                    let settings = await fetchCurrentPaymentSettingsFromDb();
+                    if (!settings || !settings.p2p_methods) return;
+                    settings.p2p_methods = settings.p2p_methods.map(p => {
+                        if (p.id === p2pId) p.is_active = !p.is_active;
+                        return p;
+                    });
+                    await savePaymentSettingsToSupabase(settings);
+                } catch (err) {
+                    showErrorDialog(err);
+                }
+            });
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
 </script>
 </body>
 </html>
