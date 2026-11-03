@@ -737,7 +737,7 @@ function switchTab(tabName) {
     }
 }
 
-function toggleP2PSection() {
+/*function toggleP2PSection() {
     try {
         const isChecked = document.getElementById("enableP2PToggle").checked;
         document.getElementById("p2pSubContainer").style.display = isChecked ? "block" : "none";
@@ -769,7 +769,7 @@ function extractGoogleDriveFileId(url) {
 }
 
 // 2. Direktang proseso ng pag-save ng P2P account gamit ang Regex ID (Wala nang OTP)
-/*async function saveP2PAccount() {
+async function saveP2PAccount() {
     try {
         const name = document.getElementById("p2pWalletName").value.trim();
         const rawLink = document.getElementById("p2pDriveLink").value.trim();
