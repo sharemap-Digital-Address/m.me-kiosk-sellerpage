@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShareMap - Kiosk Menu Manager & Theme Customizer</title>
+    <!-- I-load ang Supabase JS Client library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #0284c7; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; }
@@ -69,6 +71,7 @@
         <div id="statusNotice" style="display:none;" class="alert-box"></div>
         <div id="passwordWrapper">
             <label>Password:</label>
+            <!-- Ginawang type="password" para nka-unshow (dots) ang pagta-type -->
             <input type="password" id="storePassword" placeholder="I-type ang iyong password">
         </div>
         <button id="loginActionBtn" onclick="loginAndLoadMenu()">Log In & Load Menu</button>
@@ -111,7 +114,8 @@
             </div>
             <div class="notice-box">1. I-click ang <b>Extensions > Apps Script</b> sa Google Sheet.<br>2. Burahin ang luma at i-paste ang code.<br>3. I-deploy bilang <b>Web app</b> (Anyone).<br>4. Kopyahin ang <b>Web App URL (/exec)</b> at i-paste sa ibaba:</div>
             <label style="font-size: 12px; font-weight: bold;">2. I-paste ang Web App URL (/exec):</label>
-            <input type="text" id="sheetWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
+            <!-- Ginawang type="password" para naka-unshow / naka-mask ang Web App URL -->
+            <input type="password" id="sheetWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
             <button class="btn-green" onclick="saveSheetUrlToSupabase()">💾 Save Google Sheet Link</button>
             <button class="btn-secondary" onclick="openCodeModal()" style="margin-top: 8px;">📜 Tignan Uli ang Code</button>
         </div>
@@ -153,7 +157,8 @@
         <div id="reconfigSection" class="card" style="display: none;">
             <h3 style="margin-top:0; color:#38bdf8;">⚙️ Re-config Google Sheet Link</h3>
             <label style="font-size: 12px; font-weight: bold;">Web App URL (/exec):</label>
-            <input type="text" id="reconfigWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
+            <!-- Ginawang type="password" para naka-unshow / naka-mask -->
+            <input type="password" id="reconfigWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
             <button class="btn-green" onclick="saveReconfigSheetUrl()">💾 Save Google Sheet Link</button>
             <button class="btn-secondary" onclick="openCodeModal()" style="margin-top: 4px;">📜 Tignan ang Apps Script Code</button>
             
@@ -178,7 +183,8 @@
                     <input type="text" id="p2pWalletName" placeholder="hal. GCash Personal o Maya">
                     
                     <label style="font-size: 12px; font-weight: bold;">Google Drive Link ng QR Code:</label>
-                    <input type="url" id="p2pDriveLink" placeholder="https://drive.google.com/file/d/.../view">
+                    <!-- Ginawang type="password" para naka-unshow / naka-mask ang Drive link -->
+                    <input type="password" id="p2pDriveLink" placeholder="https://drive.google.com/file/d/.../view">
                     
                     <button class="btn-green" onclick="requestOtpAndSaveP2P()" style="margin-top: 5px;">🔒 Request OTP & Convert/Save P2P</button>
                     
@@ -197,7 +203,8 @@
 
                 <div id="paymongoSubContainer" style="display: none;">
                     <label style="font-size: 12px; font-weight: bold;">Public API Key:</label>
-                    <input type="text" id="paymongoPublicKey" placeholder="pk_live_xxxxxxxxxxxxxxxxxxxx">
+                    <!-- Ginawang type="password" para naka-unshow / naka-mask ang Public API Key -->
+                    <input type="password" id="paymongoPublicKey" placeholder="pk_live_xxxxxxxxxxxxxxxxxxxx">
 
                     <label style="font-size: 12px; font-weight: bold;">Secret API Key / Token:</label>
                     <input type="password" id="paymongoSecretKey" placeholder="sk_live_xxxxxxxxxxxxxxxxxxxx">
@@ -314,13 +321,18 @@ function doGet(e) {
     <div class="modal-content" style="text-align: center;">
         <h3 style="color: #38bdf8; margin-top: 0;">🔐 Email OTP Verification</h3>
         <p style="font-size: 13px; color: #94a3b8;" id="otpNoticeText">Ipinadala ang 6-digit code sa rehistradong email ng store owner.</p>
-        <input type="text" id="otpCodeInput" placeholder="I-type ang 6-digit OTP code" style="text-align: center; font-size: 18px; letter-spacing: 4px;" maxlength="6">
+        <input type="password" id="otpCodeInput" placeholder="I-type ang 6-digit OTP code" style="text-align: center; font-size: 18px; letter-spacing: 4px;" maxlength="6">
         <button class="btn-green" onclick="verifyOtpAndExecuteAction()">Kumpirmahin at I-save</button>
         <button class="btn-secondary" onclick="closeModal('otpModal')">Kanselahin</button>
     </div>
 </div>
 
 <script>
+    // Supabase client initialization
+    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlcWJuaHB2YXJzY2RyZHpyY3NyIiwicm9sZSI6ImFub24iLCJpiatI6MTc3MjQ2NTQ2OSwiZXhwIjoyMDg4MDQxNDY5fQ.qR5qYv3... (sample-key-placeholder)"; // Siguraduhing naka-set kung kinakailangan
+    const supabase = window.supabase.createClient("https://qeqbnhpvarsdcrdzpycr.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlcWJuaHB2YXJzY2RyZHpyY3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NjU0NjksImV4cCI6MjA4ODA0MTQ2OX0.dummy_key_to_prevent_blank");
+
     const VERIFY_THEME_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/verify-and-update-theme";
     const GET_CONFIG_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config";
 
@@ -378,7 +390,6 @@ function doGet(e) {
         if (match && match[1]) return `https://lh3.googleusercontent.com/d/${match[1]}`; return rawUrl;
     }
 
-    // --- REGEX EXTRACTION PARA SA P2P GOOGLE DRIVE FILE ID ---
     function extractGoogleDriveFileId(url) {
         if (!url) return "";
         url = url.trim();
@@ -396,7 +407,6 @@ function doGet(e) {
         document.getElementById("paymongoSubContainer").style.display = isChecked ? "block" : "none";
     }
 
-    // --- EMAIL OTP SECURITY TRIGGERS ---
     async function requestOtpAndTriggerAction(actionCallback) {
         try {
             const res = await fetch(GET_CONFIG_URL, {
