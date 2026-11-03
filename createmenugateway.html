@@ -800,7 +800,23 @@ function switchTab(tabName) {
     }
 }
 
+function toggleP2PSection() {
+    try {
+        const isChecked = document.getElementById("enableP2PToggle").checked;
+        document.getElementById("p2pSubContainer").style.display = isChecked ? "block" : "none";
+    } catch (e) {
+        showErrorDialog(e);
+    }
+}
 
+function togglePaymongoSection() {
+    try {
+        const isChecked = document.getElementById("enablePaymongoToggle").checked;
+        document.getElementById("paymongoSubContainer").style.display = isChecked ? "block" : "none";
+    } catch (e) {
+        showErrorDialog(e);
+    }
+}
 
 </script>
 </body>
