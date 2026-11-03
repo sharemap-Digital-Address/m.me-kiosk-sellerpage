@@ -870,7 +870,7 @@ async function savePaymentSettingsToSupabase(settingsObj) {
 }
 
 // 4. I-load ang mga naka-save na datos sa UI at CardView list
-async function loadPaymentSettingsData() {
+/*async function loadPaymentSettingsData() {
     try {
         const settings = await fetchCurrentPaymentSettingsFromDb();
         if (!settings) return;
@@ -912,7 +912,7 @@ async function loadPaymentSettingsData() {
     } catch (e) {
         showErrorDialog(e);
     }
-}
+}*/
 
 // 5. Direktang Delete ng P2P account
 async function deleteP2PAccount(p2pId) {
