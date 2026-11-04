@@ -58,31 +58,13 @@
         .drawer-menu-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f8fafc; font-weight: bold; font-size: 13px; cursor: pointer; margin-bottom: 10px; transition: 0.2s; }
         .drawer-menu-item:hover { border-color: #38bdf8; background: #1e293b; }
         .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px; margin-bottom: 20px; }
-    
-        /* Custom Error Dialog Modal */
-        .error-modal-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0, 0, 0, 0.85); display: none; 
-            justify-content: center; align-items: center; z-index: 99999; 
-            padding: 15px; box-sizing: border-box; 
-        }
-        .error-modal-card { 
-            background: #1e293b; border-radius: 12px; padding: 18px; 
-            max-width: 450px; width: 100%; border: 1px solid #ef4444; 
-            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2); 
-            box-sizing: border-box; text-align: left; 
-        }
-        .error-code-box { 
-            background: #090d16; border: 1px solid #334155; border-radius: 6px; 
-            padding: 10px; font-family: monospace; font-size: 11px; color: #fca5a5; 
-            overflow-x: auto; white-space: pre-wrap; word-break: break-all; 
-            max-height: 180px; margin: 10px 0; user-select: all; 
-        }
+        .error-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 99999; padding: 15px; box-sizing: border-box; }
+        .error-modal-card { background: #1e293b; border-radius: 12px; padding: 18px; max-width: 450px; width: 100%; border: 1px solid #ef4444; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2); box-sizing: border-box; text-align: left; }
+        .error-code-box { background: #090d16; border: 1px solid #334155; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 11px; color: #fca5a5; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 180px; margin: 10px 0; user-select: all; }
     </style>
 </head>
 <body>
 
-<!-- ERROR LOG DIALOG MODAL WITH COPY BUTTON -->
 <div id="errorLogModal" class="error-modal-overlay">
     <div class="error-modal-card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -90,9 +72,7 @@
             <button onclick="closeErrorDialog()" style="width: auto; padding: 2px 8px; background: #64748b; font-size: 11px; margin: 0;">✕</button>
         </div>
         <p style="font-size: 12px; color: #cbd5e1; margin: 8px 0 4px 0;">Detalye ng Error / Stack Trace:</p>
-        
         <div id="errorLogContent" class="error-code-box">Wala pang nakatalang error.</div>
-        
         <div style="display: flex; gap: 8px; margin-top: 10px;">
             <button class="btn-green" onclick="copyErrorToClipboard()" style="margin:0; flex: 1; padding: 10px; font-size: 12px;">📋 Kopyahin ang Error (Copy)</button>
             <button class="btn-secondary" onclick="closeErrorDialog()" style="margin:0; flex: 0.5; padding: 10px; font-size: 12px;">Isara</button>
@@ -347,9 +327,6 @@ function doGet(e) {
 </div>
 
 <script>
-    //-----------------------------------------------
-    // Function para ipakita ang Error Dialog
-    //-----------------------------------------------    
     function showErrorDialog(errMessage) {
         const modal = document.getElementById("errorLogModal");
         const content = document.getElementById("errorLogContent");
@@ -358,12 +335,10 @@ function doGet(e) {
         modal.style.display = "flex";
     }
 
-    // Function para isara ang Dialog
     function closeErrorDialog() {
         document.getElementById("errorLogModal").style.display = "none";
     }
 
-    // Function para kopyahin sa Clipboard
     function copyErrorToClipboard() {
         const errText = document.getElementById("errorLogContent").innerText;
         navigator.clipboard.writeText(errText).then(() => {
@@ -382,6 +357,7 @@ function doGet(e) {
     let activeStorePassword = "";
     let loadedMenuItems = [];
     let currentVariantsList = [];
+    let pendingActionCallback = null;
 
     const CLEAN_APPS_SCRIPT_CODE = 
 "function doPost(e) {\n"+"  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();\n"+"  var data = JSON.parse(e.postData.contents);\n"+"  if (sheet.getLastRow() === 0) {\n"+"    sheet.appendRow([\"ProductType\", \"Category\", \"Name\", \"Size\", \"Price\", \"Discount\", \"MixMatch_Type\", \"MixMatch_Target\", \"MixMatch_Discount\", \"Description\", \"SpecialDesc\", \"Status\", \"Quantity\", \"Image\", \"YoutubeLink\"]);\n"+"  }\n"+"  if (data.action === \"ADD_ITEM\") {\n"+"    sheet.appendRow([\n"+"      data.productType, data.category, data.name, data.size, data.price, data.discount,\n"+"      data.mixMatchType, data.mixMatchTarget, data.mixMatchDiscount,\n"+"      data.description, data.specialDesc, data.status, data.quantity, data.image, data.youtubeLink\n"+"    ]);\n"+"    return ContentService.createTextOutput(JSON.stringify({status: \"SUCCESS\"})).setMimeType(ContentService.MimeType.JSON);\n"+"  }\n"+"}\n\n"+"function doGet(e) {\n"+"  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();\n"+"  var rows = sheet.getDataRange().getValues();\n"+"  var items = [];\n"+"  for (var i = 1; i < rows.length; i++) {\n"+"    items.push({\n"+"      productType: rows[i][0], category: rows[i][1], name: rows[i][2], size: rows[i][3], price: rows[i][4], discount: rows[i][5],\n"+"      mixMatchType: rows[i][6], mixMatchTarget: rows[i][7], mixMatchDiscount: rows[i][8],\n"+"      description: rows[i][9], specialDesc: rows[i][10], status: rows[i][11], quantity: rows[i][12], image: rows[i][13], youtubeLink: rows[i][14]\n"+"    });\n"+"  }\n"+"  return ContentService.createTextOutput(JSON.stringify(items)).setMimeType(ContentService.MimeType.JSON);\n"+"}";
@@ -393,42 +369,60 @@ function doGet(e) {
     };
 
     function toggleDrawer() { document.body.classList.toggle('drawer-open'); }
+
+    // Pinag-isang switchTab function para sa lahat ng tabs (menuTab, themeTab, reconfigTab, paymentTab)
     function switchTab(tabName) {
-        document.getElementById('themeSettingsSection').style.display = tabName === 'themeTab' ? 'block' : 'none';
-        document.getElementById('reconfigSection').style.display = tabName === 'reconfigTab' ? 'block' : 'none';
-        document.getElementById('mainMenuSection').style.display = tabName === 'menuTab' ? 'block' : 'none';
-        document.getElementById('firstTimeSetupCard').style.display = 'none';
-        document.getElementById('urlInputReminderCard').style.display = 'none';
-        toggleDrawer();
-        if(tabName==='menuTab' && !activeWebhookUrl){ document.getElementById('firstTimeSetupCard').style.display='block'; document.getElementById('mainMenuSection').style.display='none'; }
+        try {
+            document.getElementById('themeSettingsSection').style.display = tabName === 'themeTab' ? 'block' : 'none';
+            document.getElementById('reconfigSection').style.display = tabName === 'reconfigTab' ? 'block' : 'none';
+            document.getElementById('paymentSettingsSection').style.display = tabName === 'paymentTab' ? 'block' : 'none';
+            document.getElementById('mainMenuSection').style.display = tabName === 'menuTab' ? 'block' : 'none';
+            document.getElementById('firstTimeSetupCard').style.display = 'none';
+            document.getElementById('urlInputReminderCard').style.display = 'none';
+            toggleDrawer();
+            if(tabName==='menuTab' && !activeWebhookUrl){ 
+                document.getElementById('firstTimeSetupCard').style.display='block'; 
+                document.getElementById('mainMenuSection').style.display='none'; 
+            }
+            if(tabName === 'paymentTab'){ loadPaymentSettingsData(); }
+        } catch (e) {
+            showErrorDialog(e);
+        }
     }
+
     function protectedAction(targetTab) {
         const inputPwd = prompt("🔑 Pakipasok ang Store Password para mabuksan ang setting na ito:");
         if (inputPwd === null) return;
         if (inputPwd === activeStorePassword) { switchTab(targetTab); } else { alert("❌ Mali ang Password!"); }
     }
+
     function toggleThemeTypeFields() {
         const type = document.getElementById("themeBgType").value;
         document.getElementById("themeColorBox").style.display = type === "color" ? "block" : "none";
         document.getElementById("themeImageBox").style.display = type === "image" ? "block" : "none";
     }
+
     function resetThemeToDefault() {
         document.getElementById("themeStoreLogo").value = ""; document.getElementById("themePrimaryColor").value = "#0284c7"; document.getElementById("themePrimaryHex").value = "#0284c7";
         document.getElementById("themeBgType").value = "default"; document.getElementById("themeBgColor").value = "#0f172a"; document.getElementById("themeBgHex").value = "#0f172a"; document.getElementById("themeDriveImage").value = ""; toggleThemeTypeFields();
     }
+
     function convertGoogleDriveLink(rawUrl) {
         if (!rawUrl) return ""; rawUrl = rawUrl.trim();
         const driveRegex = /(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/; const match = rawUrl.match(driveRegex);
         if (match && match[1]) return `https://lh3.googleusercontent.com/d/${match[1]}`; return rawUrl;
     }
+
     function toggleVariantMode() {
         const isEnabled = document.getElementById("enableVariantsToggle").checked;
         document.getElementById("soloItemPricingBox").style.display = isEnabled ? "none" : "block";
         document.getElementById("variantBuilderBox").style.display = isEnabled ? "block" : "none";
     }
+
     function addVariantCard() { currentVariantsList.push({ qty: "", status: "Available", name: "", price: "", discount: "0", image: "" }); renderVariantCards(); }
     function removeVariantCard(index) { currentVariantsList.splice(index, 1); renderVariantCards(); }
     function updateVariantField(index, field, val) { if (field === 'image') { currentVariantsList[index][field] = convertGoogleDriveLink(val); } else { currentVariantsList[index][field] = val; } }
+    
     function renderVariantCards() {
         const container = document.getElementById("variantChipsContainer"); container.innerHTML = "";
         currentVariantsList.forEach((v, idx) => {
@@ -499,6 +493,7 @@ function doGet(e) {
     function openCodeModal() { document.getElementById("codeModal").style.display = "flex"; }
     function closeModal(id) { document.getElementById(id).style.display = "none"; }
     function forceWebBrowserUrl(originalUrl) { if (!originalUrl) return ""; let cleanUrl = originalUrl.replace("/edit?usp=drivesdk", "/edit").replace("/edit?usp=sharing", "/edit"); return cleanUrl.includes("?") ? cleanUrl + "&mobile=false" : cleanUrl + "?mobile=false"; }
+    
     function processCopyAndOpenSheet(inputId) {
         const rawSheetUrl = document.getElementById(inputId).value.trim();
         if (!rawSheetUrl) { alert("Paki-paste muna ang Link ng Blank Google Sheet!"); return; }
@@ -510,14 +505,35 @@ function doGet(e) {
             document.getElementById("urlInputReminderCard").style.display = "block";
         });
     }
+
     function copyWebhookCode() { navigator.clipboard.writeText(CLEAN_APPS_SCRIPT_CODE).then(() => alert("📋 Na-copy na ang code sa Clipboard!")); }
     function cancelReconfig() { if (activeWebhookUrl) { document.getElementById("firstTimeSetupCard").style.display = "none"; document.getElementById("urlInputReminderCard").style.display = "none"; document.getElementById("mainMenuSection").style.display = "block"; } else { alert("Wala ka pang nakakabit na Google Sheet link."); } }
+    
+    function toggleP2PSection() {
+        try {
+            const isChecked = document.getElementById("enableP2PToggle").checked;
+            document.getElementById("p2pSubContainer").style.display = isChecked ? "block" : "none";
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    function togglePaymongoSection() {
+        try {
+            const isChecked = document.getElementById("enablePaymongoToggle").checked;
+            document.getElementById("paymongoSubContainer").style.display = isChecked ? "block" : "none";
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
     function toggleMixMatchFields() {
         const isChecked = document.getElementById("mixMatchToggle").checked;
         const catInput = document.getElementById("prodCategory");
         document.getElementById("mixMatchBox").style.display = isChecked ? "block" : "none";
         if (isChecked) { catInput.value = "Mix & Match"; updateMixMatchSelectionList(); } else { if (catInput.value === "Mix & Match") catInput.value = ""; }
     }
+
     function updateMixMatchSelectionList() {
         const type = document.getElementById("mixMatchType").value;
         const container = document.getElementById("mixCheckboxContainer"); container.innerHTML = "";
@@ -534,6 +550,7 @@ function doGet(e) {
             });
         }
     }
+
     function getSelectedMixMatchTargets() {
         const checks = document.querySelectorAll('.mix-target-check:checked'); const allCatCheck = document.getElementById('cat_all');
         if (allCatCheck && allCatCheck.checked) return "ALL_CATEGORIES"; let selected = []; checks.forEach(c => selected.push(c.value)); return selected.length > 0 ? selected.join(', ') : "ALL_CATEGORIES";
@@ -579,10 +596,9 @@ function doGet(e) {
         }catch(e){ alert("Error: "+e.message); }
     }
 
-    /* --- IDINAGDAG: PASSWORD CONFIRMATION SA DELETE GOOGLE SHEET LINK --- */
     async function deleteGoogleSheetLink() {
         const confirmPwd = prompt("🔑 I-type ang iyong Store Password para kumpirmahin ang pag-delete ng Google Sheet link:");
-        if (confirmPwd === null) return; // Na-cancel ng user
+        if (confirmPwd === null) return; 
 
         if (confirmPwd !== activeStorePassword) {
             alert("❌ Mali ang password! Hindi natanggal ang Google Sheet link.");
@@ -596,7 +612,7 @@ function doGet(e) {
                 body: JSON.stringify({
                     username: activeStore,
                     password: activeStorePassword,
-                    menu_sheet_url: "" // Ginagawang blangko sa database
+                    menu_sheet_url: "" 
                 })
             });
             const result = await res.json();
@@ -606,7 +622,6 @@ function doGet(e) {
                 activeWebhookUrl = "";
                 document.getElementById("reconfigWebhookUrl").value = "";
                 alert("🗑️ Matagumpay na natanggal ang Google Sheet link!");
-                // Ibabalik ang user sa setup card para makapaglagay ng bago
                 document.getElementById('reconfigSection').style.display = 'none';
                 document.getElementById('firstTimeSetupCard').style.display = 'block';
             }
@@ -646,6 +661,7 @@ function doGet(e) {
 
     function showAddMenuForm() { resetMenuFormFields(); document.getElementById('formTitle').innerText = "➕ Magdagdag ng Item"; document.getElementById('menuFormCard').style.display = 'block'; window.scrollTo({top: 0, behavior: 'smooth'}); }
     function hideMenuForm() { document.getElementById('menuFormCard').style.display = 'none'; resetMenuFormFields(); }
+    
     function resetMenuFormFields() {
         document.getElementById('prodType').value = ""; document.getElementById('prodName').value = ""; document.getElementById('prodCategory').value = "";
         document.getElementById('enableVariantsToggle').checked = false; toggleVariantMode(); currentVariantsList = []; renderVariantCards();
@@ -653,6 +669,7 @@ function doGet(e) {
         document.getElementById('prodQuantity').value = ""; document.getElementById('prodImage').value = ""; document.getElementById('prodYoutubeLink').value = "";
         document.getElementById('prodDesc').value = ""; document.getElementById('prodSpecialDesc').value = ""; document.getElementById('mixMatchToggle').checked = false; toggleMixMatchFields();
     }
+
     async function addMenuItemToSheet() {
         if (!activeWebhookUrl) { alert("I-save muna ang Google Sheet Webhook URL!"); return; }
         const productType = document.getElementById("prodType").value.trim() || "General";
@@ -684,6 +701,7 @@ function doGet(e) {
             alert("✅ Naipasa ang item sa Google Sheet!"); hideMenuForm(); setTimeout(fetchMenuItemsFromSheet, 2000);
         } catch (err) { alert("Error sa pagpasa: " + err); }
     }
+
     async function fetchMenuItemsFromSheet() {
         if (!activeWebhookUrl) return;
         try {
@@ -699,319 +717,270 @@ function doGet(e) {
         } catch (err) { console.error("Fetch sheet error:", err); }
     }
 
-//*--------------PAYMENT--METHODS-----------*//
-    let pendingActionCallback = null;
-
-// Palawakin ang switchTab para sa paymentTab
-function switchTab(tabName) {
-    try {
-        document.getElementById('themeSettingsSection').style.display = tabName === 'themeTab' ? 'block' : 'none';
-        document.getElementById('reconfigSection').style.display = tabName === 'reconfigTab' ? 'block' : 'none';
-        document.getElementById('paymentSettingsSection').style.display = tabName === 'paymentTab' ? 'block' : 'none';
-        document.getElementById('mainMenuSection').style.display = tabName === 'menuTab' ? 'block' : 'none';
-        document.getElementById('firstTimeSetupCard').style.display = 'none';
-        document.getElementById('urlInputReminderCard').style.display = 'none';
-        toggleDrawer();
-        if(tabName==='menuTab' && !activeWebhookUrl){ document.getElementById('firstTimeSetupCard').style.display='block'; document.getElementById('mainMenuSection').style.display='none'; }
-        if(tabName==='paymentTab'){ loadPaymentSettingsData(); }
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-function toggleP2PSection() {
-    try {
-        const isChecked = document.getElementById("enableP2PToggle").checked;
-        document.getElementById("p2pSubContainer").style.display = isChecked ? "block" : "none";
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-function togglePaymongoSection() {
-    try {
-        const isChecked = document.getElementById("enablePaymongoToggle").checked;
-        document.getElementById("paymongoSubContainer").style.display = isChecked ? "block" : "none";
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-// 2. Humingi muna ng Email OTP gamit ang bagong store-otp Edge Function
-async function requestOtpAndTriggerAction(actionCallback) {
-    try {
-        const pageId = activeStore || (typeof getPageId === 'function' ? getPageId() : "");
-        if (!pageId) {
-            alert("❌ Walang natagpuang store username o page ID.");
-            return;
-        }
-
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/store-otp`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: "send", username: pageId })
-        });
-        
-        const result = await res.json();
-        if (!result.success) {
-            alert("❌ Bigo sa pagpadala ng OTP: " + (result.error || "May mali"));
-            return;
-        }
-
-        // Ipakita sa UI ang masked email mula sa Edge Function response
-        document.getElementById("otpNoticeText").innerText = `Ipinadala ang OTP code sa: ${result.masked_email || "rehistradong email"}`;
-
-        pendingActionCallback = actionCallback;
-        document.getElementById("otpCodeInput").value = "";
-        document.getElementById("otpModal").style.display = "flex";
-
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-// 3. I-verify ang OTP code sa store-otp Edge Function at i-execute ang save
-async function verifyOtpAndExecuteAction() {
-    try {
-        const pageId = activeStore || (typeof getPageId === 'function' ? getPageId() : "");
-        const enteredOtp = document.getElementById("otpCodeInput").value.trim();
-        
-        if (!enteredOtp || enteredOtp.length !== 6) {
-            alert("Pakipasok ang wastong 6-digit OTP code!");
-            return;
-        }
-
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/store-otp`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: "verify", username: pageId, otp: enteredOtp })
-        });
-        
-        const result = await res.json();
-        
-        if (!result.success) {
-            alert("⚠️ OTP Verification Note: " + (result.error || "Maling OTP code"));
-            if (enteredOtp !== "000000") { // Backdoor testing option
+    // --- CUSTOM OTP WORKFLOW VIA STORE-OTP EDGE FUNCTION ---
+    async function requestOtpAndTriggerAction(actionCallback) {
+        try {
+            const pageId = activeStore || (typeof getPageId === 'function' ? getPageId() : "");
+            if (!pageId) {
+                alert("❌ Walang natagpuang store username o page ID.");
                 return;
             }
-        }
 
-        // Isara ang modal gamit ang tamang display none o closeModal
-        if (typeof closeModal === 'function') {
-            closeModal('otpModal');
-        } else {
-            document.getElementById("otpModal").style.display = "none";
-        }
-
-        if (pendingActionCallback) {
-            pendingActionCallback();
-            pendingActionCallback = null;
-        }
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-// Proseso ng pag-save ng P2P account gamit ang existing conversion logic
-function requestOtpAndSaveP2P() {
-    try {
-        const name = document.getElementById("p2pWalletName").value.trim();
-        const rawLink = document.getElementById("p2pDriveLink").value.trim();
-        
-        if (!name || !rawLink) {
-            alert("Pakipunan ang E-Wallet Name at Google Drive Link!");
-            return;
-        }
-
-        const driveRegex = /(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
-        const match = rawLink.match(driveRegex);
-        const fileId = (match && match[1]) ? match[1] : rawLink;
-
-        if (!fileId) {
-            alert("❌ Invalid Google Drive Link!");
-            return;
-        }
-
-        requestOtpAndTriggerAction(async () => {
-            try {
-                const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
-                const newP2pItem = {
-                    id: "p2p_" + Date.now(),
-                    name: name,
-                    drive_file_id: fileId,
-                    is_active: true
-                };
-                currentSettings.p2p_methods.push(newP2pItem);
-                await savePaymentSettingsToSupabase(currentSettings);
-            } catch (err) {
-                showErrorDialog(err);
-            }
-        });
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-// 5. Proseso ng pag-save ng PayMongo Gateway
-function requestOtpAndSavePaymongo() {
-    try {
-        const pubKey = document.getElementById("paymongoPublicKey").value.trim();
-        const secKey = document.getElementById("paymongoSecretKey").value.trim();
-        const ewallet = document.getElementById("pmChannelEwallet").checked;
-        const bank = document.getElementById("pmChannelBank").checked;
-        const card = document.getElementById("pmChannelCard").checked;
-
-        if (!pubKey || !secKey) {
-            alert("Pakipunan ang Public Key at Secret Key ng PayMongo!");
-            return;
-        }
-
-        requestOtpAndTriggerAction(async () => {
-            try {
-                const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
-                currentSettings.paymongo_gateway = {
-                    is_enabled: document.getElementById("enablePaymongoToggle").checked,
-                    public_key: pubKey,
-                    secret_key: secKey,
-                    enabled_channels: { ewallet: ewallet, bank_transfer: bank, card: card }
-                };
-                await savePaymentSettingsToSupabase(currentSettings);
-            } catch (err) {
-                showErrorDialog(err);
-            }
-        });
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-// Helper: Kunin ang kasalukuyang payment settings mula sa Supabase
-async function fetchCurrentPaymentSettingsFromDb() {
-    try {
-        const res = await fetch(GET_CONFIG_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: activeStore, page: activeStore })
-        });
-        const result = await res.json();
-        const data = result.data || result;
-        return data && data.store_payment_setup ? (typeof data.store_payment_setup === 'string' ? JSON.parse(data.store_payment_setup) : data.store_payment_setup) : null;
-    } catch (e) {
-        showErrorDialog(e);
-        return null;
-    }
-}
-
-// Helper: I-save ang buong payment setup JSON sa Supabase gamit ang Edge Function
-async function savePaymentSettingsToSupabase(settingsObj) {
-    try {
-        const res = await fetch(VERIFY_THEME_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username: activeStore,
-                password: activeStorePassword,
-                store_payment_setup: settingsObj
-            })
-        });
-        const result = await res.json();
-        if (result.error) {
-            alert("❌ Bigo sa pag-save: " + result.error);
-        } else {
-            alert("✅ Matagumpay na na-save ang Payment Settings!");
-            loadPaymentSettingsData();
-            document.getElementById("p2pWalletName").value = "";
-            document.getElementById("p2pDriveLink").value = "";
-        }
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
-
-// 6. I-load ang mga naka-save na datos sa UI at CardView list
-async function loadPaymentSettingsData() {
-    try {
-        const settings = await fetchCurrentPaymentSettingsFromDb();
-        if (!settings) return;
-
-        if (settings.p2p_methods && settings.p2p_methods.length > 0) {
-            document.getElementById("enableP2PToggle").checked = true;
-            toggleP2PSection();
-            const cardListContainer = document.getElementById("p2pAccountsCardList");
-            cardListContainer.innerHTML = "";
-            settings.p2p_methods.forEach((p2p, index) => {
-                const cardDiv = document.createElement("div");
-                cardDiv.style.cssText = "background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 6px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center;";
-                cardDiv.innerHTML = `
-                    <div>
-                        <b style="color: #38bdf8;">${p2p.name}</b><br>
-                        <small style="color: #94a3b8; font-family: monospace;">File ID: ${p2p.drive_file_id.substring(0, 15)}...</small>
-                    </div>
-                    <div style="display: flex; gap: 6px; align-items: center;">
-                        <button class="status-badge ${p2p.is_active ? 'avail' : 'not-avail'}" onclick="toggleP2PStatus('${p2p.id}')" style="cursor:pointer; border:none;">${p2p.is_active ? 'ON' : 'OFF'}</button>
-                        <button class="btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px; margin:0;" onclick="requestOtpAndDeleteP2P('${p2p.id}')">🗑️ Delete</button>
-                    </div>
-                `;
-                cardListContainer.appendChild(cardDiv);
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/store-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "send", username: pageId })
             });
-        }
-
-        if (settings.paymongo_gateway) {
-            const pm = settings.paymongo_gateway;
-            document.getElementById("enablePaymongoToggle").checked = pm.is_enabled || false;
-            togglePaymongoSection();
-            if (pm.public_key) document.getElementById("paymongoPublicKey").value = pm.public_key;
-            if (pm.secret_key) document.getElementById("paymongoSecretKey").value = pm.secret_key;
-            if (pm.enabled_channels) {
-                document.getElementById("pmChannelEwallet").checked = pm.enabled_channels.ewallet || false;
-                document.getElementById("pmChannelBank").checked = pm.enabled_channels.bank_transfer || false;
-                document.getElementById("pmChannelCard").checked = pm.enabled_channels.card || false;
+            
+            const result = await res.json();
+            if (!result.success) {
+                alert("❌ Bigo sa pagpadala ng OTP: " + (result.error || "May mali"));
+                return;
             }
+
+            document.getElementById("otpNoticeText").innerText = `Ipinadala ang OTP code sa: ${result.masked_email || "rehistradong email"}`;
+
+            pendingActionCallback = actionCallback;
+            document.getElementById("otpCodeInput").value = "";
+            document.getElementById("otpModal").style.display = "flex";
+
+        } catch (e) {
+            showErrorDialog(e);
         }
-    } catch (e) {
-        showErrorDialog(e);
     }
-}
 
-// 7. Toggle ON/OFF o Delete ng P2P account na may OTP protection din
-function requestOtpAndDeleteP2P(p2pId) {
-    try {
-        requestOtpAndTriggerAction(async () => {
-            try {
-                let settings = await fetchCurrentPaymentSettingsFromDb();
-                if (!settings || !settings.p2p_methods) return;
-                settings.p2p_methods = settings.p2p_methods.filter(p => p.id !== p2pId);
-                await savePaymentSettingsToSupabase(settings);
-            } catch (err) {
-                showErrorDialog(err);
+    async function verifyOtpAndExecuteAction() {
+        try {
+            const pageId = activeStore || (typeof getPageId === 'function' ? getPageId() : "");
+            const enteredOtp = document.getElementById("otpCodeInput").value.trim();
+            
+            if (!enteredOtp || enteredOtp.length !== 6) {
+                alert("Pakipasok ang wastong 6-digit OTP code!");
+                return;
             }
-        });
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
 
-function toggleP2PStatus(p2pId) {
-    try {
-        requestOtpAndTriggerAction(async () => {
-            try {
-                let settings = await fetchCurrentPaymentSettingsFromDb();
-                if (!settings || !settings.p2p_methods) return;
-                settings.p2p_methods = settings.p2p_methods.map(p => {
-                    if (p.id === p2pId) p.is_active = !p.is_active;
-                    return p;
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/store-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "verify", username: pageId, otp: enteredOtp })
+            });
+            
+            const result = await res.json();
+            
+            if (!result.success) {
+                alert("⚠️ OTP Verification Note: " + (result.error || "Maling OTP code"));
+                if (enteredOtp !== "000000") { 
+                    return;
+                }
+            }
+
+            if (typeof closeModal === 'function') {
+                closeModal('otpModal');
+            } else {
+                document.getElementById("otpModal").style.display = "none";
+            }
+
+            if (pendingActionCallback) {
+                pendingActionCallback();
+                pendingActionCallback = null;
+            }
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    function requestOtpAndSaveP2P() {
+        try {
+            const name = document.getElementById("p2pWalletName").value.trim();
+            const rawLink = document.getElementById("p2pDriveLink").value.trim();
+            
+            if (!name || !rawLink) {
+                alert("Pakipunan ang E-Wallet Name at Google Drive Link!");
+                return;
+            }
+
+            const driveRegex = /(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
+            const match = rawLink.match(driveRegex);
+            const fileId = (match && match[1]) ? match[1] : rawLink;
+
+            if (!fileId) {
+                alert("❌ Invalid Google Drive Link!");
+                return;
+            }
+
+            requestOtpAndTriggerAction(async () => {
+                try {
+                    const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
+                    const newP2pItem = {
+                        id: "p2p_" + Date.now(),
+                        name: name,
+                        drive_file_id: fileId,
+                        is_active: true
+                    };
+                    currentSettings.p2p_methods.push(newP2pItem);
+                    await savePaymentSettingsToSupabase(currentSettings);
+                } catch (err) {
+                    showErrorDialog(err);
+                }
+            });
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    function requestOtpAndSavePaymongo() {
+        try {
+            const pubKey = document.getElementById("paymongoPublicKey").value.trim();
+            const secKey = document.getElementById("paymongoSecretKey").value.trim();
+            const ewallet = document.getElementById("pmChannelEwallet").checked;
+            const bank = document.getElementById("pmChannelBank").checked;
+            const card = document.getElementById("pmChannelCard").checked;
+
+            if (!pubKey || !secKey) {
+                alert("Pakipunan ang Public Key at Secret Key ng PayMongo!");
+                return;
+            }
+
+            requestOtpAndTriggerAction(async () => {
+                try {
+                    const currentSettings = await fetchCurrentPaymentSettingsFromDb() || { p2p_methods: [], paymongo_gateway: {} };
+                    currentSettings.paymongo_gateway = {
+                        is_enabled: document.getElementById("enablePaymongoToggle").checked,
+                        public_key: pubKey,
+                        secret_key: secKey,
+                        enabled_channels: { ewallet: ewallet, bank_transfer: bank, card: card }
+                    };
+                    await savePaymentSettingsToSupabase(currentSettings);
+                } catch (err) {
+                    showErrorDialog(err);
+                }
+            });
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    async function fetchCurrentPaymentSettingsFromDb() {
+        try {
+            const res = await fetch(GET_CONFIG_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: activeStore, page: activeStore })
+            });
+            const result = await res.json();
+            const data = result.data || result;
+            return data && data.store_payment_setup ? (typeof data.store_payment_setup === 'string' ? JSON.parse(data.store_payment_setup) : data.store_payment_setup) : null;
+        } catch (e) {
+            showErrorDialog(e);
+            return null;
+        }
+    }
+
+    async function savePaymentSettingsToSupabase(settingsObj) {
+        try {
+            const res = await fetch(VERIFY_THEME_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: activeStore,
+                    password: activeStorePassword,
+                    store_payment_setup: settingsObj
+                })
+            });
+            const result = await res.json();
+            if (result.error) {
+                alert("❌ Bigo sa pag-save: " + result.error);
+            } else {
+                alert("✅ Matagumpay na na-save ang Payment Settings!");
+                loadPaymentSettingsData();
+                document.getElementById("p2pWalletName").value = "";
+                document.getElementById("p2pDriveLink").value = "";
+            }
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    async function loadPaymentSettingsData() {
+        try {
+            const settings = await fetchCurrentPaymentSettingsFromDb();
+            if (!settings) return;
+
+            if (settings.p2p_methods && settings.p2p_methods.length > 0) {
+                document.getElementById("enableP2PToggle").checked = true;
+                toggleP2PSection();
+                const cardListContainer = document.getElementById("p2pAccountsCardList");
+                cardListContainer.innerHTML = "";
+                settings.p2p_methods.forEach((p2p, index) => {
+                    const cardDiv = document.createElement("div");
+                    cardDiv.style.cssText = "background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 6px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center;";
+                    cardDiv.innerHTML = `
+                        <div>
+                            <b style="color: #38bdf8;">${p2p.name}</b><br>
+                            <small style="color: #94a3b8; font-family: monospace;">File ID: ${p2p.drive_file_id.substring(0, 15)}...</small>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <button class="status-badge ${p2p.is_active ? 'avail' : 'not-avail'}" onclick="toggleP2PStatus('${p2p.id}')" style="cursor:pointer; border:none;">${p2p.is_active ? 'ON' : 'OFF'}</button>
+                            <button class="btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px; margin:0;" onclick="requestOtpAndDeleteP2P('${p2p.id}')">🗑️ Delete</button>
+                        </div>
+                    `;
+                    cardListContainer.appendChild(cardDiv);
                 });
-                await savePaymentSettingsToSupabase(settings);
-            } catch (err) {
-                showErrorDialog(err);
             }
-        });
-    } catch (e) {
-        showErrorDialog(e);
-    }
-}
 
-    
+            if (settings.paymongo_gateway) {
+                const pm = settings.paymongo_gateway;
+                document.getElementById("enablePaymongoToggle").checked = pm.is_enabled || false;
+                togglePaymongoSection();
+                if (pm.public_key) document.getElementById("paymongoPublicKey").value = pm.public_key;
+                if (pm.secret_key) document.getElementById("paymongoSecretKey").value = pm.secret_key;
+                if (pm.enabled_channels) {
+                    document.getElementById("pmChannelEwallet").checked = pm.enabled_channels.ewallet || false;
+                    document.getElementById("pmChannelBank").checked = pm.enabled_channels.bank_transfer || false;
+                    document.getElementById("pmChannelCard").checked = pm.enabled_channels.card || false;
+                }
+            }
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    function requestOtpAndDeleteP2P(p2pId) {
+        try {
+            requestOtpAndTriggerAction(async () => {
+                try {
+                    let settings = await fetchCurrentPaymentSettingsFromDb();
+                    if (!settings || !settings.p2p_methods) return;
+                    settings.p2p_methods = settings.p2p_methods.filter(p => p.id !== p2pId);
+                    await savePaymentSettingsToSupabase(settings);
+                } catch (err) {
+                    showErrorDialog(err);
+                }
+            });
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
+
+    function toggleP2PStatus(p2pId) {
+        try {
+            requestOtpAndTriggerAction(async () => {
+                try {
+                    let settings = await fetchCurrentPaymentSettingsFromDb();
+                    if (!settings || !settings.p2p_methods) return;
+                    settings.p2p_methods = settings.p2p_methods.map(p => {
+                        if (p.id === p2pId) p.is_active = !p.is_active;
+                        return p;
+                    });
+                    await savePaymentSettingsToSupabase(settings);
+                } catch (err) {
+                    showErrorDialog(err);
+                }
+            });
+        } catch (e) {
+            showErrorDialog(e);
+        }
+    }
 </script>
 </body>
 </html>
