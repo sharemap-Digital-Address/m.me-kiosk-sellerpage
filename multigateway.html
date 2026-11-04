@@ -337,6 +337,12 @@
             const calculatedCRC = calculateCRC16(combinedStringWithoutCRC);
             const finalCompleteQRString = combinedStringWithoutCRC + calculatedCRC;
 
+            // I-update ang mga text labels sa ibabaw at ilalim ng QR code
+            const selectedWalletName = document.getElementById('p2pSpinnerSelect').value || "E-Wallet";
+            document.getElementById('drawerOrderIdLabel').innerText = `Order ID: #${generatedOrderID || 'N/A'}`;
+            document.getElementById('drawerScanTitle').innerText = `Scan to Pay via ${selectedWalletName}`;
+            document.getElementById('drawerAmountLabel').innerText = `Payment Amount: ₱${totalAmountPesos.toFixed(2)}`;
+
             renderQrCodeToContainer(finalCompleteQRString, "p2pQrCanvasDrawer");
         }
 
@@ -675,11 +681,20 @@
                         <!-- Kusang mapupunan ng p2p methods galing DB -->
                     </select>
                     
-                    <!-- Dito ilalabas ang auto-generated Dynamic QR Code batay sa total billing amount -->
-                    <div style="text-align: center; margin-top: 10px; background: #fff; padding: 10px; border-radius: 8px; display: inline-block;" id="p2pQrCanvasDrawer">
-                        <span style="font-size: 11px; color: #555;">Naglo-load ang QR code...</span>
+                    <!-- QR CODE DISPLAY CONTAINER (CENTER ALIGNED & WITH LABELS) -->
+                    <div style="text-align: center; margin-top: 12px; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px dashed #38bdf8;">
+                        <div id="drawerOrderIdLabel" style="font-size: 11px; color: #94a3b8; font-weight: bold; margin-bottom: 4px;">Order ID: #-</div>
+                        <div id="drawerScanTitle" style="font-size: 13px; color: #38bdf8; font-weight: bold; margin-bottom: 8px;">Scan to Pay via E-Wallet</div>
+                        
+                        <!-- Center Aligned QR Canvas Box -->
+                        <div style="display: flex; justify-content: center; align-items: center; background: #ffffff; padding: 10px; border-radius: 8px; width: fit-content; margin: 0 auto;" id="p2pQrCanvasDrawer">
+                            <span style="font-size: 11px; color: #555;">Naglo-load ang QR code...</span>
+                        </div>
+                        
+                        <div id="drawerAmountLabel" style="font-size: 14px; color: #34d399; font-weight: bold; margin-top: 8px;">Payment Amount: ₱0.00</div>
                     </div>
                 </div>
+
 
                 <!-- Sub-spinner 2: PayMongo -->
                 <div class="sub-selection-area" id="paymongoSubContainer" style="display: none;">
