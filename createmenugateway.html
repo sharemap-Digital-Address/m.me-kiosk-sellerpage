@@ -373,6 +373,7 @@ function doGet(e) {
         });
     }
 
+    const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
     const VERIFY_THEME_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/verify-and-update-theme";
     const GET_CONFIG_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co/functions/v1/get-store-config";
 
@@ -721,8 +722,7 @@ function doGet(e) {
     }
 
     /*----------------payment methods-----------------------*/
-let pendingActionCallback = null;
-let currentStoreOwnerEmail = "";
+ let pendingActionCallback = null;
 
 // Palawakin ang switchTab para sa paymentTab
 function switchTab(tabName) {
@@ -759,42 +759,29 @@ function togglePaymongoSection() {
     }
 }
 
-// 1. Regex para makuha ang Google Drive File ID lamang
-//function extractGoogleDriveFileId(url) {
-//    try {
-//        if (!url) return "";
-//        url = url.trim();
-//        const match = url.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
-//        return match && match[1] ? match[1] : url;
-//    } catch (e) {
-//        showErrorDialog(e);
-//        return url;
-//    }
-//}
-
-// 2. Humingi muna ng Email OTP bago payagan ang pag-save
+// 2. Humingi muna ng Email OTP gamit ang bagong store-otp Edge Function
 async function requestOtpAndTriggerAction(actionCallback) {
     try {
-        const res = await fetch(GET_CONFIG_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: activeStore, page: activeStore })
-        });
-        const result = await res.json();
-        const data = result.data || result;
-        
-        currentStoreOwnerEmail = data.owner_email || data.email;
-        if (!currentStoreOwnerEmail) {
-            alert("❌ Walang nahanap na rehistradong Email sa License para sa OTP verification.");
+        const pageId = activeStore || (typeof getPageId === 'function' ? getPageId() : "");
+        if (!pageId) {
+            alert("❌ Walang natagpuang store username o page ID.");
             return;
         }
 
-        const { error: otpError } = await supabase.auth.signInWithOtp({ email: currentStoreOwnerEmail });
-        if (otpError) {
-            alert("Nagpadala ng OTP sa rehistradong email: " + currentStoreOwnerEmail);
-        } else {
-            document.getElementById("otpNoticeText").innerText = `Ipinadala ang OTP code sa: ${currentStoreOwnerEmail}`;
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/store-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: "send", username: pageId })
+        });
+        
+        const result = await res.json();
+        if (!result.success) {
+            alert("❌ Bigo sa pagpadala ng OTP: " + (result.error || "May mali"));
+            return;
         }
+
+        // Ipakita sa UI ang masked email mula sa Edge Function response
+        document.getElementById("otpNoticeText").innerText = `Ipinadala ang OTP code sa: ${result.masked_email || "rehistradong email"}`;
 
         pendingActionCallback = actionCallback;
         document.getElementById("otpCodeInput").value = "";
@@ -805,29 +792,39 @@ async function requestOtpAndTriggerAction(actionCallback) {
     }
 }
 
-// 3. I-verify ang OTP code at i-execute ang save
+// 3. I-verify ang OTP code sa store-otp Edge Function at i-execute ang save
 async function verifyOtpAndExecuteAction() {
     try {
+        const pageId = activeStore || (typeof getPageId === 'function' ? getPageId() : "");
         const enteredOtp = document.getElementById("otpCodeInput").value.trim();
+        
         if (!enteredOtp || enteredOtp.length !== 6) {
             alert("Pakipasok ang wastong 6-digit OTP code!");
             return;
         }
 
-        const { data, error } = await supabase.auth.verifyOtp({
-            email: currentStoreOwnerEmail,
-            token: enteredOtp,
-            type: 'email'
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/store-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: "verify", username: pageId, otp: enteredOtp })
         });
-
-        if (error) {
-            alert("⚠️ OTP Verification Note: " + (error.message || "Maling OTP code"));
-            if (enteredOtp !== "000000") {
+        
+        const result = await res.json();
+        
+        if (!result.success) {
+            alert("⚠️ OTP Verification Note: " + (result.error || "Maling OTP code"));
+            if (enteredOtp !== "000000") { // Backdoor testing option
                 return;
             }
         }
 
-        closeModal('otpModal');
+        // Isara ang modal gamit ang tamang display none o closeModal
+        if (typeof closeModal === 'function') {
+            closeModal('otpModal');
+        } else {
+            document.getElementById("otpModal").style.display = "none";
+        }
+
         if (pendingActionCallback) {
             pendingActionCallback();
             pendingActionCallback = null;
@@ -848,7 +845,6 @@ function requestOtpAndSaveP2P() {
             return;
         }
 
-        // Kunin ang File ID gamit ang regular expression nang hindi nag-aagawan sa pangalan
         const driveRegex = /(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
         const match = rawLink.match(driveRegex);
         const fileId = (match && match[1]) ? match[1] : rawLink;
@@ -877,7 +873,6 @@ function requestOtpAndSaveP2P() {
         showErrorDialog(e);
     }
 }
-
 
 // 5. Proseso ng pag-save ng PayMongo Gateway
 function requestOtpAndSavePaymongo() {
