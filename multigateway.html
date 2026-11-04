@@ -125,7 +125,7 @@
         }
 
         // ==========================================
-        // DYNAMIC PAYMENT LOADER
+        // DYNAMIC PAYMENT LOADER (Direct JSON Name)
         // ==========================================
         function loadAndRenderPaymentOptions(pSetup) {
             const mainOnlineSelect = document.getElementById('mainOnlineSpinnerSelect');
@@ -167,16 +167,16 @@
                 document.getElementById('onlinePaymentSection').style.display = 'block';
             }
 
+            // Punan ang sub-spinner gamit ang eksaktong 'name' mula sa JSON nang walang dagdag na default words
             p2pSelect.innerHTML = "";
             activeMethodsList.forEach((method, index) => {
                 const opt = document.createElement('option');
                 opt.value = method.name;
-                opt.innerText = `P2P ${method.name} Wallet`;
+                opt.innerText = method.name; // Direktang kung ano ang nakalagay sa JSON
                 if (index === 0) opt.selected = true;
                 p2pSelect.appendChild(opt);
             });
 
-            // Default state: Online payment is selected, sub-options visible
             if (hasP2p) {
                 mainOnlineSelect.value = "p2p";
                 selectPaymentType('online');
@@ -204,7 +204,7 @@
             if (val === 'p2p') {
                 p2pSub.style.display = 'block';
                 const subVal = document.getElementById('p2pSpinnerSelect').value;
-                selectedPaymentMethod = subVal ? `P2P ${subVal} Wallet` : 'P2P E-Wallet';
+                selectedPaymentMethod = subVal ? `${subVal} (P2P Transfer)` : 'P2P Transfer';
             } else if (val === 'paymongo') {
                 paymongoSub.style.display = 'block';
                 const paymongoType = document.getElementById('paymongoSpinnerSelect').value;
@@ -216,9 +216,10 @@
         function handleP2pSpinnerChange(val) {
             document.getElementById('radioOnline').checked = true;
             document.getElementById('mainOnlineSpinnerSelect').value = 'p2p';
-            selectedPaymentMethod = `P2P ${val} Wallet`;
+            selectedPaymentMethod = `${val} (P2P Transfer)`; // Gagamitin ang eksaktong pangalan mula sa JSON
             updateSummaryText();
         }
+ 
 
         function handlePaymongoSpinnerChange(val) {
             document.getElementById('radioOnline').checked = true;
