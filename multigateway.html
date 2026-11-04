@@ -23,6 +23,7 @@
         let generatedOrderID = "";
         let clickedAtTimestamp = 0; 
         let currentFullNameFromKiosk = "";
+        let globalStorePaymentSetup = null; // Sasalo ng payment settings galing sa database
 
         function updateSdkDebugToast(message, isError = false) {
             const toastEl = document.getElementById('debugSdkToast');
@@ -75,6 +76,16 @@
                     return;
                 }
 
+                // SALUHIN ANG STORE PAYMENT SETUP AT I-PROCESS ANG SWITCHES
+                if (data.store_payment_setup) {
+                    globalStorePaymentSetup = typeof data.store_payment_setup === 'string' 
+                        ? JSON.parse(data.store_payment_setup) 
+                        : data.store_payment_setup;
+                    loadAndRenderPaymentOptions(globalStorePaymentSetup);
+                } else {
+                    loadAndRenderPaymentOptions(null); // Walang payment setup
+                }
+
                 if (data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED") {
                     activePageAccessToken = data.page_access_token;
                     document.getElementById('debugToken').value = "SUCCESS: Nakuha ang Token (" + activePageAccessToken.substring(0, 10) + "...)";
@@ -110,6 +121,54 @@
                 console.error("Verification error:", err);
                 updateSdkDebugToast("❌ Connection Error sa Server", true);
                 showBlockScreen("⚠️ Connection Error", "Hindi makakonekta sa ShareMap Server. Paki-check ang iyong internet connection.");
+            }
+        }
+
+        // ==========================================
+        // DYNAMIC PAYMENT LOADER (Master & Individual Switch Checker)
+        // ==========================================
+        function loadAndRenderPaymentOptions(pSetup) {
+            const onlineSection = document.getElementById('onlinePaymentSection');
+            const onlineSubCategories = document.getElementById('onlineSubCategories');
+            
+            let hasActiveP2P = false;
+            let hasActivePaymongo = false;
+
+            // 1. Suriin ang P2P E-Wallets (Master Switch & Individual active status)
+            if (pSetup && pSetup.p2p_methods && pSetup.p2p_methods.length > 0) {
+                // I-filter kung may kahit isang may is_active: true
+                const activeP2pList = pSetup.p2p_methods.filter(p => p.is_active === true);
+                if (activeP2pList.length > 0) {
+                    hasActiveP2P = true;
+                    // I-render ang mga aktibong p2p methods dynamically kung kinakailangan
+                }
+            }
+
+            // 2. Suriin ang PayMongo Gateway (is_enabled switch)
+            if (pSetup && pSetup.paymongo_gateway && pSetup.paymongo_gateway.is_enabled === true) {
+                hasActivePaymongo = true;
+            }
+
+            // Kung may kahit anong online payment na naka-ON (P2P o Paymongo)
+            if (hasActiveP2P || hasActivePaymongo) {
+                onlineSection.style.display = 'block';
+                onlineSubCategories.style.display = 'block';
+                document.getElementById('pmGcash').checked = true;
+                selectedPaymentMethod = "GCash / QR Ph";
+            } else {
+                // ITAGO ANG ONLINE PAYMENT KAPAG NAKA-OFF ANG LAHAT NG SWITCHES
+                onlineSection.style.display = 'none';
+                onlineSubCategories.style.display = 'none';
+                
+                // Awtomatikong lumipat sa COD o Cash kung walang online payment
+                const isDelivery = document.getElementById("typeDelivery").checked;
+                if(isDelivery) {
+                    document.getElementById('pmCod').checked = true;
+                    selectedPaymentMethod = 'Cash on Delivery';
+                } else {
+                    document.getElementById('pmCash').checked = true;
+                    selectedPaymentMethod = 'Cash on Pickup / Counter';
+                }
             }
         }
 
@@ -335,8 +394,8 @@
                 <button onclick="closePaymentDrawerDirect()" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">✕</button>
             </div>
             
-            <!-- GCash / QR Ph (Online Transfer) -->
-            <div>
+            <!-- GCash / QR Ph (Online Transfer) - Dynamic visibility based on store_payment_setup -->
+            <div id="onlinePaymentSection">
                 <div class="payment-option-card" onclick="selectPaymentOption('GCash / QR Ph')">
                     <input type="radio" name="payMethod" id="pmGcash" value="GCash / QR Ph" checked>
                     <div>
@@ -454,7 +513,6 @@ function selectPaymentOption(method){
     if(method === 'GCash / QR Ph') {
         document.getElementById('pmGcash').checked = true;
         subContainer.style.display = 'block';
-        // Kunin ang kasalukuyang nakatsek sa sub-options
         const checkedSub = document.querySelector('input[name="subPayMethod"]:checked');
         selectedPaymentMethod = checkedSub ? checkedSub.value : 'GCash';
     } else {
@@ -757,7 +815,6 @@ async function handleProcessOrder(){
         return;
     }
     
-    // Delivery Flow (Ipasa sa index.html kasama ang payment method)
     localStorage.setItem('sharemap_page', pageId); 
     localStorage.setItem('sharemap_orderid', generatedOrderID); 
     localStorage.setItem('sharemap_fullname', nameVal);
