@@ -23,7 +23,7 @@
         let generatedOrderID = "";
         let clickedAtTimestamp = 0; 
         let currentFullNameFromKiosk = "";
-        let globalStorePaymentSetup = null; // Sasalo ng payment settings galing sa database
+        let globalStorePaymentSetup = null;
 
         function updateSdkDebugToast(message, isError = false) {
             const toastEl = document.getElementById('debugSdkToast');
@@ -76,14 +76,13 @@
                     return;
                 }
 
-                // SALUHIN ANG STORE PAYMENT SETUP AT I-PROCESS ANG SWITCHES
                 if (data.store_payment_setup) {
                     globalStorePaymentSetup = typeof data.store_payment_setup === 'string' 
                         ? JSON.parse(data.store_payment_setup) 
                         : data.store_payment_setup;
                     loadAndRenderPaymentOptions(globalStorePaymentSetup);
                 } else {
-                    loadAndRenderPaymentOptions(null); // Walang payment setup
+                    loadAndRenderPaymentOptions(null);
                 }
 
                 if (data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED") {
@@ -125,7 +124,7 @@
         }
 
         // ==========================================
-        // DYNAMIC PAYMENT LOADER (Master & Individual Switch Checker)
+        // DYNAMIC PAYMENT LOADER (Spinner Only)
         // ==========================================
         function loadAndRenderPaymentOptions(pSetup) {
             const onlineSection = document.getElementById('onlinePaymentSection');
@@ -133,34 +132,28 @@
             
             let activeMethodsList = [];
 
-            // Suriin ang P2P E-Wallets / Banks mula sa database JSON setup[span_3](start_span)[span_3](end_span)
             if (pSetup && pSetup.p2p_methods && pSetup.p2p_methods.length > 0) {
                 activeMethodsList = pSetup.p2p_methods.filter(p => p.is_active === true);
             }
 
-            // Linisin muna ang spinner
             spinnerSelect.innerHTML = "";
 
             if (activeMethodsList.length > 0) {
                 onlineSection.style.display = 'block';
                 document.getElementById('pmGcash').checked = true;
 
-                // Idagdag lamang ang mga aktibong naka-configure sa database sa spinner
                 activeMethodsList.forEach((method, index) => {
                     const opt = document.createElement('option');
                     opt.value = method.name;
-                    opt.innerText = `📱 ${method.name} (P2P Transfer)`;
+                    opt.innerText = `📱 ${method.name} (P2P / Bank Transfer)`;
                     if (index === 0) opt.selected = true;
                     spinnerSelect.appendChild(opt);
                 });
 
-                // Itakda ang unang nahanap bilang default selected payment method
                 selectedPaymentMethod = activeMethodsList[0].name;
             } else {
-                // Kung walang active P2P online method, itago ang online section
                 onlineSection.style.display = 'none';
                 
-                // Lumipat sa COD o Cash kung walang online payment
                 const isDelivery = document.getElementById("typeDelivery").checked;
                 if(isDelivery) {
                     document.getElementById('pmCod').checked = true;
@@ -176,7 +169,6 @@
             document.getElementById('pmGcash').checked = true;
             selectedPaymentMethod = val;
         }
-
 
         function showBlockScreen(title, message) {
             const CONTACT_LINK = "https://m.me/sharemap.digital.address"; 
@@ -317,14 +309,6 @@
         .payment-option-card { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; }
         .payment-option-card:hover { border-color: #38bdf8; background: #132238; }
         .payment-option-card input { accent-color: #0284c7; width: 18px; height: 18px; }
-        
-        /* Sub-categories styling */
-        .sub-payment-container { margin-left: 28px; margin-top: 8px; margin-bottom: 12px; display: none; border-left: 2px solid #38bdf8; padding-left: 10px; }
-        .sub-category-title { font-size: 12px; font-weight: bold; color: #38bdf8; margin-bottom: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .sub-item-list { display: none; margin-top: 5px; margin-bottom: 8px; }
-        .sub-item-option { background: #132238; border: 1px solid #334155; border-radius: 6px; padding: 8px 10px; margin-bottom: 5px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        .sub-item-option:hover { border-color: #38bdf8; }
-        .sub-item-option input { accent-color: #0284c7; }
     </style>
 </head>
 <body>
@@ -400,7 +384,7 @@
                 <button onclick="closePaymentDrawerDirect()" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">✕</button>
             </div>
             
-            <!-- GCash / QR Ph (Online Transfer) - Dynamic Dropdown Spinner -->
+            <!-- Online Transfer / E-Wallet / Bank - Pure Spinner Dropdown -->
             <div id="onlinePaymentSection">
                 <div class="payment-option-card" onclick="selectPaymentMethod('GCash / QR Ph')">
                     <input type="radio" name="payMethod" id="pmGcash" value="GCash / QR Ph" checked>
@@ -410,45 +394,11 @@
                     </div>
                 </div>
 
-                <!-- DYNAMIC SPINNER DROPDOWN CONTAINER -->
                 <div id="onlineSubCategories" style="margin-left: 28px; margin-top: 8px; margin-bottom: 12px; display: block;">
                     <label style="font-size: 11px; color: #38bdf8; font-weight: bold; display: block; margin-bottom: 4px;">Piliin ang E-Wallet / Bank:</label>
                     <select id="p2pSpinnerSelect" onchange="handleSpinnerSelection(this.value)" style="width: 100%; padding: 10px; background: #0f172a; color: #ffffff; border: 1px solid #38bdf8; border-radius: 6px; font-size: 13px; font-weight: bold; outline: none;">
                         <!-- Kusang mapupunan ito base sa database p2p_methods -->
                     </select>
-                </div>
-            </div>
-
-
-                <!-- SUB-CATEGORIES PARA SA ONLINE TRANSFER -->
-                <div id="onlineSubCategories" class="sub-payment-container" style="display: block;">
-                    <!-- E-wallet Category -->
-                    <div class="sub-category-title" onclick="toggleSubList('ewalletList')">📱 E-wallet <span>▼</span></div>
-                    <div id="ewalletList" class="sub-item-list" style="display: block;">
-                        <div class="sub-item-option" onclick="selectSubPayment('GCash')">
-                            <input type="radio" name="subPayMethod" id="subGcash" value="GCash" checked onchange="selectSubPayment('GCash')"> GCash
-                        </div>
-                        <div class="sub-item-option" onclick="selectSubPayment('Maya')">
-                            <input type="radio" name="subPayMethod" id="subMaya" value="Maya" onchange="selectSubPayment('Maya')"> Maya
-                        </div>
-                    </div>
-
-                    <!-- Bank Transfer Category -->
-                    <div class="sub-category-title" onclick="toggleSubList('bankList')" style="margin-top: 10px;">🏦 Bank Transfer <span>▶</span></div>
-                    <div id="bankList" class="sub-item-list">
-                        <div class="sub-item-option" onclick="selectSubPayment('CIMB')">
-                            <input type="radio" name="subPayMethod" id="subCimb" value="CIMB" onchange="selectSubPayment('CIMB')"> CIMB
-                        </div>
-                        <div class="sub-item-option" onclick="selectSubPayment('BDO')">
-                            <input type="radio" name="subPayMethod" id="subBdo" value="BDO" onchange="selectSubPayment('BDO')"> BDO
-                        </div>
-                        <div class="sub-item-option" onclick="selectSubPayment('BPI')">
-                            <input type="radio" name="subPayMethod" id="subBpi" value="BPI" onchange="selectSubPayment('BPI')"> BPI
-                        </div>
-                        <div class="sub-item-option" onclick="selectSubPayment('Metrobank')">
-                            <input type="radio" name="subPayMethod" id="subMetrobank" value="Metrobank" onchange="selectSubPayment('Metrobank')"> Metrobank
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -525,14 +475,11 @@ function closePaymentDrawerDirect(){
 }
 
 function selectPaymentOption(method){
-    const subContainer = document.getElementById('onlineSubCategories');
     if(method === 'GCash / QR Ph') {
         document.getElementById('pmGcash').checked = true;
-        subContainer.style.display = 'block';
-        const checkedSub = document.querySelector('input[name="subPayMethod"]:checked');
-        selectedPaymentMethod = checkedSub ? checkedSub.value : 'GCash';
+        const spinnerSelect = document.getElementById('p2pSpinnerSelect');
+        selectedPaymentMethod = spinnerSelect.value || 'GCash';
     } else {
-        subContainer.style.display = 'none';
         if(method === 'Cash on Delivery') {
             document.getElementById('pmCod').checked = true;
             selectedPaymentMethod = 'Cash on Delivery';
@@ -540,30 +487,6 @@ function selectPaymentOption(method){
             document.getElementById('pmCash').checked = true;
             selectedPaymentMethod = 'Cash on Pickup / Counter';
         }
-    }
-}
-
-function selectSubPayment(subName) {
-    document.getElementById('pmGcash').checked = true;
-    selectedPaymentMethod = subName;
-    if(subName === 'GCash') document.getElementById('subGcash').checked = true;
-    else if(subName === 'Maya') document.getElementById('subMaya').checked = true;
-    else if(subName === 'CIMB') document.getElementById('subCimb').checked = true;
-    else if(subName === 'BDO') document.getElementById('subBdo').checked = true;
-    else if(subName === 'BPI') document.getElementById('subBpi').checked = true;
-    else if(subName === 'Metrobank') document.getElementById('subMetrobank').checked = true;
-}
-
-function toggleSubList(listId) {
-    const listEl = document.getElementById(listId);
-    const allLists = document.querySelectorAll('.sub-item-list');
-    allLists.forEach(l => {
-        if(l.id !== listId) l.style.display = 'none';
-    });
-    if(listEl.style.display === 'block') {
-        listEl.style.display = 'none';
-    } else {
-        listEl.style.display = 'block';
     }
 }
 
