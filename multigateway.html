@@ -23,8 +23,7 @@
         let generatedOrderID = "";
         let clickedAtTimestamp = 0; 
         let currentFullNameFromKiosk = "";
-        let globalStorePaymentSetup = null;
-        let selectedPaymentMethod = "GCash / QR Ph";
+        let globalStorePaymentSetup = null; // Sasalo ng payment settings galing sa database
 
         function updateSdkDebugToast(message, isError = false) {
             const toastEl = document.getElementById('debugSdkToast');
@@ -77,13 +76,14 @@
                     return;
                 }
 
+                // SALUHIN ANG STORE PAYMENT SETUP AT I-PROCESS ANG SWITCHES
                 if (data.store_payment_setup) {
                     globalStorePaymentSetup = typeof data.store_payment_setup === 'string' 
                         ? JSON.parse(data.store_payment_setup) 
                         : data.store_payment_setup;
                     loadAndRenderPaymentOptions(globalStorePaymentSetup);
                 } else {
-                    loadAndRenderPaymentOptions(null);
+                    loadAndRenderPaymentOptions(null); // Walang payment setup
                 }
 
                 if (data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED") {
@@ -124,55 +124,59 @@
             }
         }
 
+        // ==========================================
+        // DYNAMIC PAYMENT LOADER (Master & Individual Switch Checker)
+        // ==========================================
         function loadAndRenderPaymentOptions(pSetup) {
-            const p2pSelect = document.getElementById('p2pSpinnerSelect');
+            const onlineSection = document.getElementById('onlinePaymentSection');
+            const spinnerSelect = document.getElementById('p2pSpinnerSelect');
+            
             let activeMethodsList = [];
 
+            // Suriin ang P2P E-Wallets / Banks mula sa database JSON setup[span_3](start_span)[span_3](end_span)
             if (pSetup && pSetup.p2p_methods && pSetup.p2p_methods.length > 0) {
                 activeMethodsList = pSetup.p2p_methods.filter(p => p.is_active === true);
             }
 
-            p2pSelect.innerHTML = `<option value="" disabled selected>-- choose P2P E-wallet Qrcode provider --</option>`;
+            // Linisin muna ang spinner
+            spinnerSelect.innerHTML = "";
 
             if (activeMethodsList.length > 0) {
-                activeMethodsList.forEach((method) => {
+                onlineSection.style.display = 'block';
+                document.getElementById('pmGcash').checked = true;
+
+                // Idagdag lamang ang mga aktibong naka-configure sa database sa spinner
+                activeMethodsList.forEach((method, index) => {
                     const opt = document.createElement('option');
                     opt.value = method.name;
-                    opt.innerText = `P2P ${method.name} Wallet`;
-                    p2pSelect.appendChild(opt);
+                    opt.innerText = `📱 ${method.name} (P2P Transfer)`;
+                    if (index === 0) opt.selected = true;
+                    spinnerSelect.appendChild(opt);
                 });
+
+                // Itakda ang unang nahanap bilang default selected payment method
+                selectedPaymentMethod = activeMethodsList[0].name;
+            } else {
+                // Kung walang active P2P online method, itago ang online section
+                onlineSection.style.display = 'none';
+                
+                // Lumipat sa COD o Cash kung walang online payment
+                const isDelivery = document.getElementById("typeDelivery").checked;
+                if(isDelivery) {
+                    document.getElementById('pmCod').checked = true;
+                    selectedPaymentMethod = 'Cash on Delivery';
+                } else {
+                    document.getElementById('pmCash').checked = true;
+                    selectedPaymentMethod = 'Cash on Pickup / Counter';
+                }
             }
         }
 
-        function selectMainPaymentType(type, customName = "") {
-            document.getElementById('radioP2p').checked = (type === 'p2p');
-            document.getElementById('radioQrph').checked = (type === 'qrph');
-            document.getElementById('radioCod').checked = (type === 'cod');
-            document.getElementById('radioCounter').checked = (type === 'counter');
-
-            if (type === 'p2p') {
-                const spinnerVal = customName || document.getElementById('p2pSpinnerSelect').value;
-                selectedPaymentMethod = spinnerVal ? `P2P ${spinnerVal} Wallet` : 'P2P E-Wallet (Unselected)';
-            } else if (type === 'qrph') {
-                const spinnerVal = customName || document.getElementById('qrphSpinnerSelect').value;
-                selectedPaymentMethod = spinnerVal ? spinnerVal : 'QRPh / Bank Transfer (Unselected)';
-            } else if (type === 'cod') {
-                selectedPaymentMethod = 'Cash on Delivery';
-            } else if (type === 'counter') {
-                selectedPaymentMethod = 'Cash Over the Counter';
-            }
-            
-            // I-update ang summary view sa labas
-            document.getElementById('selectedPaymentSummaryText').innerText = selectedPaymentMethod;
+        function handleSpinnerSelection(val) {
+            document.getElementById('pmGcash').checked = true;
+            selectedPaymentMethod = val;
         }
 
-        function handleP2pSpinnerChange(val) {
-            selectMainPaymentType('p2p', val);
-        }
-
-        function handleQrphSpinnerChange(val) {
-            selectMainPaymentType('qrph', val);
-        }
 
         function showBlockScreen(title, message) {
             const CONTACT_LINK = "https://m.me/sharemap.digital.address"; 
@@ -306,17 +310,21 @@
         .qr-display-box { background: #ffffff; padding: 15px; border-radius: 12px; display: inline-block; margin-top: 10px; }
         .total-amount-badge { background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }
 
-        /* Lazada Style Payment Summary Box sa Main Screen */
-        .payment-summary-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 12px; text-align: left; display: flex; justify-content: space-between; align-items: center; }
-        
         /* Bottom Drawer para sa Payment Method */
         .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: flex-end; flex-direction: column; z-index: 2500; }
         .bottom-drawer { background: #1e293b; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; max-height: 85vh; overflow-y: auto; border-top: 2px solid #38bdf8; box-sizing: border-box; width: 100%; max-width: 480px; margin: 0 auto; text-align: left; }
         .drawer-handle { width: 40px; height: 5px; background: #64748b; border-radius: 3px; margin: 0 auto 15px auto; }
+        .payment-option-card { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; }
+        .payment-option-card:hover { border-color: #38bdf8; background: #132238; }
+        .payment-option-card input { accent-color: #0284c7; width: 18px; height: 18px; }
         
-        .payment-row { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-        .payment-row input[type="radio"] { accent-color: #0284c7; width: 16px; height: 16px; }
-        .payment-row select { flex: 1; padding: 6px 8px; background: #1e293b; color: #fff; border: 1px solid #38bdf8; border-radius: 6px; font-size: 12px; font-weight: bold; outline: none; }
+        /* Sub-categories styling */
+        .sub-payment-container { margin-left: 28px; margin-top: 8px; margin-bottom: 12px; display: none; border-left: 2px solid #38bdf8; padding-left: 10px; }
+        .sub-category-title { font-size: 12px; font-weight: bold; color: #38bdf8; margin-bottom: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .sub-item-list { display: none; margin-top: 5px; margin-bottom: 8px; }
+        .sub-item-option { background: #132238; border: 1px solid #334155; border-radius: 6px; padding: 8px 10px; margin-bottom: 5px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .sub-item-option:hover { border-color: #38bdf8; }
+        .sub-item-option input { accent-color: #0284c7; }
     </style>
 </head>
 <body>
@@ -367,15 +375,6 @@
         <div class="form-group" id="paxGroup" style="display:none;"><label>👥 Pax:</label><input type="number" id="paxCount" value="2"></div>
         <div class="form-group" id="scheduleGroup"><label>⏰ Schedule:</label><input type="datetime-local" id="scheduleOrder"></div>
 
-        <!-- LAZADA STYLE PAYMENT METHODS COMPACT PREVIEW & VIEW ALL METHODS BUTTON -->
-        <div class="payment-summary-box">
-            <div>
-                <div style="font-size: 10px; color: #94a3b8; font-weight: bold;">Payment Method</div>
-                <div id="selectedPaymentSummaryText" style="font-size: 13px; color: #38bdf8; font-weight: bold; margin-top: 2px;">GCash / QR Ph</div>
-            </div>
-            <button type="button" onclick="openPaymentDrawer()" style="background: none; border: none; color: #38bdf8; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: underline;">View all methods ></button>
-        </div>
-
         <div class="order-section">
             <div id="totalPriceDisplay" class="total-amount-badge">💰 Total: ₱<span id="grandTotalText">0.00</span></div>
             <button type="button" class="btn-add-order" onclick="openKioskMenu()">🍔 ➕ Magdagdag / Palitan ang Order (Kiosk Mode)</button>
@@ -392,50 +391,57 @@
         </div>
     </div>
 
-    <!-- PAYMENT METHOD BOTTOM DRAWER (Lazada Style Full Options) -->
+    <!-- PAYMENT METHOD BOTTOM DRAWER -->
     <div id="paymentDrawer" class="drawer-overlay" onclick="closePaymentDrawer(event)">
         <div class="bottom-drawer" onclick="event.stopPropagation()">
             <div class="drawer-handle"></div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <h3 style="margin: 0; color: #38bdf8; font-size: 15px;">💳 Select Payment Method</h3>
-                <button onclick="closePaymentDrawerDirect()" style="background: #ef4444; color: white; border: none; padding: 5px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">✕</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #38bdf8; font-size: 16px;">💳 Pumili ng Paraan ng Pagbabayad</h3>
+                <button onclick="closePaymentDrawerDirect()" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">✕</button>
             </div>
             
-            <!-- 1. P2P E-WALLET METHOD (Radio + Clickable Spinner Inline) -->
-            <div class="payment-row" onclick="selectMainPaymentType('p2p')">
-                <input type="radio" name="payMethodMain" id="radioP2p" value="P2P" checked>
-                <select id="p2pSpinnerSelect" onchange="handleP2pSpinnerChange(this.value)" onclick="event.stopPropagation(); selectMainPaymentType('p2p');">
-                    <option value="" disabled selected>-- choose P2P E-wallet Qrcode provider --</option>
-                </select>
+            <!-- GCash / QR Ph (Online Transfer) - Dynamic Dropdown Spinner -->
+            <div id="onlinePaymentSection">
+                <div class="payment-option-card" onclick="selectPaymentMethod('GCash / QR Ph')">
+                    <input type="radio" name="payMethod" id="pmGcash" value="GCash / QR Ph" checked>
+                    <div>
+                        <div style="font-weight: bold; font-size: 14px; color: #fff;">📱 Online Transfer / E-Wallet / Bank</div>
+                        <div style="font-size: 11px; color: #94a3b8;">Piliin ang iyong gustong paraan ng pagbabayad</div>
+                    </div>
+                </div>
+
+                <!-- DYNAMIC SPINNER DROPDOWN CONTAINER -->
+                <div id="onlineSubCategories" style="margin-left: 28px; margin-top: 8px; margin-bottom: 12px; display: block;">
+                    <label style="font-size: 11px; color: #38bdf8; font-weight: bold; display: block; margin-bottom: 4px;">Piliin ang E-Wallet / Bank:</label>
+                    <select id="p2pSpinnerSelect" onchange="handleSpinnerSelection(this.value)" style="width: 100%; padding: 10px; background: #0f172a; color: #ffffff; border: 1px solid #38bdf8; border-radius: 6px; font-size: 13px; font-weight: bold; outline: none;">
+                        <!-- Kusang mapupunan ito base sa database p2p_methods -->
+                    </select>
+                </div>
             </div>
 
-            <!-- 2. QRPH / BANK TRANSFER METHOD (Radio + Clickable Spinner Inline) -->
-            <div class="payment-row" onclick="selectMainPaymentType('qrph')">
-                <input type="radio" name="payMethodMain" id="radioQrph" value="QRPh">
-                <select id="qrphSpinnerSelect" onchange="handleQrphSpinnerChange(this.value)" onclick="event.stopPropagation(); selectMainPaymentType('qrph');">
-                    <option value="" disabled selected>-- choose E-wallet QRPh or / Bank transfer --</option>
-                    <option value="Merchant QR / QRPh">1) Generate Merchant Qrcode / QRPh o InstaPay PayMongo</option>
-                    <option value="Online Bank Transfer">2) Online Bank Transfer PayMongo</option>
-                </select>
+            <div class="payment-option-card" id="codOptionCard" onclick="selectPaymentOption('Cash on Delivery')">
+                <input type="radio" name="payMethod" id="pmCod" value="Cash on Delivery">
+                <div>
+                    <div style="font-weight: bold; font-size: 14px; color: #fff;">🛵 Cash on Delivery (COD)</div>
+                    <div style="font-size: 11px; color: #94a3b8;">Magbayad sa rider pagdating sa bahay</div>
+                </div>
             </div>
 
-            <!-- 3. CASH ON DELIVERY -->
-            <div class="payment-row" id="codDrawerRow" onclick="selectMainPaymentType('cod')">
-                <input type="radio" name="payMethodMain" id="radioCod" value="COD">
-                <span style="font-size: 13px; font-weight: bold; color: #fff;">🛵 Cash on Delivery (COD)</span>
+            <div class="payment-option-card" id="cashPickupOptionCard" onclick="selectPaymentOption('Cash on Pickup / Counter')">
+                <input type="radio" name="payMethod" id="pmCash" value="Cash on Pickup / Counter">
+                <div>
+                    <div style="font-weight: bold; font-size: 14px; color: #fff;">💵 Cash sa Kahera / Counter</div>
+                    <div style="font-size: 11px; color: #94a3b8;">Magbayad diretso sa counter o store cashier</div>
+                </div>
             </div>
 
-            <!-- 4. CASH OVER THE COUNTER -->
-            <div class="payment-row" onclick="selectMainPaymentType('counter')">
-                <input type="radio" name="payMethodMain" id="radioCounter" value="Counter">
-                <span style="font-size: 13px; font-weight: bold; color: #fff;">💵 Cash Over the Counter</span>
-            </div>
-
-            <button type="button" class="btn" style="background-color: #16a34a; margin-top: 15px;" onclick="closePaymentDrawerDirect()">✅ Confirm Selection ➔</button>
+            <button type="button" class="btn" style="background-color: #16a34a; margin-top: 15px;" onclick="confirmAndExecuteCheckout()">✅ Kumpirmahin at I-send ang Order ➔</button>
         </div>
     </div>
 
 <script>
+let selectedPaymentMethod = "GCash (E-wallet)";
+
 function toggleServiceType(){
     const isDelivery = document.getElementById("typeDelivery").checked; 
     const isDineIn = document.getElementById("typeDineIn").checked; 
@@ -448,9 +454,8 @@ function toggleServiceType(){
     document.getElementById("proceedBtn").style.display = isCounter ? "none" : "block"; 
     document.getElementById("counterQrContainer").style.display = isCounter ? "block" : "none";
     
-    // Itago o ipakita ang COD row sa drawer base kung Delivery o hindi
-    const codDrawerRow = document.getElementById('codDrawerRow');
-    if(codDrawerRow) codDrawerRow.style.display = isDelivery ? "flex" : "none";
+    document.getElementById("codOptionCard").style.display = isDelivery ? "flex" : "none";
+    document.getElementById("cashPickupOptionCard").style.display = (isDineIn || isCounter) ? "flex" : "block";
 
     if (isDelivery) {
         proceedBtn.innerText = "📍 Sunod: Pumili ng Payment & Kunin ang GPS ➔";
@@ -484,6 +489,49 @@ function closePaymentDrawer(e){
 }
 function closePaymentDrawerDirect(){
     document.getElementById('paymentDrawer').style.display = 'none';
+}
+
+function selectPaymentOption(method){
+    const subContainer = document.getElementById('onlineSubCategories');
+    if(method === 'GCash / QR Ph') {
+        document.getElementById('pmGcash').checked = true;
+        subContainer.style.display = 'block';
+        const checkedSub = document.querySelector('input[name="subPayMethod"]:checked');
+        selectedPaymentMethod = checkedSub ? checkedSub.value : 'GCash';
+    } else {
+        subContainer.style.display = 'none';
+        if(method === 'Cash on Delivery') {
+            document.getElementById('pmCod').checked = true;
+            selectedPaymentMethod = 'Cash on Delivery';
+        } else {
+            document.getElementById('pmCash').checked = true;
+            selectedPaymentMethod = 'Cash on Pickup / Counter';
+        }
+    }
+}
+
+function selectSubPayment(subName) {
+    document.getElementById('pmGcash').checked = true;
+    selectedPaymentMethod = subName;
+    if(subName === 'GCash') document.getElementById('subGcash').checked = true;
+    else if(subName === 'Maya') document.getElementById('subMaya').checked = true;
+    else if(subName === 'CIMB') document.getElementById('subCimb').checked = true;
+    else if(subName === 'BDO') document.getElementById('subBdo').checked = true;
+    else if(subName === 'BPI') document.getElementById('subBpi').checked = true;
+    else if(subName === 'Metrobank') document.getElementById('subMetrobank').checked = true;
+}
+
+function toggleSubList(listId) {
+    const listEl = document.getElementById(listId);
+    const allLists = document.querySelectorAll('.sub-item-list');
+    allLists.forEach(l => {
+        if(l.id !== listId) l.style.display = 'none';
+    });
+    if(listEl.style.display === 'block') {
+        listEl.style.display = 'none';
+    } else {
+        listEl.style.display = 'block';
+    }
 }
 
 function confirmAndExecuteCheckout(){
@@ -591,7 +639,7 @@ function generateCounterQr(){
     const nameVal = document.getElementById('fullName').value.trim() || "Customer"; 
     const qrPayload = JSON.stringify({oid: generatedOrderID, psid: activePsid, name: nameVal, orders: ordersVal, total: totalAmountPesos, clicked_at: clickedAtTimestamp, payment: selectedPaymentMethod}); 
     new QRCode(qrCanvasContainer, {text: qrPayload, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H}); 
-    document.getElementById("qrTextDetail",).innerText = `Order ID: #${generatedOrderID} | Pay: ${selectedPaymentMethod} | ₱${totalAmountPesos.toFixed(2)}`; 
+    document.getElementById("qrTextDetail").innerText = `Order ID: #${generatedOrderID} | Pay: ${selectedPaymentMethod} | ₱${totalAmountPesos.toFixed(2)}`; 
 }
 
 function downloadQrCodeImageWithDetails(){
