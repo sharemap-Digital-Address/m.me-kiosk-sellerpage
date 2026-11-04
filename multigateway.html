@@ -129,38 +129,38 @@
         // ==========================================
         function loadAndRenderPaymentOptions(pSetup) {
             const onlineSection = document.getElementById('onlinePaymentSection');
-            const onlineSubCategories = document.getElementById('onlineSubCategories');
+            const spinnerSelect = document.getElementById('p2pSpinnerSelect');
             
-            let hasActiveP2P = false;
-            let hasActivePaymongo = false;
+            let activeMethodsList = [];
 
-            // 1. Suriin ang P2P E-Wallets (Master Switch & Individual active status)
+            // Suriin ang P2P E-Wallets / Banks mula sa database JSON setup[span_3](start_span)[span_3](end_span)
             if (pSetup && pSetup.p2p_methods && pSetup.p2p_methods.length > 0) {
-                // I-filter kung may kahit isang may is_active: true
-                const activeP2pList = pSetup.p2p_methods.filter(p => p.is_active === true);
-                if (activeP2pList.length > 0) {
-                    hasActiveP2P = true;
-                    // I-render ang mga aktibong p2p methods dynamically kung kinakailangan
-                }
+                activeMethodsList = pSetup.p2p_methods.filter(p => p.is_active === true);
             }
 
-            // 2. Suriin ang PayMongo Gateway (is_enabled switch)
-            if (pSetup && pSetup.paymongo_gateway && pSetup.paymongo_gateway.is_enabled === true) {
-                hasActivePaymongo = true;
-            }
+            // Linisin muna ang spinner
+            spinnerSelect.innerHTML = "";
 
-            // Kung may kahit anong online payment na naka-ON (P2P o Paymongo)
-            if (hasActiveP2P || hasActivePaymongo) {
+            if (activeMethodsList.length > 0) {
                 onlineSection.style.display = 'block';
-                onlineSubCategories.style.display = 'block';
                 document.getElementById('pmGcash').checked = true;
-                selectedPaymentMethod = "GCash / QR Ph";
+
+                // Idagdag lamang ang mga aktibong naka-configure sa database sa spinner
+                activeMethodsList.forEach((method, index) => {
+                    const opt = document.createElement('option');
+                    opt.value = method.name;
+                    opt.innerText = `📱 ${method.name} (P2P Transfer)`;
+                    if (index === 0) opt.selected = true;
+                    spinnerSelect.appendChild(opt);
+                });
+
+                // Itakda ang unang nahanap bilang default selected payment method
+                selectedPaymentMethod = activeMethodsList[0].name;
             } else {
-                // ITAGO ANG ONLINE PAYMENT KAPAG NAKA-OFF ANG LAHAT NG SWITCHES
+                // Kung walang active P2P online method, itago ang online section
                 onlineSection.style.display = 'none';
-                onlineSubCategories.style.display = 'none';
                 
-                // Awtomatikong lumipat sa COD o Cash kung walang online payment
+                // Lumipat sa COD o Cash kung walang online payment
                 const isDelivery = document.getElementById("typeDelivery").checked;
                 if(isDelivery) {
                     document.getElementById('pmCod').checked = true;
@@ -171,6 +171,12 @@
                 }
             }
         }
+
+        function handleSpinnerSelection(val) {
+            document.getElementById('pmGcash').checked = true;
+            selectedPaymentMethod = val;
+        }
+
 
         function showBlockScreen(title, message) {
             const CONTACT_LINK = "https://m.me/sharemap.digital.address"; 
@@ -394,15 +400,25 @@
                 <button onclick="closePaymentDrawerDirect()" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">✕</button>
             </div>
             
-            <!-- GCash / QR Ph (Online Transfer) - Dynamic visibility based on store_payment_setup -->
+            <!-- GCash / QR Ph (Online Transfer) - Dynamic Dropdown Spinner -->
             <div id="onlinePaymentSection">
-                <div class="payment-option-card" onclick="selectPaymentOption('GCash / QR Ph')">
+                <div class="payment-option-card" onclick="selectPaymentMethod('GCash / QR Ph')">
                     <input type="radio" name="payMethod" id="pmGcash" value="GCash / QR Ph" checked>
                     <div>
-                        <div style="font-weight: bold; font-size: 14px; color: #fff;">📱 GCash / QR Ph (Online Transfer)</div>
-                        <div style="font-size: 11px; color: #94a3b8;">Magbayad gamit ang online wallet o QR code</div>
+                        <div style="font-weight: bold; font-size: 14px; color: #fff;">📱 Online Transfer / E-Wallet / Bank</div>
+                        <div style="font-size: 11px; color: #94a3b8;">Piliin ang iyong gustong paraan ng pagbabayad</div>
                     </div>
                 </div>
+
+                <!-- DYNAMIC SPINNER DROPDOWN CONTAINER -->
+                <div id="onlineSubCategories" style="margin-left: 28px; margin-top: 8px; margin-bottom: 12px; display: block;">
+                    <label style="font-size: 11px; color: #38bdf8; font-weight: bold; display: block; margin-bottom: 4px;">Piliin ang E-Wallet / Bank:</label>
+                    <select id="p2pSpinnerSelect" onchange="handleSpinnerSelection(this.value)" style="width: 100%; padding: 10px; background: #0f172a; color: #ffffff; border: 1px solid #38bdf8; border-radius: 6px; font-size: 13px; font-weight: bold; outline: none;">
+                        <!-- Kusang mapupunan ito base sa database p2p_methods -->
+                    </select>
+                </div>
+            </div>
+
 
                 <!-- SUB-CATEGORIES PARA SA ONLINE TRANSFER -->
                 <div id="onlineSubCategories" class="sub-payment-container" style="display: block;">
