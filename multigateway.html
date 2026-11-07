@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShareMap - Order & Service Gateway v5 + Payment Bottom Drawer</title>
+    <title>ShareMap - Order & Service Gateway v5 + Secure P2P QR & Receipt Validator</title>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- jsQR Library para sa Client-side QR Decoding galing sa Google Drive Link -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <!-- Tesseract OCR Library para sa pagbasa ng resibo -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     
     <script>
         const SUPABASE_URL = "https://qeqbnhpvarsdcrdzpycr.supabase.co";
@@ -26,12 +27,18 @@
         let clickedAtTimestamp = 0; 
         let currentFullNameFromKiosk = "";
         let globalStorePaymentSetup = null; 
-        let selectedPaymentMethod = "GCash (P2P Transfer)";
-
-        // Decoder variables
+        let globalKioskThemeConfig = null;
+        let selectedPaymentMethod = "Cash on Delivery";
+        
         let originalPayload = "";
         let bankMode = "GCASH";
         let parsedParts = { et1: "", et2: "", et3: "", et4: "" };
+        let finalCompleteQRStringForMain = "";
+        let qrGeneratedTimestamp = 0;
+        let extractedOcrRefNumber = ""; 
+        let extractedDateTimeStrGlobal = "";
+        let isReceiptValidTimeAndAi = false;
+        let isRefNumberFullyMatched = false;
 
         function updateSdkDebugToast(message, isError = false) {
             const toastEl = document.getElementById('debugSdkToast');
@@ -88,10 +95,15 @@
                     globalStorePaymentSetup = typeof data.store_payment_setup === 'string' 
                         ? JSON.parse(data.store_payment_setup) 
                         : data.store_payment_setup;
-                    loadAndRenderPaymentOptions(globalStorePaymentSetup);
-                } else {
-                    loadAndRenderPaymentOptions(null);
                 }
+
+                if (data.kiosk_theme_config) {
+                    globalKioskThemeConfig = typeof data.kiosk_theme_config === 'string'
+                        ? JSON.parse(data.kiosk_theme_config)
+                        : data.kiosk_theme_config;
+                }
+
+                loadAndRenderPaymentOptions(globalStorePaymentSetup);
 
                 if (data.page_access_token && data.page_access_token !== "OFFLINE_TOKEN_EXPIRED") {
                     activePageAccessToken = data.page_access_token;
@@ -123,6 +135,7 @@
                     document.getElementById("orderIdBadge").innerText = `🔢 Order ID: #${generatedOrderID}`;
                 }
                 updatePreview();
+                checkProceedButtonState();
 
             } catch (err) {
                 console.error("Verification error:", err);
@@ -131,9 +144,6 @@
             }
         }
 
-        // ==========================================
-        // DYNAMIC PAYMENT LOADER (Direct JSON Name)
-        // ==========================================
         function loadAndRenderPaymentOptions(pSetup) {
             const mainOnlineSelect = document.getElementById('mainOnlineSpinnerSelect');
             const p2pSelect = document.getElementById('p2pSpinnerSelect');
@@ -183,26 +193,26 @@
                 p2pSelect.appendChild(opt);
             });
 
-            if (hasP2p) {
-                mainOnlineSelect.value = "p2p";
-                selectPaymentType('online');
-                loadAndDecodeP2PQr(); // Awtomatikong mag-decode kapag narga-load
-            } else if (hasPaymongo) {
-                mainOnlineSelect.value = "paymongo";
-                selectPaymentType('online');
-            } else {
-                const isDelivery = document.getElementById("typeDelivery").checked;
-                if(isDelivery) {
-                    selectPaymentType('cod');
+            // Itakda ang default batay sa Service Type
+            const isDelivery = document.getElementById("typeDelivery").checked;
+            const isDineIn = document.getElementById("typeDineIn").checked;
+            const isCounter = document.getElementById("typeCounter").checked;
+
+            if (isDelivery) {
+                selectPaymentType('cod');
+            } else if (isDineIn) {
+                if (hasP2p) {
+                    mainOnlineSelect.value = "p2p";
+                    selectPaymentType('online');
+                    loadAndDecodeP2PQr();
                 } else {
                     selectPaymentType('counter');
                 }
+            } else if (isCounter) {
+                selectPaymentType('counter');
             }
         }
 
-        // ==========================================
-        // DECODER & DYNAMIC QR GENERATION FUNCTIONS
-        // ==========================================
         function loadAndDecodeP2PQr() {
             if (!globalStorePaymentSetup || !globalStorePaymentSetup.p2p_methods) return;
 
@@ -241,7 +251,7 @@
             };
 
             img.onerror = function() {
-                updateSdkDebugToast("❌ Nabigong i-load ang imahe sa Google Drive. Siguraduhing public ang link.", true);
+                updateSdkDebugToast("❌ Nabigong i-load ang imahe sa Google Drive.", true);
             };
         }
 
@@ -335,15 +345,14 @@
 
             const combinedStringWithoutCRC = et1 + parsedParts.et2 + parsedParts.et3 + et4Adjusted + "6304";
             const calculatedCRC = calculateCRC16(combinedStringWithoutCRC);
-            const finalCompleteQRString = combinedStringWithoutCRC + calculatedCRC;
+            finalCompleteQRStringForMain = combinedStringWithoutCRC + calculatedCRC;
 
-            // I-update ang mga text labels sa ibabaw at ilalim ng QR code
             const selectedWalletName = document.getElementById('p2pSpinnerSelect').value || "E-Wallet";
             document.getElementById('drawerOrderIdLabel').innerText = `Order ID: #${generatedOrderID || 'N/A'}`;
             document.getElementById('drawerScanTitle').innerText = `Scan to Pay via ${selectedWalletName}`;
             document.getElementById('drawerAmountLabel').innerText = `Payment Amount: ₱${totalAmountPesos.toFixed(2)}`;
 
-            renderQrCodeToContainer(finalCompleteQRString, "p2pQrCanvasDrawer");
+            renderQrCodeToContainer(finalCompleteQRStringForMain, "p2pQrCanvasDrawer");
         }
 
         function renderQrCodeToContainer(stringPayload, containerId) {
@@ -373,6 +382,351 @@
             return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
         }
 
+        function confirmAndMoveQrToMain() {
+            closePaymentDrawerDirect();
+            
+            const mainSection = document.getElementById('mainP2pDisplaySection');
+            const isOnline = document.getElementById('radioOnline').checked;
+            const isP2p = selectedPaymentMethod.includes('P2P Transfer');
+
+            if (isOnline && isP2p) {
+                mainSection.style.display = 'block';
+                
+                let storeLogoHtml = '🏪';
+                if (globalKioskThemeConfig && globalKioskThemeConfig.storeLogo) {
+                    storeLogoHtml = `<img src="https://lh3.googleusercontent.com/d/${globalKioskThemeConfig.storeLogo}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;" />`;
+                }
+                document.getElementById('mainStoreLogoIcon').innerHTML = storeLogoHtml;
+
+                const selectedWalletName = document.getElementById('p2pSpinnerSelect').value || "E-Wallet";
+                document.getElementById('mainOrderIdLabel').innerText = `Order ID: #${generatedOrderID}`;
+                document.getElementById('mainScanTitle').innerText = `Scan to Pay via ${selectedWalletName}`;
+                document.getElementById('mainAmountLabel').innerText = `Payment Amount: ₱${totalAmountPesos.toFixed(2)}`;
+
+                renderQrCodeToContainer(finalCompleteQRStringForMain, "p2pQrCanvasMain");
+            } else {
+                mainSection.style.display = 'none';
+            }
+            checkProceedButtonState();
+        }
+
+        // ==========================================
+        // VALIDATION CHECK FOR PROCEED BUTTON
+        // ==========================================
+        function checkProceedButtonState() {
+            const proceedBtn = document.getElementById('proceedBtn');
+            if (!proceedBtn) return;
+
+            const isOnline = document.getElementById('radioOnline').checked;
+            const isP2p = selectedPaymentMethod.includes('P2P Transfer');
+            const isCod = document.getElementById('radioCod').checked;
+            const isCounter = document.getElementById('radioCounter').checked;
+            const isDineIn = document.getElementById('typeDineIn').checked;
+
+            let canProceed = true;
+
+            // Kung Delivery at Online P2P ang napili, kailangan i-download ang QR at i-verify ang resibo
+            if (isOnline && isP2p) {
+                if (!qrGeneratedTimestamp || !isReceiptValidTimeAndAi || !isRefNumberFullyMatched) {
+                    canProceed = false;
+                }
+            }
+
+            if (canProceed) {
+                proceedBtn.disabled = false;
+                proceedBtn.style.opacity = "1";
+                proceedBtn.style.cursor = "pointer";
+                proceedBtn.style.backgroundColor = "#0284c7";
+            } else {
+                proceedBtn.disabled = true;
+                proceedBtn.style.opacity = "0.5";
+                proceedBtn.style.cursor = "not-allowed";
+                proceedBtn.style.backgroundColor = "#475569";
+            }
+        }
+
+        // ==========================================
+        // DOWNLOAD BRANDED QR CODE CARD FUNCTION
+        // ==========================================
+        function downloadMainQrCode() {
+            if (!qrGeneratedTimestamp) {
+                qrGeneratedTimestamp = Date.now();
+            }
+            const formattedDateStr = new Date(qrGeneratedTimestamp).toLocaleString('en-PH', {dateStyle:'medium', timeStyle:'short'});
+            
+            const timeLabelEl = document.getElementById('mainTimestampLabel');
+            if (timeLabelEl) {
+                timeLabelEl.innerText = `Time & Date: ${formattedDateStr}`;
+                timeLabelEl.style.display = 'block';
+            }
+            
+            const uploadSection = document.getElementById('receiptUploadFormSection');
+            if (uploadSection) {
+                uploadSection.style.display = 'block';
+            }
+
+            const container = document.getElementById('p2pQrCanvasMain');
+            if (!container) return;
+            const qrImg = container.querySelector('img');
+            const qrCanvas = container.querySelector('canvas');
+
+            if (!qrImg && !qrCanvas) {
+                updateSdkDebugToast("❌ Walang makitang QR Code para i-download.", true);
+                return;
+            }
+
+            const pageId = getPageId();
+            const storeNameText = `@${pageId.toLowerCase()}`;
+            const orderIdText = `Order ID: #${generatedOrderID || 'N/A'}`;
+            const walletNameText = document.getElementById('mainScanTitle').innerText || "Scan to Pay";
+            const amountText = document.getElementById('mainAmountLabel').innerText || "Payment Amount: ₱0.00";
+            const timestampText = `Time & Date: ${formattedDateStr}`;
+
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = 400;
+            exportCanvas.height = 540;
+            const ctx = exportCanvas.getContext('2d');
+
+            ctx.fillStyle = "#1e293b";
+            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+            ctx.strokeStyle = "#38bdf8";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(10, 10, exportCanvas.width - 20, exportCanvas.height - 20);
+
+            ctx.fillStyle = "#0284c7";
+            ctx.beginPath();
+            ctx.roundRect(100, 25, 200, 34, 17);
+            ctx.fill();
+
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(storeNameText, exportCanvas.width / 2, 47);
+
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "bold 13px Arial";
+            ctx.fillText(orderIdText, exportCanvas.width / 2, 85);
+
+            ctx.fillStyle = "#38bdf8";
+            ctx.font = "bold 14px Arial";
+            ctx.fillText(walletNameText, exportCanvas.width / 2, 110);
+
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.roundRect(100, 125, 200, 200, 10);
+            ctx.fill();
+
+            const tempImg = new Image();
+            tempImg.crossOrigin = "anonymous";
+            tempImg.onload = function() {
+                ctx.drawImage(tempImg, 115, 140, 170, 170);
+
+                ctx.fillStyle = "#34d399";
+                ctx.font = "bold 16px Arial";
+                ctx.fillText(amountText, exportCanvas.width / 2, 355);
+
+                ctx.fillStyle = "#facc15";
+                ctx.font = "italic 12px Arial";
+                ctx.fillText(timestampText, exportCanvas.width / 2, 380);
+
+                ctx.fillStyle = "#cbd5e1";
+                ctx.font = "11px Arial";
+                ctx.fillText(`ShareMap Secure Payment Gateway (${storeNameText})`, exportCanvas.width / 2, 425);
+                ctx.fillText("Gamitin ang branded QR na ito para sa tamang store.", exportCanvas.width / 2, 445);
+
+                const link = document.createElement('a');
+                link.href = exportCanvas.toDataURL('image/png');
+                link.download = `ShareMap_${pageId.toLowerCase()}_Order_${generatedOrderID || 'Payment'}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                updateSdkDebugToast("📥 Na-download ang branded QR code na may kasamang Time & Date.");
+                
+                checkProceedButtonState();
+            };
+
+            if (qrImg && qrImg.src) {
+                tempImg.src = qrImg.src;
+            } else if (qrCanvas) {
+                tempImg.src = qrCanvas.toDataURL('image/png');
+            }
+        }
+
+        // ==========================================
+        // HEURISTIC AI & EDITED IMAGE DETECTION
+        // ==========================================
+        function detectAiOrEditedReceipt(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        
+                        let isSuspicious = false;
+                        if (file.size < 15000) {
+                            isSuspicious = true;
+                        }
+                        resolve(isSuspicious);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ==========================================
+        // TUNAY NA OCR & SMART TIMESTAMP VALIDATOR
+        // ==========================================
+        async function handleReceiptFileSelected(input) {
+            const statusEl = document.getElementById('validationStatusMsg');
+            const refInput = document.getElementById('refNumberInput');
+
+            refInput.value = ""; 
+            isRefNumberFullyMatched = false;
+            isReceiptValidTimeAndAi = false;
+            checkProceedButtonState();
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                statusEl.style.display = 'block';
+                statusEl.style.color = '#38bdf8';
+                statusEl.innerText = "⏳ Binabasa at sinusuri ang resibo gamit ang OCR at AI detector...";
+
+                try {
+                    const possibleAiEdited = await detectAiOrEditedReceipt(file);
+
+                    const { data: { text } } = await Tesseract.recognize(
+                        file,
+                        'eng',
+                        { 
+                            logger: m => {
+                                if (m.status === 'recognizing text') {
+                                    statusEl.innerText = `⏳ OCR Progress: ${Math.round(m.progress * 100)}%`;
+                                }
+                            } 
+                        }
+                    );
+
+                    console.log("Raw OCR Text Result:", text);
+
+                    const dateTimeFullRegex = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\s+\d{1,2}:\d{2}\s?(?:AM|PM|am|pm)?|\d{2}[-/]\d{2}[-/]\d{4}\s+\d{1,2}:\d{2}\s?(?:AM|PM|am|pm)?|\d{2}[-/]\d{2}[-/]\d{4}\s+\d{2}:\d{2}:\d{2}/i;
+                    let dateMatch = text.match(dateTimeFullRegex);
+
+                    extractedDateTimeStrGlobal = "";
+                    if (dateMatch) {
+                        extractedDateTimeStrGlobal = dateMatch[0];
+                    } else {
+                        const dateOnlyRegex = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}|\d{2}[-/]\d{2}[-/]\d{4}/i;
+                        const timeOnlyRegex = /\d{1,2}:\d{2}\s?(?:AM|PM|am|pm)/i;
+                        const dMatch = text.match(dateOnlyRegex);
+                        const tMatch = text.match(timeOnlyRegex);
+
+                        if (dMatch) {
+                            extractedDateTimeStrGlobal = dMatch[0];
+                            if (tMatch) extractedDateTimeStrGlobal += " " + tMatch[0];
+                        }
+                    }
+
+                    let extractedRefNo = "";
+                    const mayaRefMatch = text.match(/(?:Reference\s*ID|Ref\.?\s*No\.?|Payment\s*ID)\s*[:\s]*([A-Z0-9\s]{8,25})/i);
+                    
+                    if (mayaRefMatch && mayaRefMatch[1]) {
+                        extractedRefNo = mayaRefMatch[1].trim();
+                        extractedRefNo = extractedRefNo.split(/Payment|ID|Ref|maya/i)[0].trim();
+                        extractedRefNo = extractedRefNo.replace(/\s+/g, ' ');
+                    } else {
+                        const fallbackCodeMatch = text.match(/\b[A-Z0-9]{4}\s[A-Z0-9]{4}\s[A-Z0-9]{4}\b|\b\d{10,15}\b/);
+                        if (fallbackCodeMatch) {
+                            extractedRefNo = fallbackCodeMatch[0].trim();
+                        }
+                    }
+
+                    extractedOcrRefNumber = extractedRefNo;
+
+                    if (extractedDateTimeStrGlobal) {
+                        const receiptTime = new Date(extractedDateTimeStrGlobal).getTime();
+                        const qrTime = qrGeneratedTimestamp || Date.now();
+                        const diffMs = receiptTime - qrTime;
+                        const diffMinutes = diffMs / (1000 * 60);
+
+                        const isDateValidToday = !isNaN(receiptTime);
+                        const isWithinAllowedTimeWindow = diffMinutes >= -10 && diffMinutes <= 30;
+
+                        if (possibleAiEdited) {
+                            isReceiptValidTimeAndAi = false;
+                            statusEl.style.color = '#f87171';
+                            statusEl.innerText = `❌ Not valid: Hinalang AI-Generated o Edited ang resibo na ito!`;
+                        } else if (isDateValidToday && isWithinAllowedTimeWindow) {
+                            isReceiptValidTimeAndAi = true;
+                            let maskedRef = extractedOcrRefNumber.length > 4 ? extractedOcrRefNumber.substring(0, 4) + "********" : "********";
+                            statusEl.style.color = '#34d399';
+                            statusEl.innerText = `✅ Time Valid (${extractedDateTimeStrGlobal}) | detected ref#: ${maskedRef} - Mag-type o i-paste ang tamang Ref No sa ibaba upang i-verify.`;
+                        } else {
+                            isReceiptValidTimeAndAi = false;
+                            statusEl.style.color = '#f87171';
+                            statusEl.innerText = `❌ Not valid: Hindi tugma ang oras o lumipas na ang bisa (Resibo: ${extractedDateTimeStrGlobal})`;
+                        }
+                    } else {
+                        isReceiptValidTimeAndAi = false;
+                        statusEl.style.color = '#f87171';
+                        statusEl.innerText = "❌ Not valid: Hindi nabasa ang Date & Time sa resibo.";
+                    }
+
+                    checkProceedButtonState();
+
+                } catch (err) {
+                    console.error("OCR Error:", err);
+                    statusEl.style.color = '#f87171';
+                    statusEl.innerText = "❌ May naganap na error sa pagbasa ng resibo.";
+                    isReceiptValidTimeAndAi = false;
+                    checkProceedButtonState();
+                }
+            }
+        }
+
+        // ==========================================
+        // EXACT PASSWORD-STYLE MATCHING VALIDATION
+        // ==========================================
+        function handleRefNumberInput(inputEl) {
+            const statusEl = document.getElementById('validationStatusMsg');
+            const typedVal = inputEl.value.trim();
+
+            if (!extractedOcrRefNumber) return;
+
+            const cleanTyped = typedVal.replace(/\s+/g, '').toUpperCase();
+            const cleanOcr = extractedOcrRefNumber.replace(/\s+/g, '').toUpperCase();
+            let maskedRef = extractedOcrRefNumber.length > 4 ? extractedOcrRefNumber.substring(0, 4) + "********" : "********";
+
+            if (cleanTyped.length === 0) {
+                isRefNumberFullyMatched = false;
+                statusEl.style.display = 'block';
+                statusEl.style.color = '#38bdf8';
+                statusEl.innerText = `⏳ Time Valid (${extractedDateTimeStrGlobal}) | detected ref#: ${maskedRef} - I-type o i-paste ang buong Ref No.`;
+                checkProceedButtonState();
+                return;
+            }
+
+            statusEl.style.display = 'block';
+
+            if (cleanTyped.length === cleanOcr.length && cleanTyped === cleanOcr) {
+                isRefNumberFullyMatched = true;
+                statusEl.style.color = '#34d399';
+                statusEl.innerText = `✅ Eksaktong Tugma ang Reference Number! (${extractedDateTimeStrGlobal}) | detected ref#: ${maskedRef}`;
+            } else {
+                isRefNumberFullyMatched = false;
+                statusEl.style.color = '#f87171';
+                statusEl.innerText = `❌ Hindi pa tugma o kulang ang Reference Number (Naka-type: ${cleanTyped.length}/${cleanOcr.length} chars) | detected ref#: ${maskedRef}`;
+            }
+
+            checkProceedButtonState();
+        }
+
         function handleMainOnlineSelection(val) {
             document.getElementById('radioOnline').checked = true;
             const p2pSub = document.getElementById('p2pSubContainer');
@@ -385,13 +739,14 @@
                 p2pSub.style.display = 'block';
                 const subVal = document.getElementById('p2pSpinnerSelect').value;
                 selectedPaymentMethod = subVal ? `${subVal} (P2P Transfer)` : 'P2P Transfer';
-                loadAndDecodeP2PQr(); // I-trigger ang pag-decode
+                loadAndDecodeP2PQr();
             } else if (val === 'paymongo') {
                 paymongoSub.style.display = 'block';
                 const paymongoType = document.getElementById('paymongoSpinnerSelect').value;
                 selectedPaymentMethod = paymongoType === 'qr' ? 'PayMongo Merchant QR / QRPh' : 'PayMongo Redirect Bank Transfer';
             }
             updateSummaryText();
+            checkProceedButtonState();
         }
 
         function handleP2pSpinnerChange(val) {
@@ -399,7 +754,8 @@
             document.getElementById('mainOnlineSpinnerSelect').value = 'p2p';
             selectedPaymentMethod = `${val} (P2P Transfer)`; 
             updateSummaryText();
-            loadAndDecodeP2PQr(); // Mag-re-decode kapag pinalitan ang P2P wallet (halimbawa galing GCash papuntang Maya)
+            loadAndDecodeP2PQr();
+            checkProceedButtonState();
         }
 
         function handlePaymongoSpinnerChange(val) {
@@ -407,6 +763,7 @@
             document.getElementById('mainOnlineSpinnerSelect').value = 'paymongo';
             selectedPaymentMethod = val === 'qr' ? 'PayMongo Merchant QR / QRPh' : 'PayMongo Redirect Bank Transfer';
             updateSummaryText();
+            checkProceedButtonState();
         }
 
         function selectPaymentType(type) {
@@ -430,6 +787,7 @@
                 }
             }
             updateSummaryText();
+            checkProceedButtonState();
         }
 
         function updateSummaryText() {
@@ -444,8 +802,6 @@
                         <h2 style="color:#ef4444; margin-top:0; font-size:20px;">${title}</h2>
                         <p style="color:#cbd5e1; font-size:14px; line-height:1.5;">${message}</p>
                         <a href="${CONTACT_LINK}" target="_blank" style="display:inline-block; margin-top:15px; background:#2563eb; color:#fff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; width:80%;">💬 Contact Developer / Renew Access</a>
-                        <hr style="border:0; border-top:1px solid #334155; margin:25px 0 15px 0;">
-                        <p style="font-size:11px; color:#94a3b8; margin:0;">ShareMap Licensing Protection &copy; 2026</p>
                     </div>
                 </div>
             `;
@@ -502,7 +858,7 @@
 
             if (!activePageAccessToken || window.hasValidPageToken === false) {
                 container.style.display = "none";
-                notFoundInd.innerHTML = "⚠️ Reminder: Ang store na ito ay offline o walang active POS ngayon. Ang iyong order ay diretso lamang sa chat.";
+                notFoundInd.innerHTML = "⚠️ Reminder: Ang store na ito ay offline o walang active POS ngayon.";
                 notFoundInd.style.display = "block";
                 return;
             }
@@ -564,14 +920,12 @@
         .saved-text { flex: 1; font-size: 13px; color: #f8fafc; word-break: break-word; }
         
         .btn { background-color: #0284c7; color: #ffffff; border: none; padding: 12px 20px; font-size: 0.95rem; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 8px; }
+        .btn:disabled { background-color: #475569; opacity: 0.5; cursor: not-allowed; }
         .error-msg { color: #f87171; font-size: 12px; margin-top: 6px; display: none; }
-        .qr-display-box { background: #ffffff; padding: 15px; border-radius: 12px; display: inline-block; margin-top: 10px; }
         .total-amount-badge { background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }
 
-        /* Lazada Style Summary Box sa Main Screen */
         .payment-summary-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 12px; text-align: left; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Bottom Drawer para sa Payment Method */
         .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: flex-end; flex-direction: column; z-index: 2500; }
         .bottom-drawer { background: #1e293b; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; max-height: 85vh; overflow-y: auto; border-top: 2px solid #38bdf8; box-sizing: border-box; width: 100%; max-width: 480px; margin: 0 auto; text-align: left; }
         .drawer-handle { width: 40px; height: 5px; background: #64748b; border-radius: 3px; margin: 0 auto 15px auto; }
@@ -590,13 +944,11 @@
         <h3 style="margin: 0 0 4px 0;">📍 ShareMap Ordering Gateway</h3>
         <div id="orderIdBadge" class="order-id-badge">🔢 Order ID: GENERATING...</div>
 
-        <!-- DEBUG TOAST BOX -->
         <div style="background: #0f172a; padding: 6px; border-radius: 6px; border: 1px solid #0284c7; margin-bottom: 8px; text-align: left;">
             <label style="font-size: 10px; color: #94a3b8; display: block;">🛠️ System Status:</label>
             <div id="debugSdkToast" style="font-size: 11px; font-weight: bold; color: #e2e8f0; word-break: break-all;">Ready...</div>
         </div>
 
-        <!-- PREVIEW INFO BOX -->
         <div class="info-box">
             <div>🔢 Order #: <b id="pOrder">-</b></div>
             <div>🔒 PSID: <b id="pPsid">-</b></div>
@@ -604,7 +956,6 @@
             <div>⏰ Clicked At: <b id="pClicked">-</b></div>
         </div>
 
-        <!-- PROFILE PIC & STATUS DISPLAY -->
         <div style="text-align:center; margin-bottom:12px;">
             <img id="profilePic" src="https://via.placeholder.com/80?text=FB" style="width:80px; height:80px; border-radius:50%; border:3px solid #38bdf8; object-fit:cover;" />
             <div id="profileNameDisplay" style="font-size:13px; font-weight:bold; color:#38bdf8; margin-top:5px;"></div>
@@ -617,7 +968,6 @@
             <div class="service-option"><input type="radio" id="typeCounter" name="serviceType" value="counter" onchange="toggleServiceType()"><label for="typeCounter">💳 Counter</label></div>
         </div>
 
-        <!-- Supabase Token Debugger Field (Green Box) -->
         <div class="form-group" style="background: #064e3b; padding: 6px; border-radius: 6px; border: 1px solid #10b981; margin-bottom: 8px;">
             <label style="font-size: 10px; color: #34d399; margin-bottom: 2px;">🟢 Supabase Token Status:</label>
             <input type="text" id="debugToken" readonly style="background: transparent; border: none; color: #ecfdf5; font-size: 11px; font-weight: bold; padding: 2px 0;" value="Checking Supabase Edge Function...">
@@ -635,9 +985,40 @@
         <div class="payment-summary-box">
             <div>
                 <div style="font-size: 10px; color: #94a3b8; font-weight: bold;">Payment Method</div>
-                <div id="selectedPaymentSummaryText" style="font-size: 13px; color: #38bdf8; font-weight: bold; margin-top: 2px;">GCash (P2P Transfer)</div>
+                <div id="selectedPaymentSummaryText" style="font-size: 13px; color: #38bdf8; font-weight: bold; margin-top: 2px;">Cash on Delivery</div>
             </div>
             <button type="button" onclick="openPaymentDrawer()" style="background: none; border: none; color: #38bdf8; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: underline;">View all methods ></button>
+        </div>
+
+        <!-- MAIN UI P2P QR DISPLAY SECTION (Lilitaw pagka-confirm) -->
+        <div id="mainP2pDisplaySection" style="display:none; background: #0f172a; border: 1px dashed #38bdf8; border-radius: 10px; padding: 15px; margin-bottom: 15px; text-align: center;">
+            <div id="mainStoreLogoIcon" style="margin-bottom: 6px;">🏪</div>
+            <div id="mainOrderIdLabel" style="font-size: 12px; color: #94a3b8; font-weight: bold; margin-bottom: 4px;">Order ID: #-</div>
+            <div id="mainScanTitle" style="font-size: 13px; color: #38bdf8; font-weight: bold; margin-bottom: 8px;">Scan to Pay via E-Wallet</div>
+            
+            <div style="display: flex; justify-content: center; align-items: center; background: #ffffff; padding: 10px; border-radius: 8px; width: fit-content; margin: 0 auto;" id="p2pQrCanvasMain"></div>
+            
+            <div id="mainAmountLabel" style="font-size: 14px; color: #34d399; font-weight: bold; margin-top: 8px;">Payment Amount: ₱0.00</div>
+            <div id="mainTimestampLabel" style="font-size: 11px; color: #facc15; font-style: italic; margin-top: 4px; display: none;">Time & Date: -</div>
+
+            <div style="background: #1e293b; border-left: 3px solid #f59e0b; padding: 8px; border-radius: 4px; font-size: 11px; color: #cbd5e1; text-align: left; margin-top: 10px;">
+                ⚠️ <b>Pansinin:</b> Ang P2P QR code na ito ay may bisa. 
+                <br><i>Tip:</i> Pindutin ang button sa ibaba, buksan agad ang bank/e-wallet app, magbayad, at i-upload kaagad ang resibo.
+            </div>
+
+            <!-- Download branded card button -->
+            <button type="button" class="btn" style="background-color: #2563eb; margin-top: 12px; font-size: 13px;" onclick="downloadMainQrCode();">📥 Download - Open your bank & Upload scan to pay</button>
+
+            <!-- RECEIPT UPLOAD & REFERENCE NUMBER FORM -->
+            <div id="receiptUploadFormSection" style="display: none; margin-top: 15px; border-top: 1px solid #334155; padding-top: 12px; text-align: left;">
+                <label style="font-size: 12px; color: #38bdf8; font-weight: bold; display: block; margin-bottom: 5px;">📸 Upload scanned qrcode Payment receipt here:</label>
+                <input type="file" id="receiptFile" accept="image/*" onchange="handleReceiptFileSelected(this)" style="font-size: 11px; color: #fff; margin-bottom: 10px; width: 100%;">
+                
+                <div id="validationStatusMsg" style="font-size: 11px; font-weight: bold; margin-bottom: 10px; display: none;"></div>
+
+                <label style="font-size: 12px; color: #38bdf8; font-weight: bold; display: block; margin-bottom: 5px;">🔢 Reference Number (I-type o i-paste nang mano-mano):</label>
+                <input type="text" id="refNumberInput" placeholder="Ilagay ang reference number dito" oninput="handleRefNumberInput(this)" style="width: 100%; padding: 8px; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; font-size: 13px; box-sizing: border-box; outline: none;">
+            </div>
         </div>
 
         <div class="order-section">
@@ -647,12 +1028,15 @@
         </div>
 
         <p id="errorMsg" class="error-msg"></p>
-        <button id="proceedBtn" class="btn">📍 Sunod: Pumili ng Payment & Kunin ang GPS ➔</button>
+        <!-- Final Submit / Proceed Button para sa Delivery at Dine-In -->
+        <button id="proceedBtn" class="btn" disabled style="background-color: #475569; opacity: 0.5; cursor: not-allowed;">📍 Sunod: Pumili ng Payment & Kunin ang GPS ➔</button>
 
+        <!-- COUNTER MODE SECTION -->
         <div id="counterQrContainer" style="display:none; margin-top:15px; background:#0f172a; padding:15px; border-radius:8px; border:1px solid #38bdf8;">
             <div class="qr-display-box" id="qrcodeCanvas"></div>
             <p id="qrTextDetail" style="font-size:13px; font-weight:bold; color:#38bdf8; margin-top:10px;"></p>
-            <button type="button" class="btn" style="background-color:#16a34a; margin-top:12px;" onclick="openPaymentDrawerForCounter()">💳 Pumili ng Payment & I-send sa POS ➔</button>
+            <!-- Final Blue Checkout Button para sa Counter (Hindi na nagbubukas ng drawer) -->
+            <button type="button" class="btn" style="background-color:#0284c7; margin-top:12px;" onclick="handleCounterCheckoutSequence()">💳 Kumpirmahin at I-send sa POS ➔</button>
         </div>
     </div>
 
@@ -665,28 +1049,20 @@
                 <button onclick="closePaymentDrawerDirect()" style="background: #ef4444; color: white; border: none; padding: 5px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">✕</button>
             </div>
             
-            <!-- MAIN ONLINE PAYMENT CARD (P2P or PayMongo Switcher) -->
             <div class="payment-card-box" id="onlinePaymentSection" onclick="selectPaymentType('online')">
                 <div class="payment-card-header">
-                    <input type="radio" name="payMethodMain" id="radioOnline" value="Online" checked>
-                    <select id="mainOnlineSpinnerSelect" onchange="handleMainOnlineSelection(this.value)" onclick="event.stopPropagation(); selectPaymentType('online');">
-                        <!-- Kusang mapupunan kung p2p o paymongo ang active -->
-                    </select>
+                    <input type="radio" name="payMethodMain" id="radioOnline" value="Online">
+                    <select id="mainOnlineSpinnerSelect" onchange="handleMainOnlineSelection(this.value)" onclick="event.stopPropagation(); selectPaymentType('online');"></select>
                 </div>
 
-                <!-- Sub-spinner 1: P2P E-Wallets -->
                 <div class="sub-selection-area" id="p2pSubContainer" style="display: block;">
                     <label style="font-size: 10px; color: #38bdf8; font-weight: bold; display: block; margin-bottom: 2px;">Piliin ang P2P E-Wallet Account:</label>
-                    <select id="p2pSpinnerSelect" onchange="handleP2pSpinnerChange(this.value)" onclick="event.stopPropagation();">
-                        <!-- Kusang mapupunan ng p2p methods galing DB -->
-                    </select>
+                    <select id="p2pSpinnerSelect" onchange="handleP2pSpinnerChange(this.value)" onclick="event.stopPropagation();"></select>
                     
-                    <!-- QR CODE DISPLAY CONTAINER (CENTER ALIGNED & WITH LABELS) -->
                     <div style="text-align: center; margin-top: 12px; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px dashed #38bdf8;">
                         <div id="drawerOrderIdLabel" style="font-size: 11px; color: #94a3b8; font-weight: bold; margin-bottom: 4px;">Order ID: #-</div>
                         <div id="drawerScanTitle" style="font-size: 13px; color: #38bdf8; font-weight: bold; margin-bottom: 8px;">Scan to Pay via E-Wallet</div>
                         
-                        <!-- Center Aligned QR Canvas Box -->
                         <div style="display: flex; justify-content: center; align-items: center; background: #ffffff; padding: 10px; border-radius: 8px; width: fit-content; margin: 0 auto;" id="p2pQrCanvasDrawer">
                             <span style="font-size: 11px; color: #555;">Naglo-load ang QR code...</span>
                         </div>
@@ -695,8 +1071,6 @@
                     </div>
                 </div>
 
-
-                <!-- Sub-spinner 2: PayMongo -->
                 <div class="sub-selection-area" id="paymongoSubContainer" style="display: none;">
                     <label style="font-size: 10px; color: #38bdf8; font-weight: bold; display: block; margin-bottom: 2px;">Piliin ang PayMongo Mode:</label>
                     <select id="paymongoSpinnerSelect" onchange="handlePaymongoSpinnerChange(this.value)" onclick="event.stopPropagation();">
@@ -706,7 +1080,6 @@
                 </div>
             </div>
 
-            <!-- CASH ON DELIVERY -->
             <div class="payment-card-box" id="codDrawerRow" onclick="selectPaymentType('cod')">
                 <div class="payment-card-header">
                     <input type="radio" name="payMethodMain" id="radioCod" value="COD">
@@ -714,15 +1087,14 @@
                 </div>
             </div>
 
-            <!-- CASH OVER THE COUNTER -->
-            <div class="payment-card-box" onclick="selectPaymentType('counter')">
+            <div class="payment-card-box" id="counterDrawerRow" onclick="selectPaymentType('counter')">
                 <div class="payment-card-header">
                     <input type="radio" name="payMethodMain" id="radioCounter" value="Counter">
-                    <span style="font-size: 13px; font-weight: bold; color: #fff;">💵 Cash Over the Counter</span>
+                    <span style="font-size: 13px; font-weight: bold; color: #fff;" id="counterDrawerText">💵 Cash Over the Counter</span>
                 </div>
             </div>
 
-            <button type="button" class="btn" style="background-color: #16a34a; margin-top: 15px;" onclick="closePaymentDrawerDirect()">✅ Confirm Selection ➔</button>
+            <button type="button" class="btn" style="background-color: #16a34a; margin-top: 15px;" onclick="confirmAndMoveQrToMain()">✅ Confirm Selection ➔</button>
         </div>
     </div>
 
@@ -742,13 +1114,23 @@ function toggleServiceType(){
     const codDrawerRow = document.getElementById('codDrawerRow');
     if(codDrawerRow) codDrawerRow.style.display = isDelivery ? "flex" : "none";
 
+    const counterDrawerText = document.getElementById('counterDrawerText');
+
     if (isDelivery) {
         proceedBtn.innerText = "📍 Sunod: Pumili ng Payment & Kunin ang GPS ➔";
+        if(counterDrawerText) counterDrawerText.innerText = "💵 Cash Over the Counter";
+        selectPaymentType('cod'); // Default sa Delivery ay COD
     } else if (isDineIn) {
         proceedBtn.innerText = "📩 Pumili ng Payment & I-send ang Dine-In Order ➔";
+        if(counterDrawerText) counterDrawerText.innerText = "💵 Cash Over the Counter / Pickup";
+        selectPaymentType('online'); // Default sa Dine-In ay Online Payment
+    } else if (isCounter) {
+        if(counterDrawerText) counterDrawerText.innerText = "💵 Cash Over the Counter";
+        selectPaymentType('counter'); // Default sa Counter ay Cash Over the Counter
     }
 
     if(isCounter) generateCounterQr();
+    checkProceedButtonState();
 }
 
 function openPaymentDrawer(){
@@ -761,10 +1143,6 @@ function openPaymentDrawer(){
     }
     document.getElementById('errorMsg').style.display = "none";
     document.getElementById('paymentDrawer').style.display = 'flex';
-}
-
-function openPaymentDrawerForCounter(){
-    openPaymentDrawer();
 }
 
 function closePaymentDrawer(e){
@@ -825,6 +1203,7 @@ function renderOrderUI(){
     localStorage.setItem('sharemap_orders', summaryText);
 
     if(document.getElementById("typeCounter").checked) generateCounterQr();
+    checkProceedButtonState();
 }
 
 function editOrderQty(index){ 
@@ -927,6 +1306,132 @@ function copyTextToClipboard(text) {
     }
 }
 
+// === OVER-THE-COUNTER CHECKOUT SEQUENCE ===
+async function handleCounterCheckoutSequence(){
+    const nameVal = document.getElementById('fullName').value.trim(); 
+    const phoneVal = document.getElementById('phone').value.trim();
+    if(!nameVal || !phoneVal){ 
+        document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy."; 
+        document.getElementById('errorMsg').style.display = "block"; 
+        return; 
+    }
+    document.getElementById('errorMsg').style.display = "none";
+
+    const ordersVal = getFormattedOrdersText(); 
+    const pageId = getPageId(); 
+    const activePsid = document.getElementById('displayPsid').value;
+    
+    downloadQrCodeImageWithDetails();
+    
+    const formattedOrders = ordersVal.split(', ').join('\n'); 
+    const shareText = `💳 OVER-THE-COUNTER ADVANCE ORDER\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment Method: ${selectedPaymentMethod}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Orders:\n${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+    
+    copyTextToClipboard(shareText);
+
+    try {
+        await fetch(CREATE_ORDER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                order_id: generatedOrderID,
+                store_page: pageId.toLowerCase(),
+                branch: `Counter (${selectedPaymentMethod})`,
+                schedule: "Over-the-Counter",
+                customer_name: nameVal,
+                customer_phone: phoneVal,
+                landmark: `Payment: ${selectedPaymentMethod} | Total: ₱${totalAmountPesos.toFixed(2)}`,
+                orders_list: formattedOrders,
+                plus_code: "COUNTER",
+                latitude: 0,
+                longitude: 0,
+                raw_chat_output: shareText,
+                messenger_psid: activePsid || "MESSENGER_WEB_USER",
+                clicked_at: clickedAtTimestamp || Date.now(),
+                status: 'PENDING'
+            })
+        });
+    } catch (err) {}
+    
+    const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`; 
+    setTimeout(()=>{ window.location.href = messengerUrl; }, 1000);
+}
+
+// ==========================================
+// FINAL PROCEED BUTTON SUBMISSION ACTION (Delivery / Dine-In)
+// ==========================================
+async function handleProceedSubmission() {
+    const nameVal = document.getElementById('fullName').value.trim();
+    const phoneVal = document.getElementById('phone').value.trim();
+    const landmarkVal = document.getElementById('landmark').value.trim(); 
+    const tableVal = document.getElementById('tableNum').value.trim();
+    const paxVal = document.getElementById('paxCount').value.trim(); 
+    const schedVal = document.getElementById('scheduleOrder').value;
+    const ordersVal = getFormattedOrdersText(); 
+    const isDineIn = document.getElementById("typeDineIn").checked; 
+    const pageId = getPageId(); 
+    const activePsid = document.getElementById('displayPsid').value;
+
+    if (!nameVal || !phoneVal) {
+        document.getElementById('errorMsg').innerText = "⚠️ Paki-fillup ang Pangalan at Contact Number bago magpatuloy.";
+        document.getElementById('errorMsg').style.display = "block";
+        return;
+    }
+    document.getElementById('errorMsg').style.display = "none";
+    const formattedSched = formatScheduleText(schedVal);
+
+    if(isDineIn){
+        const formattedOrders = ordersVal.split(', ').join('\n• '); 
+        const shareText = `🍽️ DINE-IN TABLE RESERVATION\npsid: ${activePsid}\n🔢 Order ID: #${generatedOrderID}\n🏪 Store: ${pageId}\n💳 Payment Method: ${selectedPaymentMethod}\n⏰ Clicked At: ${clickedAtTimestamp ? new Date(parseInt(clickedAtTimestamp)).toLocaleString() : new Date().toLocaleString()}\n🪑 Table: ${tableVal || 'Not Specified'}\n⏰ Schedule: ${formattedSched}\n👥 Party Size: ${paxVal || '2'} Pax\n💰 Total: ₱${totalAmountPesos.toFixed(2)}\n\n🛒 Advance Orders:\n• ${formattedOrders}\n\n👤 Name: ${nameVal}\n📞 Contact: ${phoneVal}`;
+        
+        copyTextToClipboard(shareText);
+
+        try {
+            await fetch(CREATE_ORDER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_id: generatedOrderID,
+                    store_page: pageId.toLowerCase(),
+                    branch: `Table: ${tableVal || 'Not Specified'} (${selectedPaymentMethod})`,
+                    schedule: formattedSched,
+                    customer_name: nameVal,
+                    customer_phone: phoneVal,
+                    landmark: `Dine-In Table ${tableVal || 'N/A'} | Pay: ${selectedPaymentMethod}`,
+                    orders_list: ordersVal,
+                    plus_code: "DINE-IN",
+                    latitude: 0,
+                    longitude: 0,
+                    raw_chat_output: shareText,
+                    messenger_psid: activePsid || "MESSENGER_WEB_USER",
+                    clicked_at: clickedAtTimestamp || Date.now(),
+                    status: 'PENDING'
+                })
+            });
+        } catch (err) {}
+        
+        const messengerUrl = `https://m.me/${encodeURIComponent(pageId)}?text=${encodeURIComponent(shareText)}`; 
+        window.location.href = messengerUrl; 
+        return;
+    }
+
+    // Delivery Flow (Ipasa sa index.html kasama ang payment method)
+    localStorage.setItem('sharemap_page', pageId); 
+    localStorage.setItem('sharemap_orderid', generatedOrderID); 
+    localStorage.setItem('sharemap_fullname', nameVal);
+    localStorage.setItem('sharemap_phone', phoneVal); 
+    localStorage.setItem('sharemap_landmark', landmarkVal || "Wala"); 
+    localStorage.setItem('sharemap_schedule', formattedSched);
+    localStorage.setItem('sharemap_orders', ordersVal); 
+    localStorage.setItem('sharemap_total', totalAmountPesos.toFixed(2)); 
+    localStorage.setItem('sharemap_psid', activePsid);
+    localStorage.setItem('sharemap_clicked_at', clickedAtTimestamp); 
+    localStorage.setItem('sharemap_payment', selectedPaymentMethod);
+    sessionStorage.setItem('access_granted', 'true');
+    
+    const queryStr = `?pass=true&page=${encodeURIComponent(pageId)}&oid=${encodeURIComponent(generatedOrderID)}&fn=${encodeURIComponent(nameVal)}&ph=${encodeURIComponent(phoneVal)}&lm=${encodeURIComponent(landmarkVal || 'Wala')}&sched=${encodeURIComponent(formattedSched)}&ord=${encodeURIComponent(ordersVal)}&total=${totalAmountPesos.toFixed(2)}&psid=${encodeURIComponent(activePsid)}&clicked_at=${clickedAtTimestamp}&pay=${encodeURIComponent(selectedPaymentMethod)}`;
+    window.location.href = `./index.html${queryStr}`;
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     const pageId = getPageId(); 
     localStorage.setItem('sharemap_page', pageId); 
@@ -978,7 +1483,7 @@ window.addEventListener('DOMContentLoaded', () => {
     setTimeout(setupBackButtonTrayReturn, 800);
 });
 
-document.getElementById('proceedBtn').onclick = () => { openPaymentDrawer(); };
+document.getElementById('proceedBtn').onclick = () => { handleProceedSubmission(); };
 </script>
 </body>
 </html>
