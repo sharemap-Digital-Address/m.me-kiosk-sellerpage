@@ -615,23 +615,28 @@
 
                     console.log("Raw OCR Text Result:", text);
 
-                    const dateTimeFullRegex = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\s+\d{1,2}:\d{2}\s?(?:AM|PM|am|pm)?|\d{2}[-/]\d{2}[-/]\d{4}\s+\d{1,2}:\d{2}\s?(?:AM|PM|am|pm)?|\d{2}[-/]\d{2}[-/]\d{4}\s+\d{2}:\d{2}:\d{2}/i;
-                    let dateMatch = text.match(dateTimeFullRegex);
+// Sinusuportahan na nito ang HH:MM:SS, HH:MM, pati na rin ang mga walang segundo
+const dateTimeFullRegex = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\s+\d{1,2}:\d{2}(?::\d{2})?\s?(?:AM|PM|am|pm)?|\d{2}[-/]\d{2}[-/]\d{4}\s+\d{1,2}:\d{2}(?::\d{2})?\s?(?:AM|PM|am|pm)?/i;
 
-                    extractedDateTimeStrGlobal = "";
-                    if (dateMatch) {
-                        extractedDateTimeStrGlobal = dateMatch[0];
-                    } else {
-                        const dateOnlyRegex = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}|\d{2}[-/]\d{2}[-/]\d{4}/i;
-                        const timeOnlyRegex = /\d{1,2}:\d{2}\s?(?:AM|PM|am|pm)/i;
-                        const dMatch = text.match(dateOnlyRegex);
-                        const tMatch = text.match(timeOnlyRegex);
+let dateMatch = text.match(dateTimeFullRegex);
 
-                        if (dMatch) {
-                            extractedDateTimeStrGlobal = dMatch[0];
-                            if (tMatch) extractedDateTimeStrGlobal += " " + tMatch[0];
-                        }
-                    }
+extractedDateTimeStrGlobal = "";
+if (dateMatch) {
+    extractedDateTimeStrGlobal = dateMatch[0];
+} else {
+    // Fallback kung hiwalay ang date at time sa resibo
+    const dateOnlyRegex = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}|\d{2}[-/]\d{2}[-/]\d{4}/i;
+    const timeGenericRegex = /\d{1,2}:\d{2}(?::\d{2})?\s?(?:AM|PM|am|pm)/i;
+    
+    const dMatch = text.match(dateOnlyRegex);
+    const tMatch = text.match(timeGenericRegex);
+
+    if (dMatch) {
+        extractedDateTimeStrGlobal = dMatch[0];
+        if (tMatch) extractedDateTimeStrGlobal += " " + tMatch[0];
+    }
+}
+
 
                     let extractedRefNo = "";
                     const mayaRefMatch = text.match(/(?:Reference\s*ID|Ref\.?\s*No\.?|Payment\s*ID)\s*[:\s]*([A-Z0-9\s]{8,25})/i);
