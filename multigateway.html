@@ -617,7 +617,7 @@
             const refInput = document.getElementById('refNumberInput');
             const debugOcrInput = document.getElementById('debugOcrRawResult');
 
-            refInput.value = ""; 
+            // HUWAG I-CLEAR ANG MANUAL REF INPUT PARA HINDI MAWALA ANG EDIT NG USER
             if (debugOcrInput) debugOcrInput.value = "";
             isRefNumberFullyMatched = false;
             isReceiptValidTimeAndAi = false;
@@ -756,33 +756,41 @@
 
                     extractedOcrRefNumber = extractedRefNo;
 
-                    // Ilagay ang nakuha ng OCR sa ating pansamantalang Debug EditText
+                    // Ilagay ang nakuha ng OCR sa debug box
                     if (debugOcrInput) {
                         debugOcrInput.value = extractedOcrRefNumber || "(Walang nade-tect na Ref#)";
                     }
 
                     if (extractedDateTimeStrGlobal) {
-                        const receiptTime = new Date(extractedDateTimeStrGlobal).getTime();
+                        const receiptDateObj = new Date(extractedDateTimeStrGlobal);
+                        const nowObj = new Date();
+                        const receiptTime = receiptDateObj.getTime();
                         const qrTime = qrGeneratedTimestamp || Date.now();
                         const diffMs = receiptTime - qrTime;
                         const diffMinutes = diffMs / (1000 * 60);
 
                         const isDateValidToday = !isNaN(receiptTime);
+                        
+                        // MAHIGPIT NA CHECK: Kailangan pareho ang petsa (Year, Month, Day) at pasok sa time allowance (-10 to +30 mins)
+                        const isSameDay = receiptDateObj.getFullYear() === nowObj.getFullYear() &&
+                                          receiptDateObj.getMonth() === nowObj.getMonth() &&
+                                          receiptDateObj.getDate() === nowObj.getDate();
+
                         const isWithinAllowedTimeWindow = diffMinutes >= -10 && diffMinutes <= 30;
 
                         if (possibleAiEdited) {
                             isReceiptValidTimeAndAi = false;
                             statusEl.style.color = '#f87171';
                             statusEl.innerText = `❌ Not valid: Hinalang AI-Generated o Edited ang resibo na ito!`;
-                        } else if (isDateValidToday && isWithinAllowedTimeWindow) {
+                        } else if (isDateValidToday && isSameDay && isWithinAllowedTimeWindow) {
                             isReceiptValidTimeAndAi = true;
                             let maskedRef = extractedOcrRefNumber.length > 4 ? extractedOcrRefNumber.substring(0, 4) + "********" : "********";
                             statusEl.style.color = '#34d399';
-                            statusEl.innerText = `✅ Time Valid (${extractedDateTimeStrGlobal}) | detected ref#: ${maskedRef} - Mag-type o i-paste ang tamang Ref No sa ibaba upang i-verify.`;
+                            statusEl.innerText = `✅ Time Valid (${extractedDateTimeStrGlobal}) | detected ref#: ${maskedRef} - I-type o i-paste ang tamang Ref No sa ibaba.`;
                         } else {
                             isReceiptValidTimeAndAi = false;
                             statusEl.style.color = '#f87171';
-                            statusEl.innerText = `❌ Not valid: Hindi tugma ang oras o lumipas na ang bisa (Resibo: ${extractedDateTimeStrGlobal})`;
+                            statusEl.innerText = `❌ Not valid: Lumang resibo o hindi tugma ang petsa/oras (Resibo: ${extractedDateTimeStrGlobal})`;
                         }
                     } else {
                         isReceiptValidTimeAndAi = false;
@@ -790,7 +798,8 @@
                         statusEl.innerText = "❌ Not valid: Hindi nabasa ang Date & Time sa resibo.";
                     }
 
-                    checkProceedButtonState();
+                    // Re-evaluate ang reference match kung sakaling may laman na ang input box
+                    handleRefNumberInput(refInput);
 
                 } catch (err) {
                     console.error("OCR Error:", err);
@@ -848,10 +857,15 @@
             const cleanOcr = extractedOcrRefNumber.replace(/\s+/g, '').toUpperCase();
             let maskedRef = extractedOcrRefNumber.length > 4 ? extractedOcrRefNumber.substring(0, 4) + "********" : "********";
 
-            if (cleanTyped.length === cleanOcr.length && cleanTyped === cleanOcr) {
+            // Sinisigurong dumaan din sa Date/Time & AI validation bago ideklarang buong valid
+            if (cleanTyped.length === cleanOcr.length && cleanTyped === cleanOcr && isReceiptValidTimeAndAi) {
                 isRefNumberFullyMatched = true;
                 statusEl.style.color = '#34d399';
                 statusEl.innerText = `✅ Eksaktong Tugma ang Reference Number! (${extractedDateTimeStrGlobal || 'Valid Time'}) | detected ref#: ${maskedRef}`;
+            } else if (!isReceiptValidTimeAndAi && cleanTyped === cleanOcr) {
+                isRefNumberFullyMatched = false;
+                statusEl.style.color = '#f87171';
+                statusEl.innerText = `❌ Not valid: Lumang resibo o hindi tugma ang petsa/oras (Resibo: ${extractedDateTimeStrGlobal})`;
             } else {
                 isRefNumberFullyMatched = false;
                 statusEl.style.color = '#f87171';
