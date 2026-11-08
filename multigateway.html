@@ -615,8 +615,10 @@
         async function handleReceiptFileSelected(input) {
             const statusEl = document.getElementById('validationStatusMsg');
             const refInput = document.getElementById('refNumberInput');
+            const debugOcrInput = document.getElementById('debugOcrRawResult');
 
             refInput.value = ""; 
+            if (debugOcrInput) debugOcrInput.value = "";
             isRefNumberFullyMatched = false;
             isReceiptValidTimeAndAi = false;
             checkProceedButtonState();
@@ -753,6 +755,11 @@
                     }
 
                     extractedOcrRefNumber = extractedRefNo;
+
+                    // Ilagay ang nakuha ng OCR sa ating pansamantalang Debug EditText
+                    if (debugOcrInput) {
+                        debugOcrInput.value = extractedOcrRefNumber || "(Walang nade-tect na Ref#)";
+                    }
 
                     if (extractedDateTimeStrGlobal) {
                         const receiptTime = new Date(extractedDateTimeStrGlobal).getTime();
@@ -1144,7 +1151,11 @@
                 <div id="validationStatusMsg" style="font-size: 11px; font-weight: bold; margin-bottom: 10px; display: none;"></div>
 
                 <label style="font-size: 12px; color: #38bdf8; font-weight: bold; display: block; margin-bottom: 5px;">🔢 Reference Number (I-type o i-paste nang mano-mano):</label>
-                <input type="text" id="refNumberInput" placeholder="Ilagay ang reference number dito" oninput="handleRefNumberInput(this)" style="width: 100%; padding: 8px; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; font-size: 13px; box-sizing: border-box; outline: none;">
+                <input type="text" id="refNumberInput" placeholder="Ilagay ang reference number dito" oninput="handleRefNumberInput(this)" style="width: 100%; padding: 8px; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; font-size: 13px; box-sizing: border-box; outline: none; margin-bottom: 10px;">
+
+                <!-- 🛠️ PANSAMANTALANG DEBUG EDITTEXT PARA SA OCR RESULT -->
+                <label style="font-size: 11px; color: #facc15; font-weight: bold; display: block; margin-bottom: 3px;">🛠️ [DEBUG] OCR Extracted Ref# Result:</label>
+                <input type="text" id="debugOcrRawResult" readonly placeholder="Dito lalabas ang nade-tect ng OCR..." style="width: 100%; padding: 7px; background: #0f172a; color: #facc15; border: 1px dashed #facc15; border-radius: 6px; font-size: 12px; box-sizing: border-box; outline: none;">
             </div>
         </div>
 
