@@ -697,40 +697,70 @@ if (dateMatch) {
 
         // ==========================================
         // EXACT PASSWORD-STYLE MATCHING VALIDATION
-        // ==========================================
-        function handleRefNumberInput(inputEl) {
-            const statusEl = document.getElementById('validationStatusMsg');
-            const typedVal = inputEl.value.trim();
+        // =========================================
 
-            if (!extractedOcrRefNumber) return;
+function handleRefNumberInput(inputEl) {
+    const statusEl = document.getElementById('validationStatusMsg');
+    const receiptFileInput = document.getElementById('receiptFile');
+    const typedVal = inputEl.value.trim();
 
-            const cleanTyped = typedVal.replace(/\s+/g, '').toUpperCase();
-            const cleanOcr = extractedOcrRefNumber.replace(/\s+/g, '').toUpperCase();
-            let maskedRef = extractedOcrRefNumber.length > 4 ? extractedOcrRefNumber.substring(0, 4) + "********" : "********";
+    statusEl.style.display = 'block';
 
-            if (cleanTyped.length === 0) {
-                isRefNumberFullyMatched = false;
-                statusEl.style.display = 'block';
-                statusEl.style.color = '#38bdf8';
-                statusEl.innerText = `⏳ Time Valid (${extractedDateTimeStrGlobal}) | detected ref#: ${maskedRef} - I-type o i-paste ang buong Ref No.`;
-                checkProceedButtonState();
-                return;
-            }
-
-            statusEl.style.display = 'block';
-
-            if (cleanTyped.length === cleanOcr.length && cleanTyped === cleanOcr) {
-                isRefNumberFullyMatched = true;
-                statusEl.style.color = '#34d399';
-                statusEl.innerText = `✅ Eksaktong Tugma ang Reference Number! (${extractedDateTimeStrGlobal}) | detected ref#: ${maskedRef}`;
-            } else {
-                isRefNumberFullyMatched = false;
-                statusEl.style.color = '#f87171';
-                statusEl.innerText = `❌ Hindi pa tugma o kulang ang Reference Number (Naka-type: ${cleanTyped.length}/${cleanOcr.length} chars) | detected ref#: ${maskedRef}`;
-            }
-
-            checkProceedButtonState();
+    // KUNG WALA PANG LAMAN ANG REFERENCE NUMBER INPUT
+    if (typedVal.length === 0) {
+        isRefNumberFullyMatched = false;
+        
+        // I-disable ang file upload habang blangko ang ref#
+        if (receiptFileInput) {
+            receiptFileInput.disabled = true;
+            receiptFileInput.style.opacity = "0.5";
+            receiptFileInput.style.cursor = "not-allowed";
         }
+
+        if (!extractedOcrRefNumber) {
+            statusEl.style.color = '#38bdf8';
+            statusEl.innerText = `ℹ️ Paki-type o i-paste muna ang Reference Number, pagkatapos ay i-upload ang resibo.`;
+        } else {
+            let maskedRef = extractedOcrRefNumber.length > 4 ? extractedOcrRefNumber.substring(0, 4) + "********" : "********";
+            statusEl.style.color = '#38bdf8';
+            statusEl.innerText = `⏳ Time Valid | detected ref#: ${maskedRef} - I-type o i-paste ang buong Ref No. para ma-enable ang upload.`;
+        }
+        
+        checkProceedButtonState();
+        return;
+    }
+
+    // KUNG MAY LAMAN NA, I-ENABLE NA ANG UPLOAD BUTTON
+    if (receiptFileInput) {
+        receiptFileInput.disabled = false;
+        receiptFileInput.style.opacity = "1";
+        receiptFileInput.style.cursor = "pointer";
+    }
+
+    if (!extractedOcrRefNumber) {
+        statusEl.style.color = '#38bdf8';
+        statusEl.innerText = `⏳ Ref# typed (${typedVal.length} chars). Ngayon ay maaari nang i-upload ang resibo.`;
+        checkProceedButtonState();
+        return;
+    }
+
+    const cleanTyped = typedVal.replace(/\s+/g, '').toUpperCase();
+    const cleanOcr = extractedOcrRefNumber.replace(/\s+/g, '').toUpperCase();
+    let maskedRef = extractedOcrRefNumber.length > 4 ? extractedOcrRefNumber.substring(0, 4) + "********" : "********";
+
+    if (cleanTyped.length === cleanOcr.length && cleanTyped === cleanOcr) {
+        isRefNumberFullyMatched = true;
+        statusEl.style.color = '#34d399';
+        statusEl.innerText = `✅ Eksaktong Tugma ang Reference Number! (${extractedDateTimeStrGlobal || 'Valid Time'}) | detected ref#: ${maskedRef}`;
+    } else {
+        isRefNumberFullyMatched = false;
+        statusEl.style.color = '#f87171';
+        statusEl.innerText = `❌ Hindi pa tugma o kulang ang Reference Number (Naka-type: ${cleanTyped.length}/${cleanOcr.length} chars) | detected ref#: ${maskedRef}`;
+    }
+
+    checkProceedButtonState();
+}
+
 
         function handleMainOnlineSelection(val) {
             document.getElementById('radioOnline').checked = true;
@@ -1017,7 +1047,8 @@ if (dateMatch) {
             <!-- RECEIPT UPLOAD & REFERENCE NUMBER FORM -->
             <div id="receiptUploadFormSection" style="display: none; margin-top: 15px; border-top: 1px solid #334155; padding-top: 12px; text-align: left;">
                 <label style="font-size: 12px; color: #38bdf8; font-weight: bold; display: block; margin-bottom: 5px;">📸 Upload scanned qrcode Payment receipt here:</label>
-                <input type="file" id="receiptFile" accept="image/*" onchange="handleReceiptFileSelected(this)" style="font-size: 11px; color: #fff; margin-bottom: 10px; width: 100%;">
+                <input type="file" id="receiptFile" accept="image/*" disabled onchange="handleReceiptFileSelected(this)" style="font-size: 11px; color: #fff; margin-bottom: 10px; width: 100%; opacity: 0.5; cursor: not-allowed;">
+
                 
                 <div id="validationStatusMsg" style="font-size: 11px; font-weight: bold; margin-bottom: 10px; display: none;"></div>
 
